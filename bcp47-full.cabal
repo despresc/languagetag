@@ -1,0 +1,58 @@
+cabal-version: 2.4
+name:          bcp47-full
+version:       0.1.0
+synopsis:      BCP47-compliant language tag handling
+bug-reports:   https://github.com/despresc/bcp47-full/issues 
+license:       BSD-2-Clause
+license-file:  LICENSE
+author:        Christian Despres
+maintainer:    christian.j.j.despres@gmail.com
+copyright:     Copyright 2021 Christian Despres
+category:      Text, Web
+description:
+  This library provides parsers for checking the syntactic
+  well-formedness and semantic validity of [BCP47 language
+  tags](https://tools.ietf.org/html/bcp47) as of its current RFC5646
+  version, as well as functions to canonicalize such tags. The
+  pertinent functions are generated automatically using data from the
+  IANA Language Subtag Registry as of its 2020-12-18 release,
+  available from
+  <https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry>.
+  (If there has been a release in the meantime, please open an issue).
+
+extra-source-files:
+  CHANGELOG.md
+  README.md
+
+library
+  hs-source-dirs: src
+  default-language: Haskell2010
+  build-depends:
+    base >=4.12.0.0,
+    text >=1.2,
+    containers >=0.5,
+    deepseq >=1.2,
+    bytestring
+  ghc-options: -Wall
+  exposed-modules:
+    Text.BCP47.Syntax
+    Text.BCP47.Internal.Syntax
+    Text.BCP47.SyntaxAlt
+    Text.BCP47.Internal.SyntaxAlt
+
+test-suite test
+  type: exitcode-stdio-1.0
+  default-language: Haskell2010
+  main-is: Spec.hs
+  hs-source-dirs:
+    test
+  build-depends: bcp47-full, base, text, containers, deepseq, hspec
+
+benchmark bench
+  type: exitcode-stdio-1.0
+  default-language: Haskell2010
+  main-is: Main.hs
+  hs-source-dirs:
+    bench
+  build-depends: bcp47-full, tasty-bench, base, deepseq
+  ghc-options: -O2
