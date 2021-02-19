@@ -10,6 +10,8 @@ import Control.DeepSeq (NFData(..))
 import qualified Text.BCP47.SyntaxAlt as SA
 import qualified Text.BCP47.Internal.SyntaxAlt as SA
 
+
+
 instance NFData Err where
   rnf x = seq x ()
 instance NFData LanguageTag where

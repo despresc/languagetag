@@ -74,6 +74,8 @@ module Text.BCP47.Syntax
 
     -- * Utilities
     isBCP47Char,
+    propercase
+
   )
 where
 
@@ -105,6 +107,10 @@ TODO:
 - consider not caring about exact re-rendering (who would care, after all?)
 - put the regular/irregular symbols in their own internal module so
   that their documentation can be generated from the IANA.
+- if we move to pretty-parsing (i.e. parse-and-case at the same time),
+  might be good to have a "lax" module that simply verifies that the
+  tag is valid, perhaps outputting the rough components (something
+  like what one of the toComponents* produces).
 
 benchmarks, including:
 
@@ -231,7 +237,24 @@ parseBCP47 = go . inputSplit
             pure $ IrregularGrandfathered $ SgnCHDE x y z
         _ -> e
     catchIrregulars _ e = e
-{-# INLINE parseBCP47 #-}
+
+-- TODO: experimental
+propercase :: LanguageTag -> LanguageTag
+{-
+propercase (NormalTag (Normal l s r v e p))
+  = NormalTag $ Normal (fromLang l) (fmap title s) (fmap upper r) (lower <$> v) (lower <$> e) (fmap lower <$> p)
+  where
+    fromLang (Language l
+-}
+propercase (PrivateTag (PrivateUse _ (st NE.:| sts))) = PrivateTag $ PrivateUse False new
+  where
+    !st' = lower st
+    con !b = st' NE.:| b
+    new = go con sts
+    strictColon !x !xs = x : xs
+    go !l (t:ts) = let t' = lower t in t' `seq` go (l . (strictColon t')) ts
+    go l [] = l []
+propercase x = x
 
 parseBCP47' :: InputStream -> Either Err LanguageTag
 parseBCP47' ((t, _) : ts)
@@ -250,17 +273,24 @@ parseBCP47' [] = Left $ Err 0 ErrEmpty
 parsePrivate :: Int -> InputStream -> Either Err (NonEmpty Text)
 parsePrivate !_ ((x, xpos) : xs) = do
   guardPrivate xpos x
-  go (x NE.:|) xs
+  let con !b = x NE.:| b
+  go con xs
   where
     guardPrivate = guardTag Cprivateuse $ \t ->
       T.length t >= 1
         && T.length t <= 8
         && T.all isAsciiAlphaNum t
-    go l ((t, pos) : ts) = do
+    go !l ((t, pos) : ts) = do
       guardPrivate pos t
-      go (l . (t :)) ts
-    go l [] = pure $ l []
+      go (l . (lower t :)) ts
+    go !l ![]
+      = let l' = l []
+        in forcing l' `seq` (pure l')
+    forcing (x NE.:| xs) = x `seq` forcing' xs
+    forcing' (x : xs) = x `seq` forcing' xs
+    forcing' [] = ()
 parsePrivate privatestart [] = Left $ Err privatestart ErrPrivateEmpty
+{-# INLINE parsePrivate #-}
 
 -- TODO: the tao/etc stuff may not be more efficient, because of O(n)
 -- text indexing.
@@ -289,6 +319,7 @@ parseIrregI inittag [(t, pos)]
     bad = Left $ Err pos $ ErrBadTag t CirregI
     good f = pure $ IrregularGrandfathered $ f inittag t
 parseIrregI _ _ = Left $ Err 0 ErrIrregINum
+{-# INLINE parseIrregI #-}
 
 class Finishing a where
   finish :: a -> LanguageTag
@@ -442,7 +473,7 @@ ciEq' :: Text -> Text -> Bool
 ciEq' x y = T.toLower x == T.toLower y
 
 lower :: Text -> Text
-lower = T.toLower
+lower !t = T.toLower t
 
 upper :: Text -> Text
 upper = T.toUpper
@@ -627,6 +658,7 @@ parseNormalish langtag othersubs
     tryPrivateUsePart con t pos ts
       | isExtensionText t = mfinish (con . (t :)) tryPrivateUsePart ts
       | otherwise = Left $ Err pos $ ErrBadTag t Cprivateuse
+{-# INLINE parseNormalish #-}
 
 mfinish ::
   Finishing a =>

@@ -16,6 +16,17 @@ import qualified Data.Text as T
 import Data.Word (Word8)
 import Text.BCP47.Internal.SyntaxAlt
 
+{- TODO HERE
+
+Okay, write the rest of the parsing for bench purposes. (N.B. need to
+fix original's parsing to output proper case).
+
+Also bench the implementation with just bytestrings and unfoldrN
+(maybe a combo of the two, I don't know).
+
+
+-}
+
 -- | The component just before what we're trying to parse
 data Component
   = -- | just started
@@ -72,6 +83,7 @@ inputSplit = List.unfoldr go . (,) 0 . T.split (== '-')
   where
     go (!pos, tag : tags) = Just ((tag, pos), (pos + T.length tag + 1, tags))
     go (_, []) = Nothing
+{-# INLINE inputSplit #-}
 
 parseBCP47 :: Text -> Either Err LanguageTag
 parseBCP47 = parseBCP47' . inputSplit
@@ -88,6 +100,7 @@ parseBCP47' ((t, _) : ts)
   where
     len = T.length t
 parseBCP47' [] = Left $ Err 0 ErrEmpty
+{-# INLINE parseBCP47' #-}
 
 -- Takes the start of the private section for errors
 parsePrivate :: Int -> InputStream -> Either Err (NonEmpty ShortByteString)
@@ -101,11 +114,16 @@ parsePrivate !_ ((x, xpos) : xs) = do
     go l ((t, pos) : ts) = do
       t' <- parsePrivateTag t pos
       go (l . (t' :)) ts
-    go l [] = pure $ l []
+    go l [] = let l' = l [] in forcing l' `seq` (pure l')
+    forcing (x NE.:| xs) = x `seq` forcing' xs
+    forcing' (x : xs) = x `seq` forcing' xs
+    forcing' [] = ()
 parsePrivate privatestart [] = Left $ Err privatestart ErrPrivateEmpty
+{-# INLINE parsePrivate #-}
 
-munfold :: (Char -> Maybe Word8) -> Text -> Maybe [Word8]
-munfold f t
+-- optimized for private use, of course
+privateUnfold :: (Char -> Maybe Word8) -> Text -> Maybe [Word8]
+privateUnfold f t
   | T.length t >= 1,
     T.length t <= 8 =
     ending $ T.foldl' go (False, id) t
@@ -119,22 +137,35 @@ munfold f t
       | otherwise = case f c of
         Just w -> (b, l . (w :))
         Nothing -> (True, l)
+{-# INLINE privateUnfold #-}
 
--- | Parse a digit or letter, also lower-casing it if it is a letter.
+-- | Parse a digit or letter, also lower-casing it if it is a
+-- letter. If it is neither, return @0@.
 
 -- TODO: optimize
+-- TODO: bench the more straightforward one too
 lowAlphaNum :: Char -> Maybe Word8
 lowAlphaNum c
-  | c >= '0' && c <= '9' = Just $ BI.c2w c
+  | c < '0' = Nothing
+  | c <= '9' = Just $ BI.c2w c
+  | c < 'A' = Nothing
+  | c <= 'Z' = Just $ BI.c2w c + 32
   | c >= 'a' && c <= 'z' = Just $ BI.c2w c
-  | c >= 'A' && c <= 'Z' = Just $ BI.c2w c + 32
   | otherwise = Nothing
+{-# INLINE lowAlphaNum #-}
 
 -- TODO: use guard
 getPrivate :: Text -> Maybe ShortByteString
-getPrivate = go . fmap BS.pack . munfold lowAlphaNum
+getPrivate = go . fmap BS.pack . privateUnfold lowAlphaNum
   where
     go Nothing = Nothing
     go (Just sbs)
       | BS.null sbs || BS.length sbs > 8 = Nothing
       | otherwise = Just sbs
+{-# INLINE getPrivate #-}
+
+{- TODO HERE:
+
+try a char-by-char approach in this module
+
+-}
