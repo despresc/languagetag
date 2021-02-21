@@ -624,6 +624,7 @@ parseNormalish langtag othersubs
         mfinish (con . (t :)) (tryVariant Cvariant) ts
       | T.length t >= 5,
         T.length t <= 8,
+        -- TODO: is this drop here required? might be bug
         T.all isAsciiAlphaNum (T.drop 1 t) =
         mfinish (con . (t :)) (tryVariant Cvariant) ts
       | otherwise = trySingleton clast (con []) t pos ts
