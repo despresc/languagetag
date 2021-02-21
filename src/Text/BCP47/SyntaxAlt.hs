@@ -218,6 +218,32 @@ tagPopMid ::
 tagPopMid = tagPop False
 {-# INLINE tagPopMid #-}
 
+-- | Pop a tag from the input stream after a singleton tag
+tagPopSingletons ::
+  Char ->
+  Text ->
+  Component ->
+  Int ->
+  Either Err (ShortByteString, Bool, Bool, Text)
+tagPopSingletons initchar inp clast pos =
+  onChar' go id (0 :: Word8) inp initchar (Left $ Err pos clast ErrBadChar)
+  where
+    onChar' f l idx t c e =
+      onChar
+        c
+        e
+        (\w -> f (l . (w :)) (idx + 1) t True False)
+        (\w -> f (l . (w + 32 :)) (idx + 1) t True False)
+        (\w -> f (l . (w :)) (idx + 1) t False True)
+    go l idx t sl sd
+      | idx == 8 = Right (BS.pack $ l [], sl, sd, t)
+      | otherwise = case T.uncons t of
+        Just (c, t')
+          | c == '-' -> Right (BS.pack $ l [], sl, sd, t)
+          | otherwise -> onChar' go l idx t' c (Left $ Err pos clast ErrBadChar)
+        Nothing -> Right (BS.pack $ l [], sl, sd, t)
+{-# INLINE tagPopSingletons #-}
+
 -- returns the character immediately after the separator if there was
 -- one, and Nothing on end of input.
 tagSep :: Component -> Int -> Text -> Either Err (Maybe (Char, Text))
