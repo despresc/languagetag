@@ -164,6 +164,13 @@ giving the documentation a once over.
 For the irregulars, could instead wait until we get an error at the
 end, then attempt to parse them as irregular. Probably nicer!
 
+Observation: the entire repertoire of tag characters can fit in 63
+bytes exactly (2 * 26 + 10 + 1). So one tag needs at most
+
+64 ^ 8 = 8 ^ 16
+
+bits
+
 -}
 
 ----------------------------------------------------------------
