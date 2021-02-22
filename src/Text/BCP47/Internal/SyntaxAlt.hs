@@ -104,6 +104,22 @@ onChar bad f g h c
   | otherwise = bad
 {-# INLINE onChar #-}
 
+data SeenChar
+  = OnlyLetter
+  | OnlyDigit
+  | Both
+  deriving (Enum)
+
+-- False for letter, True for digit
+reportChar :: Bool -> SeenChar -> SeenChar
+reportChar True OnlyLetter = Both
+reportChar False OnlyDigit = Both
+reportChar _ s = s
+{-# INLINE reportChar #-}
+
+toSeenChar :: Bool -> SeenChar
+toSeenChar = toEnum . fromEnum
+
 -- | Pack an ASCII alphanumeric character into the first 6 bits of a
 -- 'Word8', if it is valid. Digits are mapped to @[0..9]@ and the
 -- lower and upper case letters are both mapped to @[36..61]@. (The
@@ -111,12 +127,12 @@ onChar bad f g h c
 -- tags while retaining backward compatibility.)
 --
 -- We also report whether the character was a letter or digit.
-packCharDetail :: Char -> Maybe (SubtagChar, Bool, Bool)
+packCharDetail :: Char -> Maybe (SubtagChar, Bool)
 packCharDetail = onChar Nothing low high dig
   where
-    low w = Just (SubtagChar $ w - 61, True, False)
-    high w = Just (SubtagChar $ w - 29, True, False)
-    dig w = Just (SubtagChar $ w - 48, False, True)
+    low w = Just (SubtagChar $ w - 61, False)
+    high w = Just (SubtagChar $ w - 29, False)
+    dig w = Just (SubtagChar $ w - 48, True)
 {-# INLINE packCharDetail #-}
 
 -- | Like 'packChar', but replaces any invalid character with the
@@ -126,7 +142,7 @@ packCharLax = fromMaybe (SubtagChar 36) . packChar
 {-# INLINE packCharLax #-}
 
 packChar :: Char -> Maybe SubtagChar
-packChar = fmap (\(x, _, _) -> x) . packCharDetail
+packChar = fmap fst . packCharDetail
 {-# INLINE packChar #-}
 
 -- | Unpack an ASCII alphanumeric character from a 'Word8'. If not
@@ -204,42 +220,59 @@ writeTag inp = List.unfoldr go (0, inp)
 
 -- Also returns whether or not we saw a letter or a digit,
 -- respectively. Will probably want a pop version.
-toSubtagDetail :: Text -> Maybe (Subtag, Bool, Bool)
-toSubtagDetail t
-  | len == 0 || len > 8 = Nothing
-  | otherwise = (\(st, sl, sd) -> (readSubtag (fromIntegral len) st, sl, sd)) <$> wchars
+toSubtagDetail :: Text -> Maybe (Subtag, SeenChar)
+toSubtagDetail inp
+  | Just (c, t) <- T.uncons inp,
+    T.length inp <= 8 =
+    wchars (fromIntegral $ T.length inp) c t
+  | otherwise = Nothing
   where
-    len = T.length t
-    fixup (b, l, sl, sd)
+    fixup !len (!b, !l, !sc)
       | b = Nothing
-      | otherwise = Just (l [], sl, sd)
-    wchars = fixup $ T.foldl' go (False, id, False, False) t
-    go (b, l, sl, sd) c = case packCharDetail c of
-      Just (w, sl', sd') -> (b, l . (w :), sl' || sl, sd' || sd)
-      Nothing -> (True, l, sl, sd)
+      | otherwise = Just (readSubtag len $ l [], sc)
+    wchars !len !c !t = case packCharDetail c of
+      Just (w, sc) -> fixup len $ T.foldl' go (False, (w :), toSeenChar sc) t
+      Nothing -> Nothing
+    go (!b, !l, !sc) c = case packCharDetail c of
+      Just (w, sc') -> (b, l . (w :), reportChar sc' sc)
+      Nothing -> (True, l, sc)
 {-# INLINE toSubtagDetail #-}
 
--- Does not normalize the tag, yet.
-
--- TODO: Could even return the length and what the first character was
-popSubtag :: Char -> Text -> Maybe (Subtag, Bool, Bool, Text)
-popSubtag initchar inp = case packCharDetail initchar of
-  Just (c, sl, sd) -> go 1 (c :) sl sd inp
+popSubtagDetail :: Char -> Text -> Maybe (Subtag, SeenChar, Text)
+popSubtagDetail initchar inp = case packCharDetail initchar of
+  Just (c, sc) -> go 1 (c :) (toSeenChar sc) inp
   Nothing -> Nothing
   where
-    go idx l sl sd t
-      | idx == 8 = Just (readSubtag idx (l []), sl, sd, t)
+    go idx !l !sc !t
+      | idx == 8 = Just (readSubtag idx (l []), sc, t)
       | otherwise = case T.uncons t of
         Just (c, t')
-          | c == '-' -> Just (readSubtag idx (l []), sl, sd, t)
+          | c == '-' -> Just (readSubtag idx (l []), sc, t)
           | otherwise -> case packCharDetail c of
-            Just (w, sl', sd') -> go (idx + 1) (l . (w :)) (sl || sl') (sd || sd') t'
+            Just (w, sc') -> go (idx + 1) (l . (w :)) (reportChar sc' sc) t'
             Nothing -> Nothing
-        Nothing -> Just (readSubtag idx (l []), sl, sd, t)
+        Nothing -> Just (readSubtag idx (l []), sc, t)
+{-# INLINE popSubtagDetail #-}
+
+-- | Like popSubtagDetail, but when we don't care about the 'SeenChar'.
+popSubtag :: Char -> Text -> Maybe (Subtag, Text)
+popSubtag initchar inp = case packCharDetail initchar of
+  Just (c, _) -> go 1 (c :) inp
+  Nothing -> Nothing
+  where
+    go !idx !l !t
+      | idx == 8 = Just (readSubtag idx (l []), t)
+      | otherwise = case T.uncons t of
+        Just (c, t')
+          | c == '-' -> Just (readSubtag idx (l []), t)
+          | otherwise -> case packChar c of
+            Just !w -> go (idx + 1) (l . (w :)) t'
+            Nothing -> Nothing
+        Nothing -> Just (readSubtag idx (l []), t)
 {-# INLINE popSubtag #-}
 
 toSubtag :: Text -> Maybe Subtag
-toSubtag = fmap (\(x, _, _) -> x) . toSubtagDetail
+toSubtag = fmap fst . toSubtagDetail
 {-# INLINE toSubtag #-}
 
 -- | Read a tag from the given text value, truncating it or replacing
