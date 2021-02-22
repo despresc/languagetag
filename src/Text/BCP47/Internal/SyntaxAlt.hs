@@ -19,26 +19,28 @@ import Data.Word (Word64, Word8)
 {-
 
 TODO: may want to define some constants for some of these magic
-numbers (the 15 and 63 selectors, the index starting at 4 because of
-the length preamble, the shifts)
+numbers (the 15 and 63 selectors, the indices starting at 58, the
+shifts)
 
 -}
 
 -- | A compact representation of a BCP47 subtag (a string of ASCII
--- letters and digits of length between one and eight). Note that the
--- 'Ord' instance for this type does not bear any particular
--- relationship with that of 'Text'.
+-- letters and digits of length between one and eight). The 'Ord'
+-- instance is identical to that of 'Text', in that for two subtags
+-- @x@ and @y@, we have @x < y@ if and only if @'tagToText' x <
+-- 'tagToText' y@.
 
--- The three lowest bits encode the length of the tag, and the
--- remaining chunks of 6 bits encode the actual letters. (This leaves
--- us with a decent number of bits left over, in fact, not that this
--- is useful to us).
+-- The three lowest bits encode the length of the tag, and the highest
+-- chunks of 6 bits encode the actual characters (first character the
+-- highest). (This leaves us with 13 bits left over, in fact, not that
+-- this is useful to us at the moment).
 --
 -- TODO: read instance
 --
 -- TODO: may want to store whether or not there are letters or digits
 -- in the tag in the lower bits as well (requires another two bits).
-
+--
+-- TODO: add a test that toSubtag is actually an order homomorphism
 newtype Subtag = Subtag {unSubtag :: Word64}
   deriving (Eq, Ord)
 
@@ -76,9 +78,10 @@ subtagCharx = SubtagChar 59
 -- | this uses 'toSubtagLax', so it will silently mangle ill-formed
 -- subtags
 instance Show Subtag where
-  showsPrec d t =
-    showParen (d > 10) $
-      showString "toSubtagLax " . shows (tagToText t)
+    showsPrec p t r = showsPrec p (tagToText t) r
+
+instance Read Subtag where
+    readsPrec p str = [(toSubtagLax $ T.pack x,y) | (x,y) <- readsPrec p str]
 
 -- | this uses 'toSubtagLax', so it will silently mangle ill-formed
 -- subtags
@@ -155,10 +158,10 @@ unpackChar (SubtagChar w)
 -- Unnormalizing version first, I suppose. Also takes the length of
 -- the tag. Obviously needs to be fed valid characters.
 readTag :: Word64 -> [SubtagChar] -> Subtag
-readTag len = Subtag . fst . List.foldl' go (len, 4)
+readTag len = Subtag . fst . List.foldl' go (len, 58)
   where
     go :: (Word64, Int) -> SubtagChar -> (Word64, Int)
-    go (!acc, !idx) (SubtagChar !n) = (acc + Bit.shiftL (fromIntegral n) idx, idx + 6)
+    go (!acc, !idx) (SubtagChar !n) = (acc + Bit.shiftL (fromIntegral n) idx, idx - 6)
 {-# INLINE readTag #-}
 
 tagLength :: Subtag -> Word8
@@ -167,19 +170,13 @@ tagLength = fromIntegral . (Bit..&.) sel . unSubtag
     sel = 15
 {-# INLINE tagLength #-}
 
--- Internal. Obviously tags to which this function has been applied
--- shouldn't be passed around as normal tags.
-stripLen :: Subtag -> Subtag
-stripLen = Subtag . (`Bit.shiftR` 4) . unSubtag
-{-# INLINE stripLen #-}
-
 -- map over the constituent letters of a subtag. the given function
 -- must, of course, preserve the encoding.
 imapSubtag :: (Word8 -> SubtagChar -> SubtagChar) -> Subtag -> Subtag
-imapSubtag f n = Subtag n''
+imapSubtag f n = Subtag n'
   where
-    (len, n') = (tagLength n, stripLen n)
-    n'' = go (fromIntegral len) 0 n'
+    len = tagLength n
+    n' = go (fromIntegral len) 0 n
     go !acc !idx !w
       | idx == len = acc
       | otherwise =
@@ -188,25 +185,34 @@ imapSubtag f n = Subtag n''
               ( acc
                   + Bit.shiftL
                     (fromIntegral $ unSubtagChar $ f idx c)
-                    (fromIntegral $ 4 + 6 * idx)
+                    -- TODO: I think this is right?
+                    (fromIntegral $ 58 - 6 * idx)
               )
               (idx + 1)
               w'
 {-# INLINE imapSubtag #-}
 
--- should only be applied to tags that have had their lengths stripped
+-- will mangle the length of a subtag!
 popChar :: Subtag -> (SubtagChar, Subtag)
-popChar (Subtag n) = (SubtagChar $ fromIntegral $ n Bit..&. sel, Subtag $ Bit.shiftR n 6)
-  where
-    sel = 63
+popChar (Subtag n) = (SubtagChar $ fromIntegral $ Bit.shiftR n 58, Subtag $ Bit.shiftL n 6)
 {-# INLINE popChar #-}
 
+-- performs no bounds checking, though (unsafeIndexSubtag 0) will
+-- always be valid.
+unsafeIndexSubtag :: Subtag -> Word8 -> SubtagChar
+unsafeIndexSubtag (Subtag n) idx =
+  SubtagChar $
+    fromIntegral $
+      Bit.shiftR n (58 - 6 * fromIntegral idx) Bit..&. sel
+  where
+    sel = 63
+
 subtagHead :: Subtag -> SubtagChar
-subtagHead = fst . popChar . stripLen
+subtagHead = (`unsafeIndexSubtag` 0)
 {-# INLINE subtagHead #-}
 
 writeTag :: Subtag -> [SubtagChar]
-writeTag inp = List.unfoldr go (0, stripLen inp)
+writeTag inp = List.unfoldr go (0, inp)
   where
     len = tagLength inp
     go (idx, n)
@@ -257,8 +263,8 @@ toSubtag = fmap (\(x, _, _) -> x) . toSubtagDetail
 {-# INLINE toSubtag #-}
 
 -- | Read a tag from the given text value, truncating it or replacing
--- it with the singleton "a" if necessary, and replacing any invalid
--- characters with the letter a.
+-- it with the singleton "a" if necessary, and replacing any
+-- characters other than ASCII digits or letters with @'a'@.
 toSubtagLax :: Text -> Subtag
 toSubtagLax t = readTag (fromIntegral len) (wchars [])
   where
@@ -271,7 +277,7 @@ toSubtagLax t = readTag (fromIntegral len) (wchars [])
 {-# INLINE toSubtagLax #-}
 
 tagToText :: Subtag -> Text
-tagToText w = T.unfoldrN (fromIntegral len) go (stripLen w, 0)
+tagToText w = T.unfoldrN (fromIntegral len) go (w, 0)
   where
     len = tagLength w
     go (n, idx)
