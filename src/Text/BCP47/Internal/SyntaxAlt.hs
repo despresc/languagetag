@@ -249,7 +249,7 @@ popSubtagDetail initchar inp = case packCharDetail initchar of
         Just (c, t')
           | c == '-' -> Just (readSubtag idx (l []), sc, t)
           | otherwise -> case packCharDetail c of
-            Just (w, sc') -> go (idx + 1) (l . (w :)) (reportChar sc' sc) t'
+            Just (!w, !sc') -> go (idx + 1) (l . (w :)) (reportChar sc' sc) t'
             Nothing -> Nothing
         Nothing -> Just (readSubtag idx (l []), sc, t)
 {-# INLINE popSubtagDetail #-}
