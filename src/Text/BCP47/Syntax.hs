@@ -74,8 +74,7 @@ module Text.BCP47.Syntax
 
     -- * Utilities
     isBCP47Char,
-    propercase
-
+    propercase,
   )
 where
 
@@ -259,7 +258,7 @@ propercase (PrivateTag (PrivateUse _ (st NE.:| sts))) = PrivateTag $ PrivateUse 
     con !b = st' NE.:| b
     new = go con sts
     strictColon !x !xs = x : xs
-    go !l (t:ts) = let t' = lower t in t' `seq` go (l . (strictColon t')) ts
+    go !l (t : ts) = let t' = lower t in t' `seq` go (l . (strictColon t')) ts
     go l [] = l []
 propercase x = x
 
@@ -290,11 +289,11 @@ parsePrivate !_ ((x, xpos) : xs) = do
     go !l ((t, pos) : ts) = do
       guardPrivate pos t
       go (l . (lower t :)) ts
-    go !l ![]
-      = let l' = l []
-        in forcing l' `seq` (pure l')
-    forcing (x NE.:| xs) = x `seq` forcing' xs
-    forcing' (x : xs) = x `seq` forcing' xs
+    go !l ![] =
+      let l' = l []
+       in forcing l' `seq` (pure l')
+    forcing (a NE.:| as) = a `seq` forcing' as
+    forcing' (a : as) = a `seq` forcing' as
     forcing' [] = ()
 parsePrivate privatestart [] = Left $ Err privatestart ErrPrivateEmpty
 {-# INLINE parsePrivate #-}
@@ -468,11 +467,6 @@ data Component
   | -- | tag right after an initial @i-@
     CirregI
   deriving (Eq, Ord, Show, Read)
-
--- case-insensitive match
--- TODO: optimize for ascii
-ciEq :: Text -> Text -> Bool
-ciEq x y = T.toLower x == T.toLower y
 
 -- case-insensitive match when the second part is known to be ascii
 -- lower case
@@ -943,12 +937,12 @@ zhXiang = RegularGrandfathered $ Zhxiang "zh" "xiang"
 -- level (so @en@ is a prefix of @en-GB@ but not of @ena@) and
 -- case-insensitively (so @en@ is equal to @EN@).
 compareTag :: LanguageTag -> LanguageTag -> Maybe Ordering
-compareTag (NormalTag x) (NormalTag y) = undefined
-compareTag (PrivateTag x) (PrivateTag y) = undefined
-compareTag (RegularGrandfathered x) (NormalTag y) = undefined
-compareTag (NormalTag x) (RegularGrandfathered y) = undefined
-compareTag (RegularGrandfathered x) (RegularGrandfathered y) = undefined
-compareTag (IrregularGrandfathered x) (IrregularGrandfathered y) = undefined
+compareTag (NormalTag _) (NormalTag _) = undefined
+compareTag (PrivateTag _) (PrivateTag _) = undefined
+compareTag (RegularGrandfathered _) (NormalTag _) = undefined
+compareTag (NormalTag _) (RegularGrandfathered _) = undefined
+compareTag (RegularGrandfathered _) (RegularGrandfathered _) = undefined
+compareTag (IrregularGrandfathered _) (IrregularGrandfathered _) = undefined
 compareTag _ _ = Nothing
 
 -- | Test if two tags are equal. The comparison is performed

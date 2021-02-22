@@ -34,5 +34,7 @@ main = defaultMain
      , bench "privatealt" $ nf SA.parseBCP47 "x-XX-xxxxxx-xxxxxx-xxxxxx-xxxxxx-xxxxxx"
      , bench "regnormal" $ nf parseBCP47 "en-gb-1234-x-xxxxxx-foobar"
      , bench "regalt" $ nf SA.parseBCP47 "en-gb-1234-x-xxxxxx-foobar"
+     , bench "regnormal" $ nf parseBCP47 "en-gb-1234-x-XXXXXX-FOOBAR"
+     , bench "regalt" $ nf SA.parseBCP47 "en-gb-1234-x-XXXXXX-FOOBAR"
      ]
   ]

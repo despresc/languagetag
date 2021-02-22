@@ -8,8 +8,7 @@
 module Text.BCP47.SyntaxAlt where
 
 import qualified Data.ByteString.Internal as BI
-import Data.ByteString.Short (ShortByteString)
-import qualified Data.ByteString.Short as BS
+import Data.Char (isAsciiLower)
 import qualified Data.List.NonEmpty as NE
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -93,22 +92,6 @@ data ErrType
     ErrBadTag
   deriving (Eq, Ord, Show, Read)
 
-{-
--- | The content of an error message
-data ErrMessage
-  = -- | input was empty
-    ErrEmpty
-  | -- | invalid tag and the last thing that was parsed correctly
-    ErrBadTag !Text !Component
-  | -- | empty private use section
-    ErrPrivateEmpty
-  | -- | empty extension section
-    ErrExtensionEmpty
-  | -- | did not have exactly one tag after an @i-@
-    ErrIrregINum
-  deriving (Eq, Ord, Show, Read)
--}
-
 ----------------------------------------------------------------
 -- Utilities
 ----------------------------------------------------------------
@@ -124,7 +107,7 @@ lowAlphaNum c
   | c <= '9' = Just $ BI.c2w c
   | c < 'A' = Nothing
   | c <= 'Z' = Just $ BI.c2w c + 32
-  | c >= 'a' && c <= 'z' = Just $ BI.c2w c
+  | isAsciiLower c = Just $ BI.c2w c
   | otherwise = Nothing
 {-# INLINE lowAlphaNum #-}
 
@@ -133,7 +116,7 @@ lowAlpha :: Char -> Maybe Word8
 lowAlpha c
   | c < 'A' = Nothing
   | c <= 'Z' = Just $ BI.c2w c + 32
-  | c >= 'a' && c <= 'z' = Just $ BI.c2w c
+  | isAsciiLower c = Just $ BI.c2w c
   | otherwise = Nothing
 {-# INLINE lowAlpha #-}
 
@@ -141,63 +124,18 @@ lowAlpha c
 -- Parsing
 ----------------------------------------------------------------
 
-onChar ::
-  Char ->
-  r ->
-  (Word8 -> r) ->
-  (Word8 -> r) ->
-  (Word8 -> r) ->
-  r
-onChar c bad f g h
-  | c > 'z' = bad
-  | c >= 'a' = f $! BI.c2w c
-  | c > 'Z' = bad
-  | c >= 'A' = g $! BI.c2w c
-  | c <= '9' && c >= '0' = h $! BI.c2w c
-  | otherwise = bad
-{-# INLINE onChar #-}
-
 -- | Pop a tag from the input stream
+
+-- TODO: we don't do/allow for input normalization yet!
 tagPop ::
-  Bool ->
   Char ->
   Text ->
   Component ->
   Int ->
-  Either Err (ShortByteString, Bool, Bool, Text)
-tagPop allLow initchar inp clast pos =
-  onChar' go (const id) 0 inp initchar (Left $ Err pos clast ErrBadChar)
-  where
-    onChar' f l idx t c e =
-      onChar
-        c
-        e
-        (\w -> f (\len -> l len . (condDown idx w len :)) (idx + 1) t True False)
-        (\w -> f (\len -> l len . (condUp idx w len :)) (idx + 1) t True False)
-        (\w -> f (\len -> l len . (condDig idx w len :)) (idx + 1) t False True)
-    go l idx t sl sd
-      | idx == 8 = Right (BS.pack $ l 8 [], sl, sd, t)
-      | otherwise = case T.uncons t of
-        Just (c, t')
-          | c == '-' -> Right (BS.pack $ l idx [], sl, sd, t)
-          | otherwise -> onChar' go l idx t' c (Left $ Err pos clast ErrBadChar)
-        Nothing -> Right (BS.pack $ l idx [], sl, sd, t)
-    condUp :: Word8 -> Word8 -> Word8 -> Word8
-    condUp i !n l
-      | allLow = n + 32
-      | l == 2 && i < 2 = n
-      | l == 4 && i == 0 = n
-      | otherwise = n + 32
-
-    condDown :: Word8 -> Word8 -> Word8 -> Word8
-    condDown i !n l
-      | allLow = n
-      | l == 2 && i < 2 = n - 32
-      | l == 4 && i == 0 = n - 32
-      | otherwise = n
-
-    condDig :: Word8 -> Word8 -> Word8 -> Word8
-    condDig _ !n _ = n
+  Either Err (Subtag, Bool, Bool, Text)
+tagPop initchar inp clast pos = case popSubtagDetail initchar inp of
+  Just (st, sl, sd, t) -> Right (st, sl, sd, t)
+  Nothing -> Left $ Err pos clast ErrBadChar
 {-# INLINE tagPop #-}
 
 tagPopBegin ::
@@ -205,8 +143,8 @@ tagPopBegin ::
   Text ->
   Component ->
   Int ->
-  Either Err (ShortByteString, Bool, Bool, Text)
-tagPopBegin = tagPop True
+  Either Err (Subtag, Bool, Bool, Text)
+tagPopBegin = tagPop
 {-# INLINE tagPopBegin #-}
 
 tagPopMid ::
@@ -214,35 +152,9 @@ tagPopMid ::
   Text ->
   Component ->
   Int ->
-  Either Err (ShortByteString, Bool, Bool, Text)
-tagPopMid = tagPop False
+  Either Err (Subtag, Bool, Bool, Text)
+tagPopMid = tagPop
 {-# INLINE tagPopMid #-}
-
--- | Pop a tag from the input stream after a singleton tag
-tagPopSingletons ::
-  Char ->
-  Text ->
-  Component ->
-  Int ->
-  Either Err (ShortByteString, Bool, Bool, Text)
-tagPopSingletons initchar inp clast pos =
-  onChar' go id (0 :: Word8) inp initchar (Left $ Err pos clast ErrBadChar)
-  where
-    onChar' f l idx t c e =
-      onChar
-        c
-        e
-        (\w -> f (l . (w :)) (idx + 1) t True False)
-        (\w -> f (l . (w + 32 :)) (idx + 1) t True False)
-        (\w -> f (l . (w :)) (idx + 1) t False True)
-    go l idx t sl sd
-      | idx == 8 = Right (BS.pack $ l [], sl, sd, t)
-      | otherwise = case T.uncons t of
-        Just (c, t')
-          | c == '-' -> Right (BS.pack $ l [], sl, sd, t)
-          | otherwise -> onChar' go l idx t' c (Left $ Err pos clast ErrBadChar)
-        Nothing -> Right (BS.pack $ l [], sl, sd, t)
-{-# INLINE tagPopSingletons #-}
 
 -- returns the character immediately after the separator if there was
 -- one, and Nothing on end of input.
@@ -259,24 +171,24 @@ tagSep clast pos inp = case T.uncons inp of
 -- for the middle of the tag
 mfinish ::
   Finishing a =>
-  Int ->
+  Word8 ->
   Component ->
   Int ->
   Text ->
   a ->
-  (a -> ShortByteString -> Bool -> Bool -> Component -> Int -> Text -> Either Err LanguageTag) ->
+  (a -> Subtag -> Bool -> Bool -> Component -> Int -> Text -> Either Err LanguageTag) ->
   Either Err LanguageTag
 mfinish len clast pos inp con pr = do
   mc <- tagSep clast pos inp
   case mc of
     Just (c, t) ->
       tagPopMid c t clast pos >>= \(sbs, sl, sd, t') ->
-        pr con sbs sl sd clast (len + pos + 1) t'
+        pr con sbs sl sd clast (fromIntegral len + pos + 1) t'
     Nothing -> pure $ finish con
 {-# INLINE mfinish #-}
 
-isDigit :: Word8 -> Bool
-isDigit w = 48 <= w && w <= 57
+isDigit :: SubtagChar -> Bool
+isDigit (SubtagChar w) = w < 10
 {-# INLINE isDigit #-}
 
 parseBCP47 :: Text -> Either Err LanguageTag
@@ -285,119 +197,139 @@ parseBCP47 t = case T.uncons t of
   Nothing -> Left $ Err 0 Cbeginning ErrEmpty
 
 -- TODO: catch irregulars and grandfathered
+
+-- TODO: also test out the normal approach of 'split'ting the input beforehand
 parseBCP47' :: Char -> Text -> Either Err LanguageTag
 parseBCP47' !initchar !inp = tagPopBegin initchar inp Cbeginning 0 >>= parsePrimary
   where
     initcon l e1 e2 e3 s r v e p = NormalTag $ Normal l e1 e2 e3 s r v e p
 
-    -- the letter x
-    wex = 120
-
-    parsePrimary (sbs, _, sd, t)
+    -- TODO: could be optimized a bit
+    parsePrimary (st, _, sd, t)
       | sd = Left $ Err 0 Cbeginning ErrBadChar
-      | BS.length sbs == 1,
-        BS.index sbs 0 == wex =
+      | tagLength st == 1,
+        subtagHead st == subtagCharx =
         PrivateTag <$> parsePrivate 0 t
-      | BS.length sbs >= 4 =
+      | tagLength st >= 4 =
         mfinish
-          (BS.length sbs)
+          (tagLength st)
           Cprimary
           0
           t
-          (initcon sbs BS.empty BS.empty BS.empty)
+          (initcon st nullSubtag nullSubtag nullSubtag)
           tryScript
-      | otherwise = mfinish (BS.length sbs) Cprimary 0 t (initcon sbs) tryLext1
+      | otherwise = mfinish (tagLength st) Cprimary 0 t (initcon st) tryLext1
 
-    tryLext1 !con sbs sl sd clast pos t
+    tryLext1 !con st sl sd clast pos t
       | not sd,
-        BS.length sbs == 3 =
-        mfinish (BS.length sbs) Clext1 pos t (con sbs) tryLext2
-      | otherwise = tryScript (con BS.empty BS.empty BS.empty) sbs sl sd clast pos t
+        tagLength st == 3 =
+        mfinish (tagLength st) Clext1 pos t (con $ justSubtag st) tryLext2
+      | otherwise = tryScript (con nullSubtag nullSubtag nullSubtag) st sl sd clast pos t
 
-    tryLext2 !con sbs sl sd clast pos t
+    tryLext2 !con st sl sd clast pos t
       | not sd,
-        BS.length sbs == 3 =
-        mfinish (BS.length sbs) Clext2 pos t (con sbs) tryLext3
-      | otherwise = tryScript (con BS.empty BS.empty) sbs sl sd clast pos t
+        tagLength st == 3 =
+        mfinish (tagLength st) Clext2 pos t (con $ justSubtag st) tryLext3
+      | otherwise = tryScript (con nullSubtag nullSubtag) st sl sd clast pos t
 
-    tryLext3 !con sbs sl sd clast pos t
+    tryLext3 !con st sl sd clast pos t
       | not sd,
-        BS.length sbs == 3 =
-        mfinish (BS.length sbs) Clanguage pos t (con sbs) tryScript
-      | otherwise = tryScript (con BS.empty) sbs sl sd clast pos t
+        tagLength st == 3 =
+        mfinish (tagLength st) Clanguage pos t (con $ justSubtag st) tryScript
+      | otherwise = tryScript (con nullSubtag) st sl sd clast pos t
 
-    tryScript !con sbs sl sd clast pos t
-      | BS.length sbs == 4,
+    tryScript !con st sl sd clast pos t
+      | tagLength st == 4,
         not sd =
-        mfinish (BS.length sbs) Cscript pos t (con sbs) tryRegion
-      | otherwise = tryRegion (con BS.empty) sbs sl sd clast pos t
+        mfinish (tagLength st) Cscript pos t (con $ justSubtag st) tryRegion
+      | otherwise = tryRegion (con nullSubtag) st sl sd clast pos t
 
-    tryRegion !con sbs sl sd clast pos t
-      | sl && not sd && BS.length sbs == 2
-          || sd && not sl && BS.length sbs == 3 =
-        mfinish (BS.length sbs) Cregion pos t (con sbs) tryVariant
-      | otherwise = tryVariant (con BS.empty) sbs sl sd clast pos t
+    tryRegion !con st sl sd clast pos t
+      | sl && not sd && tagLength st == 2
+          || sd && not sl && tagLength st == 3 =
+        mfinish (tagLength st) Cregion pos t (con $ justSubtag st) tryVariant
+      | otherwise = tryVariant (con nullSubtag) st sl sd clast pos t
 
     -- TODO: Technically I can stop falling at the length 4 case if
     -- the other condition doesn't hold, since nothing else should
     -- have length 4.
-    tryVariant !con sbs sl sd clast pos t
-      | BS.length sbs == 4,
-        isDigit $ BS.index sbs 0 =
-        mfinish (BS.length sbs) Cvariant pos t (con . (sbs :)) tryVariant
-      | BS.length sbs >= 5 =
-        mfinish (BS.length sbs) Cvariant pos t (con . (sbs :)) tryVariant
-      | otherwise = trySingleton (con []) sbs sl sd clast pos t
+    tryVariant !con st sl sd clast pos t
+      | tagLength st == 4,
+        isDigit $ subtagHead st =
+        mfinish (tagLength st) Cvariant pos t (con . strictCons st) tryVariant
+      | tagLength st >= 5 =
+        mfinish (tagLength st) Cvariant pos t (con . strictCons st) tryVariant
+      | otherwise = trySingleton (con []) st sl sd clast pos t
 
-    trySingleton !con sbs _ _ clast pos t
-      | BS.length sbs /= 1 = Left $ Err pos clast ErrBadTag
-      | BS.index sbs 0 == wex =
+    trySingleton !con st _ _ clast pos t
+      | tagLength st /= 1 = Left $ Err pos clast ErrBadTag
+      | subtagHead st == subtagCharx =
         parsePrivateUse (con []) pos t
-      | otherwise = parseExtension (\ne -> con . (Extension (BS.index sbs 0) ne :)) pos t
+      | otherwise = parseExtension (\ne -> con . strictCons (Extension (subtagHead st) ne)) pos t
 
     parsePrivateUse !con pos t = do
       ms <- tagSep Cprivateuse pos t
       case ms of
         Just (c, t') -> do
-          (sbs, sl, sd, t'') <- tagPopMid c t' Cprivateuse pos
-          parsePrivateUseTag con sbs sl sd Cprivateuse pos t''
+          (st, sl, sd, t'') <- tagPopMid c t' Cprivateuse pos
+          parsePrivateUseTag con st sl sd Cprivateuse pos t''
         Nothing -> Left $ Err pos Cprivateuse ErrNeededTag
 
-    parsePrivateUseTag !con sbs _ _ _ pos t =
-      mfinish (BS.length sbs) Cprivateuse pos t (con . (sbs :)) parsePrivateUseTag
+    parsePrivateUseTag !con st _ _ _ pos t =
+      mfinish (tagLength st) Cprivateuse pos t (con . strictCons st) parsePrivateUseTag
 
+    parseExtension ::
+      (NE.NonEmpty Subtag -> [Extension] -> [Subtag] -> LanguageTag) ->
+      Int ->
+      Text ->
+      Either Err LanguageTag
     parseExtension !con pos t = do
       ms <- tagSep Cextension pos t
       case ms of
         Just (c, t') -> do
-          (sbs, _, _, t'') <- tagPopMid c t' Cextension pos
-          if BS.length sbs >= 2
-            then mfinish (BS.length sbs) Cextension pos t'' (con . (sbs NE.:|)) parseExtensionTag
+          (st, _, _, t'') <- tagPopMid c t' Cextension pos
+          if tagLength st >= 2
+            then mfinish (tagLength st) Cextension pos t'' (con . strictNE st) parseExtensionTag
             else Left $ Err pos Cextension ErrNeededTag
         Nothing -> Left $ Err pos Cextension ErrNeededTag
 
-    parseExtensionTag con sbs sl sd _ pos t
-      | BS.length sbs == 1 = trySingleton (con []) sbs sl sd Cextension pos t
-      | otherwise = mfinish (BS.length sbs) Cextension pos t (con . (sbs :)) parseExtensionTag
+    parseExtensionTag ::
+      ([Subtag] -> [Extension] -> [Subtag] -> LanguageTag) ->
+      Subtag ->
+      Bool ->
+      Bool ->
+      Component ->
+      Int ->
+      Text ->
+      Either Err LanguageTag
+    parseExtensionTag con st sl sd _ pos t
+      | tagLength st == 1 = trySingleton (con []) st sl sd Cextension pos t
+      | otherwise = mfinish (tagLength st) Cextension pos t (con . strictCons st) parseExtensionTag
 {-# INLINE parseBCP47' #-}
 
-parsePrivate :: Int -> Text -> Either Err (NE.NonEmpty ShortByteString)
+parsePrivate :: Int -> Text -> Either Err (NE.NonEmpty Subtag)
 parsePrivate initpos inp = do
   ms <- tagSep Cprivateuse initpos inp
   case ms of
     Just (c, t) -> do
-      (sbs, _, _, t') <- tagPopMid c t Cprivateuse initpos
-      parsePrivateUseTag (sbs NE.:|) (initpos + BS.length sbs + 1) t'
+      (st, _, _, t') <- tagPopMid c t Cprivateuse initpos
+      parsePrivateUseTag (strictNE st) (initpos + fromIntegral (tagLength st) + 1) t'
     Nothing -> Left $ Err initpos Cprivateuse ErrNeededTag
   where
-    parsePrivateUseTag con pos t = do
+    parsePrivateUseTag con !pos !t = do
       mc <- tagSep Cprivateuse pos t
       case mc of
         Just (c, t') -> do
-          (sbs, _, _, t'') <- tagPopMid c t' Cprivateuse pos
-          parsePrivateUseTag (con . (sbs :)) (pos + BS.length sbs + 1) t''
+          (st, _, _, t'') <- tagPopMid c t' Cprivateuse pos
+          parsePrivateUseTag (con . strictCons st) (pos + fromIntegral (tagLength st) + 1) t''
         Nothing -> pure $ con []
 {-# INLINE parsePrivate #-}
+
+strictNE :: a -> [a] -> NE.NonEmpty a
+strictNE !x !y = x NE.:| y
+
+strictCons :: a -> [a] -> [a]
+strictCons !x !y = x : y
 
 {- TODO: cannibalize
 -- takes the length of the tag we just parsed and what it was, and
