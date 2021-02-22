@@ -24,8 +24,6 @@ Also bench the implementation with just bytestrings and unfoldrN
 
 (maybe a combo of the two, I don't know).
 
-TODO: consider putting bang patterns in some of the M invocations (test)
-
 TODO: test strictness in more places (e.g. the non-strictness of : and
 :| may be a problem)
 

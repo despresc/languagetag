@@ -22,6 +22,12 @@ TODO: may want to define some constants for some of these magic
 numbers (the 15 and 63 selectors, the indices starting at 58, the
 shifts)
 
+TODO: hashable, nfdata instances for subtag et al?
+
+TODO HERE: change packChar so that it maps everything to lower case (I
+guess that's just packCharLow?), then add pretty-printing to
+tagToText. Also consider changing those names.
+
 -}
 
 -- | A compact representation of a BCP47 subtag (a string of ASCII
