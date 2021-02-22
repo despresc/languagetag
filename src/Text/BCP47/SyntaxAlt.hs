@@ -180,11 +180,11 @@ isDigit (SubtagChar w) = w < 10
 {-# INLINE isDigit #-}
 
 parseBCP47 :: Text -> Either Err LanguageTag
-parseBCP47 t = case T.uncons t of
-  Just (c, t') -> parseBCP47' c t'
+parseBCP47 inp = case T.uncons inp of
+  Just (c, t) -> parseBCP47' c t
   Nothing -> Left $ Err 0 Cbeginning ErrEmpty
 
--- TODO: catch irregulars and grandfathered
+-- TODO: catch regular grandfathered and the rest of the irregulars
 
 -- TODO: also test out the normal approach of 'split'ting the input beforehand
 parseBCP47' :: Char -> Text -> Either Err LanguageTag
