@@ -148,11 +148,12 @@ mfinish ::
   (a -> Subtag -> SeenChar -> Component -> Int -> Text -> Either Err LanguageTag) ->
   Either Err LanguageTag
 mfinish !len !clast !pos !inp !con !pr = do
-  mc <- tagSep clast pos inp
+  let pos' = fromIntegral len + pos + 1
+  mc <- tagSep clast pos' inp
   case mc of
     Just (c, t) ->
-      tagPopDetail c t clast pos >>= \(sbs, sc, t') ->
-        pr con sbs sc clast (fromIntegral len + pos + 1) t'
+      tagPopDetail c t clast pos' >>= \(sbs, sc, t') ->
+        pr con sbs sc clast pos' t'
     Nothing -> pure $ finish con
 {-# INLINE mfinish #-}
 
@@ -167,11 +168,12 @@ mfinishSimple ::
   (a -> Subtag -> Component -> Int -> Text -> Either Err LanguageTag) ->
   Either Err LanguageTag
 mfinishSimple !len !clast !pos !inp !con !pr = do
-  mc <- tagSep clast pos inp
+  let pos' = fromIntegral len + pos + 1
+  mc <- tagSep clast pos' inp
   case mc of
     Just (c, t) ->
-      tagPop c t clast pos >>= \(sbs, t') ->
-        pr con sbs clast (fromIntegral len + pos + 1) t'
+      tagPop c t clast pos' >>= \(sbs, t') ->
+        pr con sbs clast pos' t'
     Nothing -> pure $ finish con
 {-# INLINE mfinishSimple #-}
 
@@ -181,10 +183,28 @@ isDigit (SubtagChar w) = w < 10
 
 parseBCP47 :: Text -> Either Err LanguageTag
 parseBCP47 inp = case T.uncons inp of
-  Just (c, t) -> parseBCP47' c t
+  Just (c, t) -> catchIrregulars $ parseBCP47' c t
   Nothing -> Left $ Err 0 Cbeginning ErrEmpty
+  where
+    -- FIXME: sufficient for the moment
+    catchIrregulars (Right a) = Right a
+    catchIrregulars (Left e)
+      | T.length inp == 9,
+        T.toLower inp == T.pack "en-gb-oed" =
+        Right $ IrregularGrandfathered EnGBoed
+      | T.length inp == 10,
+        T.toLower inp == T.pack "sgn-be-fr" =
+        Right $ IrregularGrandfathered SgnBEFR
+      | T.length inp == 10,
+        T.toLower inp == T.pack "sgn-be-nl" =
+        Right $ IrregularGrandfathered SgnBENL
+      | T.length inp == 10,
+        T.toLower inp == T.pack "sgn-ch-de" =
+        Right $ IrregularGrandfathered SgnCHDE
+      | otherwise = Left e
 
--- TODO: catch regular grandfathered and the rest of the irregulars
+-- TODO HERE: okay, so all the errors are very slightly misaligned,
+-- right? I want the position to be the position of the current tag?
 
 -- TODO: also test out the normal approach of 'split'ting the input beforehand
 parseBCP47' :: Char -> Text -> Either Err LanguageTag
@@ -210,8 +230,37 @@ parseBCP47' !initchar !inp = tagPopDetail initchar inp Cbeginning 0 >>= parsePri
           t
           (initcon st nullSubtag nullSubtag nullSubtag)
           tryScript
-      | otherwise = mfinish (tagLength st) Cprimary 0 t (initcon st) tryLext1
+      | otherwise = mfinish (tagLength st) Cprimary 0 t (initcon st) (tryGrandPrimary st)
     parsePrimary _ = Left $ Err 0 Cbeginning ErrBadChar
+
+    tryGrandPrimary st0 con st1 sc clast pos t =
+      case (unSubtag st0, unSubtag st1) of
+        (10618854602642030595, 13775215567545827334)
+          | T.null t -> pure $ RegularGrandfathered Artlojban
+        (11136205609836216323, 12271798482267799559)
+          | T.null t -> pure $ RegularGrandfathered Celgaulish
+        (14348468412802400258, 10892940861214031875)
+          | T.null t -> pure $ RegularGrandfathered Nobok
+        (14348468412802400258, 14396952477540810755)
+          | T.null t -> pure $ RegularGrandfathered Nonyn
+        (17775707729231347714, 12361462747483865093)
+          | T.null t -> pure $ RegularGrandfathered Zhguoyu
+        (17775707729231347714, 12559323919351283717)
+          | T.null t -> pure $ RegularGrandfathered Zhhakka
+        (17775707729231347714, 14036664507351171075) -> do
+          let pos' = pos + fromIntegral (tagLength st1) + 1
+          msep <- tagSep clast pos' t
+          case msep of
+            Nothing -> pure $ RegularGrandfathered Zhmin
+            Just (c, t') -> do
+              (st2, sc', t'') <- tagPopDetail c t' Clext1 pos'
+              case unSubtag st2 of
+                14288866086483918851
+                  | T.null t'' -> pure $ RegularGrandfathered Zhminnan
+                _ -> tryLext2 (con $ justSubtag st1) st2 sc' Clext1 pos' t''
+        (17775707729231347714, 17206338448969957381)
+          | T.null t -> pure $ RegularGrandfathered Zhxiang
+        _ -> tryLext1 con st1 sc clast pos t
 
     tryLext1 !con st sc clast pos t
       | OnlyLetter <- sc,
@@ -262,27 +311,29 @@ parseBCP47' !initchar !inp = tagPopDetail initchar inp Cbeginning 0 >>= parsePri
       | otherwise = parseExtension (\ne -> con . strictCons (Extension (subtagHead st) ne)) pos t
 
     parsePrivateUse con pos t = do
-      ms <- tagSep Cprivateuse pos t
+      let pos' = pos + 2
+      ms <- tagSep Cprivateuse pos' t
       case ms of
         Just (c, t') -> do
-          (st, sc, t'') <- tagPopDetail c t' Cprivateuse pos
-          parsePrivateUseTag con st sc Cprivateuse pos t''
+          (st, sc, t'') <- tagPopDetail c t' Cprivateuse pos'
+          parsePrivateUseTag con st sc Cprivateuse pos' t''
         Nothing -> Left $ Err pos Cprivateuse ErrNeededTag
 
     parsePrivateUseTag con st _ _ pos t =
       mfinish (tagLength st) Cprivateuse pos t (con . strictCons st) parsePrivateUseTag
 
     parseExtension con pos t = do
-      ms <- tagSep Cextension pos t
+      let pos' = pos + 2
+      ms <- tagSep Cextension pos' t
       case ms of
         Just (c, t') -> do
-          (st, t'') <- tagPop c t' Cextension pos
+          (st, t'') <- tagPop c t' Cextension pos'
           if tagLength st >= 2
             then
               mfinishSimple
                 (tagLength st)
                 Cextension
-                pos
+                pos'
                 t''
                 (con . strictNE st)
                 parseExtensionTag
