@@ -1,7 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 -- |
@@ -258,7 +257,7 @@ propercase (PrivateTag (PrivateUse _ (st NE.:| sts))) = PrivateTag $ PrivateUse 
     con !b = st' NE.:| b
     new = go con sts
     strictColon !x !xs = x : xs
-    go !l (t : ts) = let t' = lower t in t' `seq` go (l . (strictColon t')) ts
+    go !l (t : ts) = let t' = lower t in t' `seq` go (l . strictColon t') ts
     go l [] = l []
 propercase x = x
 
@@ -289,9 +288,9 @@ parsePrivate !_ ((x, xpos) : xs) = do
     go !l ((t, pos) : ts) = do
       guardPrivate pos t
       go (l . (lower t :)) ts
-    go !l ![] =
+    go !l [] =
       let l' = l []
-       in forcing l' `seq` (pure l')
+       in forcing l' `seq` pure l'
     forcing (a NE.:| as) = a `seq` forcing' as
     forcing' (a : as) = a `seq` forcing' as
     forcing' [] = ()
@@ -731,7 +730,7 @@ renderLanguageTagPretty = T.intercalate "-" . go . toComponents'
     go (Right (l NE.:| xs, es, ps)) =
       lower l :
       ( (treatLater <$> xs)
-          <> (concatMap fromExtension es)
+          <> concatMap fromExtension es
           <> (lower <$> ps)
       )
     treatLater l

@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -26,6 +27,9 @@ Also bench the implementation with just bytestrings and unfoldrN
 
 TODO: test strictness in more places (e.g. the non-strictness of : and
 :| may be a problem)
+
+TODO: try parsing strategy that first lexes the input stream into
+Subtag tokens (i.e. pop everything first with some kind of foldr).
 
 -}
 
@@ -71,6 +75,8 @@ data Err = Err
 -- TODO: come up with a type for the errlength bool?
 -- TODO: could distinguish between "extremely bad" (not even a
 -- alphanum/dash) and merely inappropriate
+-- TODO: remember that Err 0 Cprimary ErrNeededTag can only occur
+-- when the start is "x" or "i".
 data ErrType
   = -- | incorrect tag length for the section (false for too short)
     ErrLength !Bool
@@ -88,6 +94,9 @@ data ErrType
     ErrTagEnd
   | -- | invalid tag
     ErrBadTag
+  | -- | an @i-@ tag should be followed by exactly one
+    -- tag
+    ErrIrregINum
   deriving (Eq, Ord, Show, Read)
 
 ----------------------------------------------------------------
@@ -131,7 +140,7 @@ tagPop ::
   Component ->
   Int ->
   Either Err (Subtag, Bool, Bool, Text)
-tagPop initchar inp clast pos = case popSubtagDetail initchar inp of
+tagPop initchar inp clast pos = case popSubtag initchar inp of
   Just (st, sl, sd, t) -> Right (st, sl, sd, t)
   Nothing -> Left $ Err pos clast ErrBadChar
 {-# INLINE tagPop #-}
@@ -205,9 +214,14 @@ parseBCP47' !initchar !inp = tagPopBegin initchar inp Cbeginning 0 >>= parsePrim
     -- TODO: could be optimized a bit
     parsePrimary (st, _, sd, t)
       | sd = Left $ Err 0 Cbeginning ErrBadChar
-      | tagLength st == 1,
-        subtagHead st == subtagCharx =
-        PrivateTag <$> parsePrivate 0 t
+      | tagLength st == 1 =
+        if subtagHead st == subtagCharx
+          then PrivateTag <$> parsePrivate 0 t
+          else do
+            msep <- tagSep Cprimary 0 t
+            case msep of
+              Just (c, t') -> parseIrregularI st c t'
+              Nothing -> Left $ Err 0 Cprimary ErrNeededTag
       | tagLength st >= 4 =
         mfinish
           (tagLength st)
@@ -306,6 +320,31 @@ parseBCP47' !initchar !inp = tagPopBegin initchar inp Cbeginning 0 >>= parsePrim
     parseExtensionTag con st sl sd _ pos t
       | tagLength st == 1 = trySingleton (con []) st sl sd Cextension pos t
       | otherwise = mfinish (tagLength st) Cextension pos t (con . strictCons st) parseExtensionTag
+
+    parseIrregularI st c t
+      | st /= subtagI = Left $ Err 0 Cbeginning ErrBadChar
+      | otherwise = case tagPopMid c t Cbeginning 0 of
+        Right (st', _, _, t') -> case T.uncons t' of
+          Just _ -> Left $ Err 0 Cprimary ErrIrregINum
+          Nothing -> recognizeIrregI st'
+        Left e -> Left e
+
+    -- TODO: might want to test to make sure these constants remain
+    -- accurate
+    recognizeIrregI (Subtag n) = case n of
+      10595562548319223811 -> Right $ IrregularGrandfathered Iami
+      10888648367819194371 -> Right $ IrregularGrandfathered Ibnn
+      11424054330861289479 -> Right $ IrregularGrandfathered Idefault
+      11753452397160103944 -> Right $ IrregularGrandfathered Ienochian
+      12559272723341115395 -> Right $ IrregularGrandfathered Ihak
+      13473417321460531207 -> Right $ IrregularGrandfathered Iklingon
+      14036711545832996869 -> Right $ IrregularGrandfathered Imingo
+      14289469405371826182 -> Right $ IrregularGrandfathered Inavajo
+      14964406030589493251 -> Right $ IrregularGrandfathered Ipwn
+      16018318712138366979 -> Right $ IrregularGrandfathered Itao
+      16019022399580143619 -> Right $ IrregularGrandfathered Itay
+      16099805717896101891 -> Right $ IrregularGrandfathered Itsu
+      _ -> Left $ Err 2 CirregI ErrBadTag
 {-# INLINE parseBCP47' #-}
 
 parsePrivate :: Int -> Text -> Either Err (NE.NonEmpty Subtag)
@@ -317,7 +356,7 @@ parsePrivate initpos inp = do
       parsePrivateUseTag (strictNE st) (initpos + fromIntegral (tagLength st) + 1) t'
     Nothing -> Left $ Err initpos Cprivateuse ErrNeededTag
   where
-    parsePrivateUseTag con !pos !t = do
+    parsePrivateUseTag !con !pos !t = do
       mc <- tagSep Cprivateuse pos t
       case mc of
         Just (c, t') -> do
@@ -331,3 +370,10 @@ strictNE !x !y = x NE.:| y
 
 strictCons :: a -> [a] -> [a]
 strictCons !x !y = x : y
+
+----------------------------------------------------------------
+-- Grandfathered (sub)tag constants
+----------------------------------------------------------------
+
+subtagI :: Subtag
+subtagI = Subtag 12682136550675316737
