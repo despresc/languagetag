@@ -140,10 +140,10 @@ tests:
   a tag get parsed properly
 - check that irregular grandfathered tags with any components after
   them are never parsed
+- error positions
 -}
 
 {-
-
 Make LangugeTag opaque? Could be freer to change the internal
 representations of things if we do. Unsure. Would want various unsafe*
 functions to convert directly to a tag. Seems okay?

@@ -13,27 +13,7 @@ import qualified Data.Text as T
 import Data.Word (Word8)
 import Text.LanguageTag.Internal.BCP47.SyntaxAlt
 
-{- TODO HERE
-
-Okay, write the rest of the parsing for bench purposes. (N.B. need to
-fix original's parsing to output proper case).
-
-Also bench the implementation with just bytestrings and unfoldrN
-
-(maybe a combo of the two, I don't know).
-
-TODO: test strictness in more places (e.g. the non-strictness of : and
-:| may be a problem)
-
-TODO: try parsing strategy that first lexes the input stream into
-Subtag tokens (i.e. pop everything first with some kind of foldr). Or
-maybe some kind of weird custom fold?
-
--}
-
--- TODO: need to improve the documentation for the error types (e.g. errComponent)
-
--- | The component just before what we're trying to parse
+-- | The component just before what we're trying to parse.
 data Component
   = -- | just started
     Cbeginning
@@ -70,22 +50,15 @@ data Err = Err
   }
   deriving (Eq, Ord, Show, Read)
 
--- TODO: come up with a type for the errlength bool?
 -- TODO: could distinguish between "extremely bad" (not even a
 -- alphanum/dash) and merely inappropriate
 -- TODO: remember that Err 0 Cprimary ErrNeededTag can only occur
 -- when the start is "x" or "i".
 data ErrType
-  = -- | incorrect tag length for the section (false for too short)
-    ErrLength !Bool
-  | -- | empty input
+  = -- | empty input
     ErrEmpty
-  | -- | empty tag
-    ErrEmptyTag
   | -- | character was encountered that was incorrect for the section
     ErrBadChar
-  | -- | only one single-character tag at the beginning (TODO: better name)
-    ErrSingleBegin
   | -- | another tag was expected
     ErrNeededTag
   | -- | expecting a tag separator or the end of input
@@ -202,9 +175,6 @@ parseBCP47 inp = case T.uncons inp of
         T.toLower inp == T.pack "sgn-ch-de" =
         Right $ IrregularGrandfathered SgnCHDE
       | otherwise = Left e
-
--- TODO HERE: okay, so all the errors are very slightly misaligned,
--- right? I want the position to be the position of the current tag?
 
 -- TODO: also test out the normal approach of 'split'ting the input beforehand
 parseBCP47' :: Char -> Text -> Either Err LanguageTag
