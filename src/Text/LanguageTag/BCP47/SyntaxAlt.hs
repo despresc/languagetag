@@ -5,13 +5,13 @@
 
 -- TODO: remove me or integrate me with Syntax
 
-module Text.BCP47.SyntaxAlt where
+module Text.LanguageTag.BCP47.SyntaxAlt where
 
 import qualified Data.List.NonEmpty as NE
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Word (Word8)
-import Text.BCP47.Internal.SyntaxAlt
+import Text.LanguageTag.Internal.BCP47.SyntaxAlt
 
 {- TODO HERE
 

@@ -1,21 +1,23 @@
 cabal-version: 2.4
-name:          bcp47-full
+name:          languagetags
 version:       0.1.0
-synopsis:      BCP47-compliant language tag handling
-bug-reports:   https://github.com/despresc/bcp47-full/issues 
+synopsis:      Language tag parsing and analysis
+bug-reports:   https://github.com/despresc/languagetags/issues 
 license:       BSD-2-Clause
 license-file:  LICENSE
 author:        Christian Despres
 maintainer:    christian.j.j.despres@gmail.com
 copyright:     Copyright 2021 Christian Despres
-category:      Text, Web
+category:      Text
 description:
-  This library provides parsers for checking the syntactic
-  well-formedness and semantic validity of [BCP47 language
-  tags](https://tools.ietf.org/html/bcp47) as of its current RFC5646
-  version, as well as functions to canonicalize such tags. The
-  pertinent functions are generated automatically using data from the
-  IANA Language Subtag Registry as of its 2020-12-18 release,
+  This library aims to provide tools for parsing and analyzing a
+  variety of different language tags, /language tag/ meaning some code
+  in a standard for identifying human languages. Currently it only
+  supports checking the syntactic well-formedness and semantic
+  validity of [BCP47 language tags](https://tools.ietf.org/html/bcp47)
+  as of its current RFC5646 version, as well as canonicalizing such
+  tags. The pertinent functions are generated automatically using data
+  from the IANA Language Subtag Registry as of its 2020-12-18 release,
   available from
   <https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry>.
   (If there has been a release in the meantime, please open an issue).
@@ -35,8 +37,8 @@ library
     bytestring
   ghc-options: -Wall
   exposed-modules:
-    Text.BCP47.SyntaxAlt
-    Text.BCP47.Internal.SyntaxAlt
+    Text.LanguageTag.BCP47.SyntaxAlt
+    Text.LanguageTag.Internal.BCP47.SyntaxAlt
 
 test-suite test
   type: exitcode-stdio-1.0
@@ -44,7 +46,7 @@ test-suite test
   main-is: Spec.hs
   hs-source-dirs:
     test
-  build-depends: bcp47-full, base, text, containers, deepseq, hspec
+  build-depends: languagetags, base, text, containers, deepseq, hspec
 
 benchmark bench
   type: exitcode-stdio-1.0

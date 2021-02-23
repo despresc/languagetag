@@ -1,1 +1,1 @@
-# Revision history for bcp47-full
+# Revision history for languagetags

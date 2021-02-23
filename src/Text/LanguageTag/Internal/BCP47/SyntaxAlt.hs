@@ -5,7 +5,7 @@
 -- TODO: remove this file or integrate it with the other
 -- is alternate internal syntax stuff.
 
-module Text.BCP47.Internal.SyntaxAlt where
+module Text.LanguageTag.Internal.BCP47.SyntaxAlt where
 
 import qualified Data.Bits as Bit
 import qualified Data.ByteString.Internal as BI
@@ -31,17 +31,13 @@ names of things.
 
 TODO: test that the contents are actually accurate
 
-TODO HERE: just remove the fucking show and read instances. Then call
-normalTag and fullNormalTag "unsafe*" instead. Also remove the lax
-functions.
-
 -}
 
 -- | A compact representation of a BCP47 subtag (a string of ASCII
 -- letters and digits of length between one and eight). The 'Ord'
 -- instance is identical to that of 'Text', in that for two subtags
--- @x@ and @y@, we have @x < y@ if and only if @'tagToText' x <
--- 'tagToText' y@.
+-- @x@ and @y@, we have @x < y@ if and only if @'renderLanguageTag' x
+-- < 'renderLanguageTag' y@.
 --
 -- These tags are always stored and printed entirely in lower case
 -- when on their own; in the context of a full tag, they may be
@@ -58,10 +54,33 @@ functions.
 newtype Subtag = Subtag {unSubtag :: Word64}
   deriving (Eq, Ord)
 
+-- TODO: check that this is half the inverse of parse
+instance Show Subtag where
+  showsPrec p ps r = showsPrec p (renderSubtagLow ps) r
+
+-- | Unwrap the internal representation of a 'Subtag'
+unwrapSubtag :: Subtag -> Word64
+unwrapSubtag = unSubtag
+{-# INLINE unwrapSubtag #-}
+
+-- | Convert the internal representation of a 'Subtag' back to a
+-- 'Subtag'
+wrapSubtag :: Word64 -> Maybe Subtag
+wrapSubtag = undefined
+{-# INLINE wrapSubtag #-}
+
+-- | Convert the internal representation of a 'Subtag' back to a
+-- 'Subtag' without checking the validity of the input
+unsafeWrapSubtag :: Word64 -> Subtag
+unsafeWrapSubtag = Subtag
+{-# INLINE unsafeWrapSubtag #-}
+
 -- | A subtag that may not be present. Equivalent to @Maybe
 -- Subtag@. Use 'justSubtag' and 'nullSubtag' to construct these, and
 -- 'fromMaybeSubtag' to eliminate them.
 newtype MaybeSubtag = MaybeSubtag Subtag
+
+-- | Deconstruct a 'MaybeSubtag'
 
 -- relies on the fact that valid 'Subtag' values will never be zero
 fromMaybeSubtag :: MaybeSubtag -> Maybe Subtag
@@ -70,15 +89,18 @@ fromMaybeSubtag (MaybeSubtag (Subtag n))
   | otherwise = Just $ Subtag n
 {-# INLINE fromMaybeSubtag #-}
 
+-- | Convert a 'Subtag' to a 'MaybeSubtag' that is present
 justSubtag :: Subtag -> MaybeSubtag
 justSubtag = MaybeSubtag
 {-# INLINE justSubtag #-}
 
+-- | A 'MaybeSubtag' that is not present
 nullSubtag :: MaybeSubtag
 nullSubtag = MaybeSubtag (Subtag 0)
 {-# INLINE nullSubtag #-}
 
--- TODO: temporary show instance
+-- | The encoding of a valid subtag character (an ASCII alphabetic
+-- character or digit)
 newtype SubtagChar = SubtagChar {unSubtagChar :: Word8}
   deriving (Eq, Show)
 
@@ -165,28 +187,6 @@ tagLength = fromIntegral . (Bit..&.) sel . unSubtag
   where
     sel = 15
 {-# INLINE tagLength #-}
-
--- map over the constituent letters of a subtag. the given function
--- must, of course, preserve the encoding.
-imapSubtag :: (Word8 -> SubtagChar -> SubtagChar) -> Subtag -> Subtag
-imapSubtag f n = Subtag n'
-  where
-    len = tagLength n
-    n' = go (fromIntegral len) 0 n
-    go !acc !idx !w
-      | idx == len = acc
-      | otherwise =
-        let (c, w') = popChar w
-         in go
-              ( acc
-                  + Bit.shiftL
-                    (fromIntegral $ unSubtagChar $ f idx c)
-                    -- TODO: I think this is right?
-                    (fromIntegral $ 58 - 6 * idx)
-              )
-              (idx + 1)
-              w'
-{-# INLINE imapSubtag #-}
 
 -- will mangle the length and letter/digit details of a subtag!
 popChar :: Subtag -> (SubtagChar, Subtag)
@@ -277,7 +277,7 @@ toSubtag = fmap fst . toSubtagDetail
 
 -- | Read a tag from the given text value, truncating it or replacing
 -- it with the singleton "a" if necessary, and replacing any
--- characters other than ASCII digits or letters with @'a'@.
+-- characters other than ASCII digits or letters with @\'a\'@.
 toSubtagLax :: Text -> Subtag
 toSubtagLax t = readSubtag (fromIntegral len) (wchars [])
   where
@@ -338,6 +338,10 @@ data LanguageTag
   | RegularGrandfathered !RegularGrandfathered
   | IrregularGrandfathered !IrregularGrandfathered
 
+-- TODO: test that this is half the inverse of parse
+instance Show LanguageTag where
+  showsPrec p ps r = showsPrec p (renderLanguageTag ps) r
+
 -- TODO: put this and other functions into the main module, I
 -- think. Also document this.
 renderLanguageTag :: LanguageTag -> TL.Text
@@ -350,9 +354,9 @@ renderLanguageTag (NormalTag (Normal pr e1 e2 e3 sc reg vars exts pu)) =
   where
     renderLowPref s = "-" <> renderSubtagLow s
     pr' = renderSubtagLow pr
-    e1' = fromMaybe "" $ renderLowPref <$> fromMaybeSubtag e1
-    e2' = fromMaybe "" $ renderLowPref <$> fromMaybeSubtag e2
-    e3' = fromMaybe "" $ renderLowPref <$> fromMaybeSubtag e3
+    e1' = maybe "" renderLowPref $ fromMaybeSubtag e1
+    e2' = maybe "" renderLowPref $ fromMaybeSubtag e2
+    e3' = maybe "" renderLowPref $ fromMaybeSubtag e3
     sc' = renderScript sc
     reg' = renderRegion reg
     vars' = foldMap renderLowPref vars
@@ -593,12 +597,12 @@ instance Finishing LanguageTag where
 
 -- $valueconstruction
 
--- | Construct a normal tag from its components. Keep in mind the
--- warnings for 'toSubtagLax' when using this function with the
--- 'IsString' instances for 'Subtag' and 'MaybeSubtag', since they
--- will silently mangle ill-formed subtags (though the result will
--- still be well-formed). This function will also not check if the
--- input is a regular grandfathered language tag. See
+-- | Construct a normal tag from its components. This function uses
+-- 'toSubtagLax' to construct the subtags from the given components,
+-- so the warnings that accompany that function also apply here. This
+-- function will also not check if the input is a regular
+-- grandfathered language tag, and will not check if the subtags are
+-- appropriate for their sections. See
 -- <https://tools.ietf.org/html/bcp47#section-2.1> for the exact
 -- grammar. A summary of the rules to follow to ensure that the input
 -- is well-formed:
@@ -621,53 +625,69 @@ instance Finishing LanguageTag where
 --   and eight digits or letters long.
 --
 -- * Private use subtags: between one and eight digits or letters.
-
--- TODO: check for the regular grandfathered tags?
 --
--- TODO: link to the section that has all of the regular/irregular
--- grandfathered tag constants in it.
+-- All types of subtags but the primary language subtag are
+-- optional. The empty text value @""@ should be used for subtags that
+-- are not present.
 --
--- TODO: have this function and fullNormalTag actually mangle the
--- input tags. Also check to make sure that the extension sections
--- don't have the x singleton.
-normalTag ::
+-- Examples of well-formed normal tags:
+--
+-- >>> unsafeNormalTag "en" "" "" "US" [] [] []
+-- "en-US"
+--
+-- >>> unsafeNormalTag "cmn" "" "" "" [] [] []
+-- "cmn"
+--
+-- >>> unsafeNormalTag "cmn" "" "" "" [] [] []
+-- "zh-Hant-HK"
+--
+-- >>> unsafeNormalTag "cmn" "" "" "" [] [] []
+-- "es-419"
+--
+-- And a tag with all the parts labelled:
+--
+-- @
+-- "fr-frm-Armi-AU-1606nict-a-strange-x-tag"
+-- -- primary language  "fr"
+-- -- extended language "frm"
+-- -- script            "Armi"
+-- -- region            "AU"
+-- -- variants          ["1606nict"]
+-- -- extensions        [(\'a\', "strange" :| [])]
+-- -- private use       ["tag"]
+-- @
+--
+-- (which mean something like: the Australian dialect of the Middle
+-- French that is roughly exemplified by Jean Nicot's 1606 dictionary,
+-- written in the Imperial Aramaic script, also including certain
+-- extensions and private use subtags).
+unsafeNormalTag ::
   -- | primary language
-  Subtag ->
+  Text ->
   -- | extended language
-  MaybeSubtag ->
+  Text ->
   -- | script
-  MaybeSubtag ->
+  Text ->
   -- | region
-  MaybeSubtag ->
+  Text ->
   -- | variant subtags
-  [Subtag] ->
+  [Text] ->
   -- | extension sections
-  [(Char, NonEmpty Subtag)] ->
+  [(Char, NonEmpty Text)] ->
   -- | private use subtags
-  [Subtag] ->
+  [Text] ->
   LanguageTag
-normalTag l me ms mr mv es pus =
-  NormalTag $
-    Normal
-      { primlang = l,
-        extlang1 = me,
-        extlang2 = nullSubtag,
-        extlang3 = nullSubtag,
-        script = ms,
-        region = mr,
-        variants = mv,
-        extensions = uncurry (Extension . packCharLax) <$> es,
-        privateUse = pus
-      }
+unsafeNormalTag l me ms mr mv es pus = undefined
+{-# INLINE unsafeNormalTag #-}
 
 -- | Construct a full normal tag from its components. You probably
--- want 'normalTag' instead of this function, since the third extended
--- language will always be null for valid tags and the only valid tag
--- with a non-null second extended language is the regular
+-- want 'unsafeNormalTag' instead of this function, since the third
+-- extended language will always be null for valid tags and the only
+-- valid tag with a non-null second extended language is the regular
 -- grandfathered tag @zh-min-nan@, which should be constructed with
--- 'zhMinNan'. The warnings for 'normalTag' also apply to this
+-- 'zhMinNan'. The warnings for 'unsafeNormalTag' also apply to this
 -- function.
-fullNormalTag ::
+unsafeFullNormalTag ::
   -- | primary language
   Subtag ->
   -- | extended language
@@ -687,19 +707,8 @@ fullNormalTag ::
   -- | private use subtags
   [Subtag] ->
   LanguageTag
-fullNormalTag l me me2 me3 ms mr mv es pus =
-  NormalTag $
-    Normal
-      { primlang = l,
-        extlang1 = me,
-        extlang2 = me2,
-        extlang3 = me3,
-        script = ms,
-        region = mr,
-        variants = mv,
-        extensions = uncurry (Extension . packCharLax) <$> es,
-        privateUse = pus
-      }
+unsafeFullNormalTag l me me2 me3 ms mr mv es pus = undefined
+{-# INLINE unsafeFullNormalTag #-}
 
 -- | A private use tag starts with @x-@, which is followed by one or
 -- more private use subtags, each of which is between one and eight
