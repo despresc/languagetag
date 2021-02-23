@@ -6,8 +6,8 @@ module Main where
 import Test.Tasty.Bench
 import Control.DeepSeq (NFData(..))
 
-import Text.LanguageTag.BCP47.SyntaxAlt
-import Text.LanguageTag.Internal.BCP47.SyntaxAlt
+import Text.LanguageTag.BCP47.Syntax
+import Text.LanguageTag.Internal.BCP47.Syntax
 
 
 

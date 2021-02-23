@@ -3,11 +3,98 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Text.LanguageTag.BCP47.Syntax where
+-- |
+-- Module      : Text.LanguageTag.BCP47.Syntax
+-- Description : BCP47 language tag parser
+-- Copyright   : 2021 Christian Despres
+-- License     : BSD-2-Clause
+-- Maintainer  : Christian Despres
+--
+-- This module provides the 'parseBCP47' function to parse well-formed
+-- (but not necessarily valid) BCP47 language tags as of the current
+-- 2009 version. A copy of this standard is available at
+-- <https://tools.ietf.org/html/bcp47>.
+module Text.LanguageTag.BCP47.Syntax
+  ( -- * Parsing and rendering tags
+    LanguageTag,
+    parseBCP47,
+    renderLanguageTag,
+    renderLanguageTagBuilder,
+
+    -- * Constructing tags directly
+    -- $valueconstruction
+
+    -- ** Normal and private use tags
+    unsafeNormalTag,
+    unsafeFullNormalTag,
+    unsafePrivateTag,
+
+    -- ** Grandfathered tags
+    -- $grandfathered
+
+    -- *** Irregular grandfathered tags
+    -- $irregular
+    enGbOed,
+    iAmi,
+    iBnn,
+    iDefault,
+    iEnochian,
+    iHak,
+    iKlingon,
+    iLux,
+    iMingo,
+    iNavajo,
+    iPwn,
+    iTao,
+    iTay,
+    iTsu,
+    sgnBeFr,
+    sgnBeNl,
+    sgnChDe,
+
+    -- *** Regular grandfathered tags
+    -- $regular
+    artLojban,
+    celGaulish,
+    noBok,
+    noNyn,
+    zhGuoyu,
+    zhHakka,
+    zhMin,
+    zhMinNan,
+    zhXiang,
+
+    -- * Subtags
+    Subtag,
+    renderSubtag,
+    renderSubtagBuilder,
+    toMangledSubtag,
+    unwrapSubtag,
+    wrapSubtag,
+    unsafeWrapSubtag,
+    unpackSubtag,
+    subtagHead,
+    unsafeIndexSubtag,
+    MaybeSubtag,
+    justSubtag,
+    nullSubtag,
+    fromMaybeSubtag,
+    SubtagChar,
+    packChar,
+    packCharLax,
+    unpackChar,
+
+    -- * Errors
+    Err (..),
+    Component (..),
+    ErrType (..),
+  )
+where
 
 import qualified Data.List.NonEmpty as NE
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.Text.Lazy.Builder as TB
 import Data.Word (Word8)
 import Text.LanguageTag.Internal.BCP47.Syntax
 
@@ -52,6 +139,8 @@ data Err = Err
 -- alphanum/dash) and merely inappropriate
 -- TODO: remember that Err 0 Cprimary ErrNeededTag can only occur
 -- when the start is "x" or "i".
+
+-- | The type of error that occurred during parsing
 data ErrType
   = -- | empty input
     ErrEmpty
@@ -85,7 +174,7 @@ tagPopDetail initchar inp clast pos = case popSubtagDetail initchar inp of
 {-# INLINE tagPopDetail #-}
 
 -- | Pop a tag from the input stream when we don't care about the
--- 'SeenChar'.
+-- SeenChar.
 tagPop ::
   Char ->
   Text ->
@@ -152,6 +241,7 @@ isDigit :: SubtagChar -> Bool
 isDigit (SubtagChar w) = w < 10
 {-# INLINE isDigit #-}
 
+-- | Parse a BCP47 language tag
 parseBCP47 :: Text -> Either Err LanguageTag
 parseBCP47 inp = case T.uncons inp of
   Just (c, t) -> catchIrregulars $ parseBCP47' c t
@@ -362,3 +452,55 @@ parsePrivate initpos inp = do
 
 subtagI :: Subtag
 subtagI = Subtag 12682136550675316737
+
+----------------------------------------------------------------
+-- Renamed exports
+----------------------------------------------------------------
+
+-- | Render a subtag as a laxy text builder. The resulting value will
+-- be in lower case.
+renderSubtagBuilder :: Subtag -> TB.Builder
+renderSubtagBuilder = renderSubtagLow
+{-# INLINE renderSubtagBuilder #-}
+
+-- | Render a subtag as a strict text value. The resulting value will
+-- be in lower case. This should be faster than converting the result
+-- of 'renderSubtagBuilder' to strict text.
+renderSubtag :: Subtag -> Text
+renderSubtag w = T.unfoldrN (fromIntegral len) go (w, 0)
+  where
+    len = tagLength w
+    go (n, idx)
+      | idx == len = Nothing
+      | otherwise =
+        let (c, n') = unsafePopChar n
+         in Just (unpackChar c, (n', idx + 1))
+{-# INLINE renderSubtag #-}
+
+-- $valueconstruction
+--
+-- Other than the 'parseBCP47' function, tags can also be constructed
+-- using 'unsafeNormalTag' and 'unsafePrivateTag' if they are known to
+-- be well-formed. Constants are also provided for all the
+-- grandfathered tags in BCP47, but note that as of 2021-02-23 all of
+-- them are deprecated except for 'iDefault' and 'iMingo', and of the
+-- deprecated tags, only 'iEnochian' has no replacement tag.
+
+-- $grandfathered
+--
+-- In a prior standard it was possible to register entire tags, not
+-- simply subtags. Of those tags, the ones that could not be
+-- represented via registered subtags were explicitly grandfathered
+-- into the current standard via the grammar of the tags itself. All
+-- of them are valid, but they are all deprecated except for
+-- 'iDefault' and 'iMingo'.
+
+-- $regular
+--
+-- Grandfathered tags with one or more subtags that do not appear in
+-- the registry, or appear with different semantics.
+
+-- $irregular
+--
+-- Grandfathered tags that do not conform to the normal language tag
+-- grammar.

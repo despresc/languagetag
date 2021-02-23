@@ -15,7 +15,7 @@ description:
   in a standard for identifying human languages. Currently it only
   supports checking the syntactic well-formedness and semantic
   validity of [BCP47 language tags](https://tools.ietf.org/html/bcp47)
-  as of its current RFC5646 version, as well as canonicalizing such
+  as of its current 2009 version, as well as canonicalizing such
   tags. The pertinent functions are generated automatically using data
   from the IANA Language Subtag Registry as of its 2020-12-18 release,
   available from
@@ -38,6 +38,7 @@ library
   ghc-options: -Wall
   exposed-modules:
     Text.LanguageTag.BCP47.Syntax
+  other-modules:
     Text.LanguageTag.Internal.BCP47.Syntax
 
 test-suite test
@@ -55,4 +56,3 @@ benchmark bench
   hs-source-dirs:
     bench
   build-depends: languagetags, tasty-bench, base, deepseq
-  ghc-options: -O2

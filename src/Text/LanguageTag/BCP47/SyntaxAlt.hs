@@ -88,7 +88,7 @@ import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
 import Data.Text (Text)
 import qualified Data.Text as T
-import Text.BCP47.Internal.Syntax
+-- import Text.BCP47.Internal.Syntax
 
 {-
 TODO:

@@ -29,6 +29,9 @@ names of things.
 
 TODO: test that the contents are actually accurate
 
+TODO: docs on various function properties (e.g. fmap renderLanguageTag
+. parseBCP47 = Right up to case).
+
 -}
 
 -- | A compact representation of a BCP47 subtag (a string of ASCII
@@ -56,6 +59,11 @@ newtype Subtag = Subtag {unSubtag :: Word64}
 instance Show Subtag where
   showsPrec p ps r = showsPrec p (renderSubtagLow ps) r
 
+instance Show MaybeSubtag where
+  showsPrec p (MaybeSubtag t) r
+    | unSubtag t == 0 = showsPrec p ("" :: String) r
+    | otherwise = showsPrec p (renderSubtagLow t) r
+
 -- | Unwrap the internal representation of a 'Subtag'
 unwrapSubtag :: Subtag -> Word64
 unwrapSubtag = unSubtag
@@ -68,7 +76,10 @@ wrapSubtag = undefined
 {-# INLINE wrapSubtag #-}
 
 -- | Convert the internal representation of a 'Subtag' back to a
--- 'Subtag' without checking the validity of the input
+-- 'Subtag' without checking the validity of the input. Invalid
+-- subtags constructed with this function may violate invariants that
+-- other functions in this library depend on, and so cause
+-- unpredictable behaviour.
 unsafeWrapSubtag :: Word64 -> Subtag
 unsafeWrapSubtag = Subtag
 {-# INLINE unsafeWrapSubtag #-}
@@ -77,10 +88,9 @@ unsafeWrapSubtag = Subtag
 -- Subtag@. Use 'justSubtag' and 'nullSubtag' to construct these, and
 -- 'fromMaybeSubtag' to eliminate them.
 newtype MaybeSubtag = MaybeSubtag Subtag
+  deriving (Eq, Ord)
 
 -- | Deconstruct a 'MaybeSubtag'
-
--- relies on the fact that valid 'Subtag' values will never be zero
 fromMaybeSubtag :: MaybeSubtag -> Maybe Subtag
 fromMaybeSubtag (MaybeSubtag (Subtag n))
   | n == 0 = Nothing
@@ -100,7 +110,7 @@ nullSubtag = MaybeSubtag (Subtag 0)
 -- | The encoding of a valid subtag character (an ASCII alphabetic
 -- character or digit)
 newtype SubtagChar = SubtagChar {unSubtagChar :: Word8}
-  deriving (Eq, Show)
+  deriving (Eq, Ord, Show)
 
 onChar ::
   r ->
@@ -155,6 +165,7 @@ packCharLax :: Char -> SubtagChar
 packCharLax = fromMaybe (SubtagChar 36) . packChar
 {-# INLINE packCharLax #-}
 
+-- | Pack a normal 'Char' into a 'SubtagChar'.
 packChar :: Char -> Maybe SubtagChar
 packChar = fmap fst . packCharDetail
 {-# INLINE packChar #-}
@@ -186,13 +197,14 @@ tagLength = fromIntegral . (Bit..&.) sel . unSubtag
     sel = 15
 {-# INLINE tagLength #-}
 
--- will mangle the length and letter/digit details of a subtag!
-popChar :: Subtag -> (SubtagChar, Subtag)
-popChar (Subtag n) = (SubtagChar $ fromIntegral $ Bit.shiftR n 58, Subtag $ Bit.shiftL n 6)
-{-# INLINE popChar #-}
+-- | Pop a character from the head of a 'Subtag'. Note that this will
+-- mangle the stored length of a subtag!
+unsafePopChar :: Subtag -> (SubtagChar, Subtag)
+unsafePopChar (Subtag n) = (SubtagChar $ fromIntegral $ Bit.shiftR n 58, Subtag $ Bit.shiftL n 6)
+{-# INLINE unsafePopChar #-}
 
--- performs no bounds checking, though (unsafeIndexSubtag 0) will
--- always be valid.
+-- | Index a subtag without bounds checking. Note that
+-- @'unsafeIndexSubtag' 0@ is equivalent to 'subtagHead'.
 unsafeIndexSubtag :: Subtag -> Word8 -> SubtagChar
 unsafeIndexSubtag (Subtag n) idx =
   SubtagChar $
@@ -200,21 +212,31 @@ unsafeIndexSubtag (Subtag n) idx =
       Bit.shiftR n (58 - 6 * fromIntegral idx) Bit..&. sel
   where
     sel = 63
+{-# INLINE unsafeIndexSubtag #-}
 
+indexSubtag :: Subtag -> Word8 -> Maybe SubtagChar
+indexSubtag t idx
+  | tagLength t >= idx = Nothing
+  | otherwise = Just $ unsafeIndexSubtag t idx
+{-# INLINE indexSubtag #-}
+
+-- | Return the head of the 'Subtag'. Subtags are always non-empty, so
+-- this function is total.
 subtagHead :: Subtag -> SubtagChar
 subtagHead = (`unsafeIndexSubtag` 0)
 {-# INLINE subtagHead #-}
 
-writeTag :: Subtag -> [SubtagChar]
-writeTag inp = List.unfoldr go (0, inp)
+-- | Unpack a 'Subtag' into its constituent 'SubtagChar' elements.
+unpackSubtag :: Subtag -> [SubtagChar]
+unpackSubtag inp = List.unfoldr go (0, inp)
   where
     len = tagLength inp
     go (idx, n)
       | idx == len = Nothing
       | otherwise =
-        let (!w, !n') = popChar n
+        let (!w, !n') = unsafePopChar n
          in Just (w, (idx + 1, n'))
-{-# INLINE writeTag #-}
+{-# INLINE unpackSubtag #-}
 
 -- Also returns whether or not we saw a letter or a digit,
 -- respectively. Will probably want a pop version.
@@ -296,7 +318,7 @@ renderRegion (MaybeSubtag s)
     capgo (n, idx)
       | idx == (2 :: Word8) = Nothing
       | otherwise =
-        let (c, n') = popChar n
+        let (c, n') = unsafePopChar n
          in Just (unpackUpperLetter c, (n', idx + 1))
 {-# INLINE renderRegion #-}
 
@@ -309,10 +331,10 @@ renderScript (MaybeSubtag s)
     go (n, idx)
       | idx == 4 = Nothing
       | idx == 0 =
-        let (c, n') = popChar n
+        let (c, n') = unsafePopChar n
          in Just (unpackUpperLetter c, (n', idx + 1))
       | otherwise =
-        let (c, n') = popChar n
+        let (c, n') = unsafePopChar n
          in Just (unpackChar c, (n', idx + 1))
 {-# INLINE renderScript #-}
 
@@ -323,32 +345,34 @@ renderSubtagLow w = TB.fromString $ List.unfoldr go (w, 0)
     go (n, idx)
       | idx == len = Nothing
       | otherwise =
-        let (c, n') = popChar n
+        let (c, n') = unsafePopChar n
          in Just (unpackChar c, (n', idx + 1))
 {-# INLINE renderSubtagLow #-}
 
 -- | A syntactically well-formed BCP47 tag. See
 -- <https://tools.ietf.org/html/bcp47#section-2.1> for the full
--- details.
+-- details. Note that the 'Ord' instance does not correspond to that
+-- of 'Text', in the sense that there are language tags @x@ and @y@
+-- such that @x < y@ and yet @'renderLanguageTag' x >
+-- 'renderLanguageTag' y@.
 data LanguageTag
   = NormalTag {-# UNPACK #-} !Normal
   | PrivateTag !(NonEmpty Subtag)
   | RegularGrandfathered !RegularGrandfathered
   | IrregularGrandfathered !IrregularGrandfathered
+  deriving (Eq, Ord)
 
 -- TODO: test that this is half the inverse of parse
 instance Show LanguageTag where
-  showsPrec p ps r = showsPrec p (renderLanguageTag ps) r
+  showsPrec p ps r = showsPrec p (renderLanguageTagBuilder ps) r
 
--- TODO: put this and other functions into the main module, I
--- think. Also document this.
-renderLanguageTag :: LanguageTag -> TL.Text
-renderLanguageTag (NormalTag (Normal pr e1 e2 e3 sc reg vars exts pu)) =
-  TB.toLazyText $
-    pr' <> e1' <> e2' <> e3' <> sc' <> reg'
-      <> vars'
-      <> exts'
-      <> pu'
+-- | Render a language tag to a lazy text builder
+renderLanguageTagBuilder :: LanguageTag -> TB.Builder
+renderLanguageTagBuilder (NormalTag (Normal pr e1 e2 e3 sc reg vars exts pu)) =
+  pr' <> e1' <> e2' <> e3' <> sc' <> reg'
+    <> vars'
+    <> exts'
+    <> pu'
   where
     renderLowPref s = "-" <> renderSubtagLow s
     pr' = renderSubtagLow pr
@@ -363,8 +387,8 @@ renderLanguageTag (NormalTag (Normal pr e1 e2 e3 sc reg vars exts pu)) =
     pu'
       | null pu = ""
       | otherwise = "-" <> TB.singleton 'x' <> foldMap renderLowPref pu
-renderLanguageTag (PrivateTag l) = TB.toLazyText $ TB.singleton 'x' <> foldMap renderSubtagLow l
-renderLanguageTag (RegularGrandfathered t) = case t of
+renderLanguageTagBuilder (PrivateTag l) = TB.singleton 'x' <> foldMap renderSubtagLow l
+renderLanguageTagBuilder (RegularGrandfathered t) = case t of
   Artlojban -> "art-lojban"
   Celgaulish -> "cel-gaulish"
   Nobok -> "no-bok"
@@ -374,7 +398,7 @@ renderLanguageTag (RegularGrandfathered t) = case t of
   Zhmin -> "zh-min"
   Zhminnan -> "zh-min-nan"
   Zhxiang -> "zh-xiang"
-renderLanguageTag (IrregularGrandfathered t) = case t of
+renderLanguageTagBuilder (IrregularGrandfathered t) = case t of
   EnGBoed -> "en-GB-oed"
   Iami -> "i-ami"
   Ibnn -> "i-bnn"
@@ -392,11 +416,12 @@ renderLanguageTag (IrregularGrandfathered t) = case t of
   SgnBEFR -> "sgn-BE-FR"
   SgnBENL -> "sgn-BE-NL"
   SgnCHDE -> "sgn-CH-DE"
-{-# INLINE renderLanguageTag #-}
+{-# INLINE renderLanguageTagBuilder #-}
 
-renderLanguageTagStrict :: LanguageTag -> Text
-renderLanguageTagStrict = TL.toStrict . renderLanguageTag
-{-# INLINE renderLanguageTagStrict #-}
+-- | Render a language tag to a strict text string
+renderLanguageTag :: LanguageTag -> Text
+renderLanguageTag = TL.toStrict . TB.toLazyText . renderLanguageTagBuilder
+{-# INLINE renderLanguageTag #-}
 
 data Normal = Normal
   { primlang :: {-# UNPACK #-} !Subtag,
@@ -409,11 +434,13 @@ data Normal = Normal
     extensions :: ![Extension],
     privateUse :: ![Subtag]
   }
+  deriving (Eq, Ord)
 
 data Extension = Extension
   { extSingleton :: {-# UNPACK #-} !SubtagChar,
     extTags :: {-# UNPACK #-} !(NonEmpty Subtag)
   }
+  deriving (Eq, Ord)
 
 data RegularGrandfathered
   = -- | @art-lojban@
@@ -434,6 +461,7 @@ data RegularGrandfathered
     Zhminnan
   | -- | @zh-xiang@
     Zhxiang
+  deriving (Eq, Ord)
 
 data IrregularGrandfathered
   = -- | @en-GB-oed@
@@ -470,6 +498,7 @@ data IrregularGrandfathered
     SgnBENL
   | -- | @sgn-CH-DE@
     SgnCHDE
+  deriving (Eq, Ord)
 
 ----------------------------------------------------------------
 -- Various tag constants
@@ -596,14 +625,15 @@ instance Finishing LanguageTag where
 -- $valueconstruction
 
 -- | Construct a normal tag from its components. This function uses
--- 'toMangledSubtag' to construct the subtags from the given components,
--- so the warnings that accompany that function also apply here. This
--- function will also not check if the input is a regular
+-- 'toMangledSubtag' to construct the subtags from the given
+-- components, so the warnings that accompany that function also apply
+-- here. This function will also not check if the input is a
 -- grandfathered language tag, and will not check if the subtags are
 -- appropriate for their sections. See
 -- <https://tools.ietf.org/html/bcp47#section-2.1> for the exact
 -- grammar. A summary of the rules to follow to ensure that the input
--- is well-formed:
+-- is well-formed, with /letter/ meaning ASCII alphabetic character
+-- and /digit/ meaning ASCII numeric character:
 --
 -- * Primary language: between two and eight letters.
 --
