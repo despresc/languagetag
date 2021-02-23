@@ -711,9 +711,9 @@ unsafeNormalTag l me = unsafeFullNormalTag l me "" ""
 -- want 'unsafeNormalTag' instead of this function, since the third
 -- extended language will always absent in valid tags, and the only
 -- valid tag with a second extended language is the regular
--- grandfathered tag @zh-min-nan@, which should be constructed with
--- 'zhMinNan'. The warnings for 'unsafeNormalTag' also apply to this
--- function.
+-- grandfathered (and deprecated) tag @zh-min-nan@, which should be
+-- constructed with 'zhMinNan'. The warnings for 'unsafeNormalTag'
+-- also apply to this function.
 unsafeFullNormalTag ::
   -- | primary language
   Text ->
@@ -757,10 +757,8 @@ unsafeFullNormalTag l me me2 me3 ms mr vs es pus =
 -- | A private use tag starts with @x-@, which is followed by one or
 -- more private use subtags, each of which is between one and eight
 -- digits or letters long. This function constructs such a tag given
--- those private use subtags. The condition on the 'Text' values in
--- the input list is not checked, and if it does not hold then certain
--- functions in this library may behave unpredictably when given the
--- resulting tag.
+-- those private use subtags. This function uses 'toMangledSubtag',
+-- and so the warnings for that function apply here as well.
 unsafePrivateTag :: NonEmpty Text -> LanguageTag
 unsafePrivateTag = PrivateTag . strictMapNE toMangledSubtag
 {-# INLINE unsafePrivateTag #-}

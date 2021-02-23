@@ -497,8 +497,9 @@ renderSubtag w = T.unfoldrN (fromIntegral len) go (w, 0)
 
 -- $regular
 --
--- Grandfathered tags with one or more subtags that do not appear in
--- the registry, or appear with different semantics.
+-- Grandfathered tags that conform to the normal language tag grammar,
+-- but have one or more subtags that do not appear in the registry, or
+-- appear with different semantics.
 
 -- $irregular
 --
