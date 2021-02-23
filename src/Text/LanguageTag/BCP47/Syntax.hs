@@ -81,7 +81,7 @@ module Text.LanguageTag.BCP47.Syntax
     fromMaybeSubtag,
     SubtagChar,
     packChar,
-    packCharLax,
+    packCharMangled,
     unpackChar,
 
     -- * Errors

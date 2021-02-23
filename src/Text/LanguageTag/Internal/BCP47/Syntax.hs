@@ -161,9 +161,9 @@ packCharDetail = onChar Nothing low high dig
 
 -- | Like 'packChar', but replaces any invalid character with the
 -- letter a.
-packCharLax :: Char -> SubtagChar
-packCharLax = fromMaybe (SubtagChar 36) . packChar
-{-# INLINE packCharLax #-}
+packCharMangled :: Char -> SubtagChar
+packCharMangled = fromMaybe (SubtagChar 36) . packChar
+{-# INLINE packCharMangled #-}
 
 -- | Pack a normal 'Char' into a 'SubtagChar'.
 packChar :: Char -> Maybe SubtagChar
@@ -306,7 +306,7 @@ toMangledSubtag t = readSubtag (fromIntegral len) (wchars [])
       | tlen == 0 = (T.singleton 'a', 1)
       | otherwise = (T.take 8 t, min 8 tlen)
     wchars = T.foldl' go id t'
-    go l c = l . (packCharLax c :)
+    go l c = l . (packCharMangled c :)
 {-# INLINE toMangledSubtag #-}
 
 renderRegion :: MaybeSubtag -> TB.Builder
@@ -625,11 +625,11 @@ instance Finishing LanguageTag where
 -- $valueconstruction
 
 -- | Construct a normal tag from its components. This function uses
--- 'toMangledSubtag' to construct the subtags from the given
--- components, so the warnings that accompany that function also apply
--- here. This function will also not check if the input is a
--- grandfathered language tag, and will not check if the subtags are
--- appropriate for their sections. See
+-- 'toMangledSubtag' and 'packCharMangled' to construct the subtags
+-- from the given components, so the warnings that accompany that
+-- function also apply here. This function will also not check if the
+-- input is a grandfathered language tag, and will not check if the
+-- subtags are appropriate for their sections. See
 -- <https://tools.ietf.org/html/bcp47#section-2.1> for the exact
 -- grammar. A summary of the rules to follow to ensure that the input
 -- is well-formed, with /letter/ meaning ASCII alphabetic character
@@ -748,7 +748,7 @@ unsafeFullNormalTag l me me2 me3 ms mr vs es pus =
         privateUse = strictMap toMangledSubtag pus
       }
   where
-    toExtension (c, ext) = Extension (packCharLax c) (strictMapNE toMangledSubtag ext)
+    toExtension (c, ext) = Extension (packCharMangled c) (strictMapNE toMangledSubtag ext)
     mmangled t
       | T.null t = nullSubtag
       | otherwise = justSubtag $ toMangledSubtag t
