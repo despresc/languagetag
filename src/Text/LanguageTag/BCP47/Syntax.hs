@@ -68,7 +68,7 @@ module Text.LanguageTag.BCP47.Syntax
     Subtag,
     renderSubtag,
     renderSubtagBuilder,
-    toMangledSubtag,
+    packSubtagMangled,
     unwrapSubtag,
     wrapSubtag,
     unsafeWrapSubtag,

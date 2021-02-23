@@ -298,8 +298,8 @@ toSubtag = fmap fst . toSubtagDetail
 -- | Read a tag from the given text value, truncating it or replacing
 -- it with the singleton "a" if necessary, and replacing any
 -- characters other than ASCII digits or letters with @\'a\'@.
-toMangledSubtag :: Text -> Subtag
-toMangledSubtag t = readSubtag (fromIntegral len) (wchars [])
+packSubtagMangled :: Text -> Subtag
+packSubtagMangled t = readSubtag (fromIntegral len) (wchars [])
   where
     tlen = T.length t
     (t', len)
@@ -307,7 +307,7 @@ toMangledSubtag t = readSubtag (fromIntegral len) (wchars [])
       | otherwise = (T.take 8 t, min 8 tlen)
     wchars = T.foldl' go id t'
     go l c = l . (packCharMangled c :)
-{-# INLINE toMangledSubtag #-}
+{-# INLINE packSubtagMangled #-}
 
 renderRegion :: MaybeSubtag -> TB.Builder
 renderRegion (MaybeSubtag s)
@@ -625,7 +625,7 @@ instance Finishing LanguageTag where
 -- $valueconstruction
 
 -- | Construct a normal tag from its components. This function uses
--- 'toMangledSubtag' and 'packCharMangled' to construct the subtags
+-- 'packSubtagMangled' and 'packCharMangled' to construct the subtags
 -- from the given components, so the warnings that accompany that
 -- function also apply here. This function will also not check if the
 -- input is a grandfathered language tag, and will not check if the
@@ -737,30 +737,30 @@ unsafeFullNormalTag ::
 unsafeFullNormalTag l me me2 me3 ms mr vs es pus =
   NormalTag $
     Normal
-      { primlang = toMangledSubtag l,
+      { primlang = packSubtagMangled l,
         extlang1 = mmangled me,
         extlang2 = mmangled me2,
         extlang3 = mmangled me3,
         script = mmangled ms,
         region = mmangled mr,
-        variants = strictMap toMangledSubtag vs,
+        variants = strictMap packSubtagMangled vs,
         extensions = strictMap toExtension es,
-        privateUse = strictMap toMangledSubtag pus
+        privateUse = strictMap packSubtagMangled pus
       }
   where
-    toExtension (c, ext) = Extension (packCharMangled c) (strictMapNE toMangledSubtag ext)
+    toExtension (c, ext) = Extension (packCharMangled c) (strictMapNE packSubtagMangled ext)
     mmangled t
       | T.null t = nullSubtag
-      | otherwise = justSubtag $ toMangledSubtag t
+      | otherwise = justSubtag $ packSubtagMangled t
 {-# INLINE unsafeFullNormalTag #-}
 
 -- | A private use tag starts with @x-@, which is followed by one or
 -- more private use subtags, each of which is between one and eight
 -- digits or letters long. This function constructs such a tag given
--- those private use subtags. This function uses 'toMangledSubtag',
+-- those private use subtags. This function uses 'packSubtagMangled',
 -- and so the warnings for that function apply here as well.
 unsafePrivateTag :: NonEmpty Text -> LanguageTag
-unsafePrivateTag = PrivateTag . strictMapNE toMangledSubtag
+unsafePrivateTag = PrivateTag . strictMapNE packSubtagMangled
 {-# INLINE unsafePrivateTag #-}
 
 ----------------------------------------------------------------

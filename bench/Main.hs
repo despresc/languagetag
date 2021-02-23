@@ -7,9 +7,6 @@ import Test.Tasty.Bench
 import Control.DeepSeq (NFData(..))
 
 import Text.LanguageTag.BCP47.Syntax
-import Text.LanguageTag.Internal.BCP47.Syntax
-
-
 
 instance NFData Err where
   rnf x = seq x ()
@@ -29,7 +26,5 @@ main = defaultMain
      , bench "regUp3" $ nf parseBCP47 "en-hans-gb-1234-x-XXXXXX-FOOBAR"
      , bench "render1" $ nf (fmap renderLanguageTag . parseBCP47) "en-123-1234-x-XXXXXX-FOOBAR"
      , bench "render2" $ nf (fmap renderLanguageTag . parseBCP47) "en-hans-gb-1234-x-XXXXXX-FOOBAR"
-     , bench "render3" $ nf (fmap renderLanguageTagStrict . parseBCP47) "en-123-1234-x-XXXXXX-FOOBAR"
-     , bench "render4" $ nf (fmap renderLanguageTagStrict . parseBCP47) "en-hans-gb-1234-x-XXXXXX-FOOBAR"
      ]
   ]
