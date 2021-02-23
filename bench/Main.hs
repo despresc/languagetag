@@ -4,22 +4,16 @@
 module Main where
 
 import Test.Tasty.Bench
-import Text.BCP47.Syntax
 import Control.DeepSeq (NFData(..))
 
-import qualified Text.BCP47.SyntaxAlt as SA
-import qualified Text.BCP47.Internal.SyntaxAlt as SA
+import Text.BCP47.SyntaxAlt
+import Text.BCP47.Internal.SyntaxAlt
 
 
 
 instance NFData Err where
   rnf x = seq x ()
 instance NFData LanguageTag where
-  rnf x = seq x ()
-
-instance NFData SA.Err where
-  rnf x = seq x ()
-instance NFData SA.LanguageTag where
   rnf x = seq x ()
 
 main :: IO ()
@@ -29,14 +23,14 @@ main = defaultMain
      , bench "other" $ nf parseBCP47 "en-GB-xxxxxx-xxxxxx-xxxxxx-xxxxxx-xxxxxx"
      , bench "blah"  $ nf parseBCP47 "foo-XX-xxxxxx-xxxxxx-xxxxxx-xxxxxx-xxxxxx"
      , bench "privatenormal" $ nf parseBCP47 "x-XX-xxxxxx-xxxxxx-xxxxxx-xxxxxx-xxxxxx"
-     , bench "privatealt" $ nf SA.parseBCP47 "x-XX-xxxxxx-xxxxxx-xxxxxx-xxxxxx-xxxxxx"
-     , bench "privatenormal" $ nf parseBCP47 "x-XX-xxxxxx-xxxxxx-xxxxxx-xxxxxx-xxxxxx"
-     , bench "privatealt" $ nf SA.parseBCP47 "x-XX-xxxxxx-xxxxxx-xxxxxx-xxxxxx-xxxxxx"
-     , bench "regnormal" $ nf parseBCP47 "en-gb-1234-x-xxxxxx-foobar"
-     , bench "regalt" $ nf SA.parseBCP47 "en-gb-1234-x-xxxxxx-foobar"
-     , bench "regnormal" $ nf parseBCP47 "en-gb-1234-x-XXXXXX-FOOBAR"
-     , bench "regalt" $ nf SA.parseBCP47 "en-gb-1234-x-XXXXXX-FOOBAR"
-     , bench "regnormal" $ nf parseBCP47 "en-123-1234-x-XXXXXX-FOOBAR"
-     , bench "regalt" $ nf SA.parseBCP47 "en-123-1234-x-XXXXXX-FOOBAR"
+     , bench "privatealt" $ nf parseBCP47 "x-XX-xxxxxx-xxxxxx-xxxxxx-xxxxxx-xxxxxx"
+     , bench "privatealt" $ nf parseBCP47 "x-XX-xxxxxx-xxxxxx-xxxxxx-xxxxxx-xxxxxx"
+     , bench "regalt" $ nf parseBCP47 "en-gb-1234-x-xxxxxx-foobar"
+     , bench "regalt" $ nf parseBCP47 "en-gb-1234-x-XXXXXX-FOOBAR"
+     , bench "regalt" $ nf parseBCP47 "en-123-1234-x-XXXXXX-FOOBAR"
+     , bench "render1" $ nf (fmap renderLanguageTag . parseBCP47) "en-123-1234-x-XXXXXX-FOOBAR"
+     , bench "render2" $ nf (fmap renderLanguageTag . parseBCP47) "en-hans-gb-1234-x-XXXXXX-FOOBAR"
+     , bench "render3" $ nf (fmap renderLanguageTagStrict . parseBCP47) "en-123-1234-x-XXXXXX-FOOBAR"
+     , bench "render4" $ nf (fmap renderLanguageTagStrict . parseBCP47) "en-hans-gb-1234-x-XXXXXX-FOOBAR"
      ]
   ]

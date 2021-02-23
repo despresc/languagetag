@@ -9,12 +9,13 @@ module Text.BCP47.Internal.SyntaxAlt where
 
 import qualified Data.Bits as Bit
 import qualified Data.ByteString.Internal as BI
-import Data.Foldable (toList)
 import qualified Data.List as List
 import Data.List.NonEmpty (NonEmpty)
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.Text.Lazy as TL
+import qualified Data.Text.Lazy.Builder as TB
 import Data.Word (Word64, Word8)
 
 {-
@@ -288,11 +289,11 @@ toSubtagLax t = readSubtag (fromIntegral len) (wchars [])
     go l c = l . (packCharLax c :)
 {-# INLINE toSubtagLax #-}
 
-renderRegion :: MaybeSubtag -> [Text]
+renderRegion :: MaybeSubtag -> TB.Builder
 renderRegion (MaybeSubtag s)
-  | unSubtag s == 0 = []
-  | tagLength s == 2 = [T.unfoldrN 2 capgo (s, 0)]
-  | otherwise = [renderSubtagLow s]
+  | unSubtag s == 0 = ""
+  | tagLength s == 2 = TB.fromString $ '-' : List.unfoldr capgo (s, 0)
+  | otherwise = renderSubtagLow s
   where
     capgo (n, idx)
       | idx == (2 :: Word8) = Nothing
@@ -302,10 +303,10 @@ renderRegion (MaybeSubtag s)
 {-# INLINE renderRegion #-}
 
 -- TODO: should probably just do this more normally.
-renderScript :: MaybeSubtag -> [Text]
+renderScript :: MaybeSubtag -> TB.Builder
 renderScript (MaybeSubtag s)
-  | unSubtag s == 0 = []
-  | otherwise = [T.unfoldrN 4 go (s, 0 :: Word8)]
+  | unSubtag s == 0 = ""
+  | otherwise = TB.fromString $ '-' : List.unfoldr go (s, 0 :: Word8)
   where
     go (n, idx)
       | idx == 4 = Nothing
@@ -317,8 +318,8 @@ renderScript (MaybeSubtag s)
          in Just (unpackChar c, (n', idx + 1))
 {-# INLINE renderScript #-}
 
-renderSubtagLow :: Subtag -> Text
-renderSubtagLow w = T.unfoldrN (fromIntegral len) go (w, 0)
+renderSubtagLow :: Subtag -> TB.Builder
+renderSubtagLow w = TB.fromString $ List.unfoldr go (w, 0)
   where
     len = tagLength w
     go (n, idx)
@@ -339,33 +340,28 @@ data LanguageTag
 
 -- TODO: put this and other functions into the main module, I
 -- think. Also document this.
-renderLanguageTag :: LanguageTag -> Text
+renderLanguageTag :: LanguageTag -> TL.Text
 renderLanguageTag (NormalTag (Normal pr e1 e2 e3 sc reg vars exts pu)) =
-  T.intercalate "-" $
-    pr' :
-    ( e1' <> e2' <> e3' <> sc' <> reg'
-        <> vars'
-        <> exts'
-        <> pu'
-    )
+  TB.toLazyText $
+    pr' <> e1' <> e2' <> e3' <> sc' <> reg'
+      <> vars'
+      <> exts'
+      <> pu'
   where
+    renderLowPref s = "-" <> renderSubtagLow s
     pr' = renderSubtagLow pr
-    e1' = toList $ renderSubtagLow <$> fromMaybeSubtag e1
-    e2' = toList $ renderSubtagLow <$> fromMaybeSubtag e2
-    e3' = toList $ renderSubtagLow <$> fromMaybeSubtag e3
+    e1' = fromMaybe "" $ renderLowPref <$> fromMaybeSubtag e1
+    e2' = fromMaybe "" $ renderLowPref <$> fromMaybeSubtag e2
+    e3' = fromMaybe "" $ renderLowPref <$> fromMaybeSubtag e3
     sc' = renderScript sc
     reg' = renderRegion reg
-    vars' = renderSubtagLow <$> vars
-    exts' = concatMap renderExtension exts
-    renderExtension (Extension s t) =
-      T.singleton (unpackChar s) :
-      toList (renderSubtagLow <$> t)
+    vars' = foldMap renderLowPref vars
+    exts' = foldMap renderExtension exts
+    renderExtension (Extension s t) = "-" <> TB.singleton (unpackChar s) <> foldMap renderLowPref t
     pu'
-      | null pu = []
-      | otherwise = T.singleton 'x' : (renderSubtagLow <$> pu)
-renderLanguageTag (PrivateTag l) =
-  T.intercalate "-" $
-    T.singleton 'x' : toList (renderSubtagLow <$> l)
+      | null pu = ""
+      | otherwise = "-" <> TB.singleton 'x' <> foldMap renderLowPref pu
+renderLanguageTag (PrivateTag l) = TB.toLazyText $ TB.singleton 'x' <> foldMap renderSubtagLow l
 renderLanguageTag (RegularGrandfathered t) = case t of
   Artlojban -> "art-lojban"
   Celgaulish -> "cel-gaulish"
@@ -395,6 +391,10 @@ renderLanguageTag (IrregularGrandfathered t) = case t of
   SgnBENL -> "sgn-BE-NL"
   SgnCHDE -> "sgn-CH-DE"
 {-# INLINE renderLanguageTag #-}
+
+renderLanguageTagStrict :: LanguageTag -> Text
+renderLanguageTagStrict = TL.toStrict . renderLanguageTag
+{-# INLINE renderLanguageTagStrict #-}
 
 data Normal = Normal
   { primlang :: {-# UNPACK #-} !Subtag,
