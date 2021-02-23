@@ -33,8 +33,9 @@ library
     base >=4.12.0.0,
     text >=1.2,
     containers >=0.5,
-    deepseq >=1.2,
-    bytestring
+    bytestring,
+    hashable,
+    unordered-containers,
   ghc-options: -Wall
   exposed-modules:
     Text.LanguageTag.BCP47.Syntax
