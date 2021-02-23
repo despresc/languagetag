@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 -- TODO: remove this file or integrate it with the other
 -- is alternate internal syntax stuff.
@@ -8,10 +9,10 @@ module Text.BCP47.Internal.SyntaxAlt where
 
 import qualified Data.Bits as Bit
 import qualified Data.ByteString.Internal as BI
+import Data.Foldable (toList)
 import qualified Data.List as List
 import Data.List.NonEmpty (NonEmpty)
 import Data.Maybe (fromMaybe)
-import Data.String (IsString (..))
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Word (Word64, Word8)
@@ -28,6 +29,10 @@ TODO HERE: Add pretty-printing to tagToText. Also consider changing
 names of things.
 
 TODO: test that the contents are actually accurate
+
+TODO HERE: just remove the fucking show and read instances. Then call
+normalTag and fullNormalTag "unsafe*" instead. Also remove the lax
+functions.
 
 -}
 
@@ -52,9 +57,10 @@ TODO: test that the contents are actually accurate
 newtype Subtag = Subtag {unSubtag :: Word64}
   deriving (Eq, Ord)
 
--- TODO: temporary show instance. replace with an actual one.
+-- | A subtag that may not be present. Equivalent to @Maybe
+-- Subtag@. Use 'justSubtag' and 'nullSubtag' to construct these, and
+-- 'fromMaybeSubtag' to eliminate them.
 newtype MaybeSubtag = MaybeSubtag Subtag
-  deriving (Show)
 
 -- relies on the fact that valid 'Subtag' values will never be zero
 fromMaybeSubtag :: MaybeSubtag -> Maybe Subtag
@@ -74,19 +80,6 @@ nullSubtag = MaybeSubtag (Subtag 0)
 -- TODO: temporary show instance
 newtype SubtagChar = SubtagChar {unSubtagChar :: Word8}
   deriving (Eq, Show)
-
--- | this uses 'toSubtagLax', so it will silently mangle ill-formed
--- subtags
-instance Show Subtag where
-  showsPrec p t r = showsPrec p (tagToText t) r
-
-instance Read Subtag where
-  readsPrec p str = [(toSubtagLax $ T.pack x, y) | (x, y) <- readsPrec p str]
-
--- | this uses 'toSubtagLax', so it will silently mangle ill-formed
--- subtags
-instance IsString Subtag where
-  fromString = toSubtagLax . T.pack
 
 onChar ::
   r ->
@@ -152,6 +145,12 @@ unpackChar (SubtagChar w)
   | w < 10 = BI.w2c $ w + 48
   | otherwise = BI.w2c $ w + 61
 {-# INLINE unpackChar #-}
+
+-- | Convert a packed letter to an unpacked upper case letter.
+unpackUpperLetter :: SubtagChar -> Char
+unpackUpperLetter (SubtagChar w) =
+  BI.w2c $ w + 29
+{-# INLINE unpackUpperLetter #-}
 
 readSubtag :: Word64 -> [SubtagChar] -> Subtag
 readSubtag len = Subtag . fst . List.foldl' go (len, 58)
@@ -289,8 +288,37 @@ toSubtagLax t = readSubtag (fromIntegral len) (wchars [])
     go l c = l . (packCharLax c :)
 {-# INLINE toSubtagLax #-}
 
-tagToText :: Subtag -> Text
-tagToText w = T.unfoldrN (fromIntegral len) go (w, 0)
+renderRegion :: MaybeSubtag -> [Text]
+renderRegion (MaybeSubtag s)
+  | unSubtag s == 0 = []
+  | tagLength s == 2 = [T.unfoldrN 2 capgo (s, 0)]
+  | otherwise = [renderSubtagLow s]
+  where
+    capgo (n, idx)
+      | idx == (2 :: Word8) = Nothing
+      | otherwise =
+        let (c, n') = popChar n
+         in Just (unpackUpperLetter c, (n', idx + 1))
+{-# INLINE renderRegion #-}
+
+-- TODO: should probably just do this more normally.
+renderScript :: MaybeSubtag -> [Text]
+renderScript (MaybeSubtag s)
+  | unSubtag s == 0 = []
+  | otherwise = [T.unfoldrN 4 go (s, 0 :: Word8)]
+  where
+    go (n, idx)
+      | idx == 4 = Nothing
+      | idx == 0 =
+        let (c, n') = popChar n
+         in Just (unpackUpperLetter c, (n', idx + 1))
+      | otherwise =
+        let (c, n') = popChar n
+         in Just (unpackChar c, (n', idx + 1))
+{-# INLINE renderScript #-}
+
+renderSubtagLow :: Subtag -> Text
+renderSubtagLow w = T.unfoldrN (fromIntegral len) go (w, 0)
   where
     len = tagLength w
     go (n, idx)
@@ -298,17 +326,76 @@ tagToText w = T.unfoldrN (fromIntegral len) go (w, 0)
       | otherwise =
         let (c, n') = popChar n
          in Just (unpackChar c, (n', idx + 1))
-{-# INLINE tagToText #-}
+{-# INLINE renderSubtagLow #-}
 
--- | A well-formed BCP47 language tag
+-- | A syntactically well-formed BCP47 tag. See
+-- <https://tools.ietf.org/html/bcp47#section-2.1> for the full
+-- details.
 data LanguageTag
   = NormalTag {-# UNPACK #-} !Normal
   | PrivateTag !(NonEmpty Subtag)
   | RegularGrandfathered !RegularGrandfathered
   | IrregularGrandfathered !IrregularGrandfathered
-  deriving (Show)
 
--- TODO: temporary show instance
+-- TODO: put this and other functions into the main module, I
+-- think. Also document this.
+renderLanguageTag :: LanguageTag -> Text
+renderLanguageTag (NormalTag (Normal pr e1 e2 e3 sc reg vars exts pu)) =
+  T.intercalate "-" $
+    pr' :
+    ( e1' <> e2' <> e3' <> sc' <> reg'
+        <> vars'
+        <> exts'
+        <> pu'
+    )
+  where
+    pr' = renderSubtagLow pr
+    e1' = toList $ renderSubtagLow <$> fromMaybeSubtag e1
+    e2' = toList $ renderSubtagLow <$> fromMaybeSubtag e2
+    e3' = toList $ renderSubtagLow <$> fromMaybeSubtag e3
+    sc' = renderScript sc
+    reg' = renderRegion reg
+    vars' = renderSubtagLow <$> vars
+    exts' = concatMap renderExtension exts
+    renderExtension (Extension s t) =
+      T.singleton (unpackChar s) :
+      toList (renderSubtagLow <$> t)
+    pu'
+      | null pu = []
+      | otherwise = T.singleton 'x' : (renderSubtagLow <$> pu)
+renderLanguageTag (PrivateTag l) =
+  T.intercalate "-" $
+    T.singleton 'x' : toList (renderSubtagLow <$> l)
+renderLanguageTag (RegularGrandfathered t) = case t of
+  Artlojban -> "art-lojban"
+  Celgaulish -> "cel-gaulish"
+  Nobok -> "no-bok"
+  Nonyn -> "no-nyn"
+  Zhguoyu -> "zh-guoyu"
+  Zhhakka -> "zh-hakka"
+  Zhmin -> "zh-min"
+  Zhminnan -> "zh-min-nan"
+  Zhxiang -> "zh-xiang"
+renderLanguageTag (IrregularGrandfathered t) = case t of
+  EnGBoed -> "en-GB-oed"
+  Iami -> "i-ami"
+  Ibnn -> "i-bnn"
+  Idefault -> "i-default"
+  Ienochian -> "i-enochian"
+  Ihak -> "i-hak"
+  Iklingon -> "i-klingon"
+  Ilux -> "i-lux"
+  Imingo -> "i-mingo"
+  Inavajo -> "i-navajo"
+  Ipwn -> "i-pwn"
+  Itao -> "i-tao"
+  Itay -> "i-tay"
+  Itsu -> "i-tsu"
+  SgnBEFR -> "sgn-BE-FR"
+  SgnBENL -> "sgn-BE-NL"
+  SgnCHDE -> "sgn-CH-DE"
+{-# INLINE renderLanguageTag #-}
+
 data Normal = Normal
   { primlang :: {-# UNPACK #-} !Subtag,
     extlang1 :: {-# UNPACK #-} !MaybeSubtag,
@@ -320,13 +407,11 @@ data Normal = Normal
     extensions :: ![Extension],
     privateUse :: ![Subtag]
   }
-  deriving (Show)
 
 data Extension = Extension
   { extSingleton :: {-# UNPACK #-} !SubtagChar,
     extTags :: {-# UNPACK #-} !(NonEmpty Subtag)
   }
-  deriving (Show)
 
 data RegularGrandfathered
   = -- | @art-lojban@
@@ -347,7 +432,6 @@ data RegularGrandfathered
     Zhminnan
   | -- | @zh-xiang@
     Zhxiang
-  deriving (Eq, Ord, Show, Read)
 
 data IrregularGrandfathered
   = -- | @en-GB-oed@
@@ -384,7 +468,6 @@ data IrregularGrandfathered
     SgnBENL
   | -- | @sgn-CH-DE@
     SgnCHDE
-  deriving (Eq, Ord, Show, Read)
 
 ----------------------------------------------------------------
 -- Various tag constants
@@ -505,5 +588,250 @@ instance Finishing LanguageTag where
   {-# INLINE finish #-}
 
 ----------------------------------------------------------------
+-- Value construction
+----------------------------------------------------------------
+
+-- $valueconstruction
+
+-- | Construct a normal tag from its components. Keep in mind the
+-- warnings for 'toSubtagLax' when using this function with the
+-- 'IsString' instances for 'Subtag' and 'MaybeSubtag', since they
+-- will silently mangle ill-formed subtags (though the result will
+-- still be well-formed). This function will also not check if the
+-- input is a regular grandfathered language tag. See
+-- <https://tools.ietf.org/html/bcp47#section-2.1> for the exact
+-- grammar. A summary of the rules to follow to ensure that the input
+-- is well-formed:
+--
+-- * Primary language: between two and eight letters.
+--
+-- * Extended language: exactly three letters. If the primary language
+--   is four letters or longer then the extended language must be
+--   empty.
+--
+-- * Script: exactly four letters.
+--
+-- * Region: either exactly two letters or exactly three digits.
+--
+-- * Variant: between four and eight letters or digits. If the variant
+--   has length four then it must begin with a digit.
+--
+-- * Extension sections: the character must be a digit or a letter
+--   other than @x@ or @X@ and the 'Text' values must be between two
+--   and eight digits or letters long.
+--
+-- * Private use subtags: between one and eight digits or letters.
+
+-- TODO: check for the regular grandfathered tags?
+--
+-- TODO: link to the section that has all of the regular/irregular
+-- grandfathered tag constants in it.
+--
+-- TODO: have this function and fullNormalTag actually mangle the
+-- input tags. Also check to make sure that the extension sections
+-- don't have the x singleton.
+normalTag ::
+  -- | primary language
+  Subtag ->
+  -- | extended language
+  MaybeSubtag ->
+  -- | script
+  MaybeSubtag ->
+  -- | region
+  MaybeSubtag ->
+  -- | variant subtags
+  [Subtag] ->
+  -- | extension sections
+  [(Char, NonEmpty Subtag)] ->
+  -- | private use subtags
+  [Subtag] ->
+  LanguageTag
+normalTag l me ms mr mv es pus =
+  NormalTag $
+    Normal
+      { primlang = l,
+        extlang1 = me,
+        extlang2 = nullSubtag,
+        extlang3 = nullSubtag,
+        script = ms,
+        region = mr,
+        variants = mv,
+        extensions = uncurry (Extension . packCharLax) <$> es,
+        privateUse = pus
+      }
+
+-- | Construct a full normal tag from its components. You probably
+-- want 'normalTag' instead of this function, since the third extended
+-- language will always be null for valid tags and the only valid tag
+-- with a non-null second extended language is the regular
+-- grandfathered tag @zh-min-nan@, which should be constructed with
+-- 'zhMinNan'. The warnings for 'normalTag' also apply to this
+-- function.
+fullNormalTag ::
+  -- | primary language
+  Subtag ->
+  -- | extended language
+  MaybeSubtag ->
+  -- | a second extended language
+  MaybeSubtag ->
+  -- | a third extended language
+  MaybeSubtag ->
+  -- | script
+  MaybeSubtag ->
+  -- | region
+  MaybeSubtag ->
+  -- | variant subtags
+  [Subtag] ->
+  -- | extension sections
+  [(Char, NonEmpty Subtag)] ->
+  -- | private use subtags
+  [Subtag] ->
+  LanguageTag
+fullNormalTag l me me2 me3 ms mr mv es pus =
+  NormalTag $
+    Normal
+      { primlang = l,
+        extlang1 = me,
+        extlang2 = me2,
+        extlang3 = me3,
+        script = ms,
+        region = mr,
+        variants = mv,
+        extensions = uncurry (Extension . packCharLax) <$> es,
+        privateUse = pus
+      }
+
+-- | A private use tag starts with @x-@, which is followed by one or
+-- more private use subtags, each of which is between one and eight
+-- digits or letters long. This function constructs such a tag given
+-- those private use subtags. The condition on the 'Text' values in
+-- the input list is not checked, and if it does not hold then certain
+-- functions in this library may behave unpredictably when given the
+-- resulting tag.
+privateTag :: NonEmpty Subtag -> LanguageTag
+privateTag = PrivateTag
+
+----------------------------------------------------------------
 -- File auto-generated below this line. Do not edit by hand!
 ----------------------------------------------------------------
+
+-- TODO: actually generate this (or the documentation, anyway)
+-- automatically
+
+-- | Tag @en-GB-oed@. English, Oxford English Dictionary
+-- spelling. Deprecated. Preferred value: @en-GB-oxendict@.
+enGbOed :: LanguageTag
+enGbOed = IrregularGrandfathered $ EnGBoed
+
+-- | Tag @i-ami@. Amis. Deprecated. Preferred value: @ami@.
+iAmi :: LanguageTag
+iAmi = IrregularGrandfathered $ Iami
+
+-- | Tag @-ibnn@. Bunun. Deprecated. Preferred value: @bnn@.
+iBnn :: LanguageTag
+iBnn = IrregularGrandfathered $ Ibnn
+
+-- | Tag @i-default@. Default Language.
+iDefault :: LanguageTag
+iDefault = IrregularGrandfathered $ Idefault
+
+-- | Tag @i-enochian@. Enochian. Deprecated.
+iEnochian :: LanguageTag
+iEnochian = IrregularGrandfathered $ Ienochian
+
+-- | Tag @i-hak@. Hakka. Deprecated. Preferred value: @hak@.
+iHak :: LanguageTag
+iHak = IrregularGrandfathered $ Ihak
+
+-- | Tag @i-klingon@. Klingon. Deprecated. Preferred value: @tlh@.
+iKlingon :: LanguageTag
+iKlingon = IrregularGrandfathered $ Iklingon
+
+-- | Tag @i-lux@. Luxembourgish. Deprecated. Preferred value: @lb@.
+iLux :: LanguageTag
+iLux = IrregularGrandfathered $ Ilux
+
+-- | Tag @i-mingo@. Mingo.
+iMingo :: LanguageTag
+iMingo = IrregularGrandfathered $ Imingo
+
+-- | Tag @i-navajo@. Navajo. Deprecated. Preferred value: @nv@.
+iNavajo :: LanguageTag
+iNavajo = IrregularGrandfathered $ Inavajo
+
+-- | Tag @i-pwn@. Paiwan. Deprecated. Preferred value: @pwn@.
+iPwn :: LanguageTag
+iPwn = IrregularGrandfathered $ Ipwn
+
+-- | Tag @i-tao@. Tao. Deprecated. Preferred value: @i-tao@.
+iTao :: LanguageTag
+iTao = IrregularGrandfathered $ Itao
+
+-- | Tag @i-tay@. Tayal. Deprecated. Preferred value: @i-tay@.
+iTay :: LanguageTag
+iTay = IrregularGrandfathered $ Itay
+
+-- | Tag @i-tsu@. Tsou. Deprecated. Preferred value: @i-tsu@.
+iTsu :: LanguageTag
+iTsu = IrregularGrandfathered $ Itsu
+
+-- | Tag @sgn-BE-FR@. Belgian-French Sign
+-- Language. Deprecated. Preferred value: @sfb@.
+sgnBeFr :: LanguageTag
+sgnBeFr = IrregularGrandfathered $ SgnBEFR
+
+-- | Tag @sgn-BE-NL@. Belgian-Flemish Sign
+-- Language. Deprecated. Preferred value: @vgt@.
+sgnBeNl :: LanguageTag
+sgnBeNl = IrregularGrandfathered $ SgnBENL
+
+-- | Tag @sgn-CH-DE@. Swiss-German Sign
+-- Language. Deprecated. Preferred value: @sgg@.
+sgnChDe :: LanguageTag
+sgnChDe = IrregularGrandfathered $ SgnCHDE
+
+-- | Tag @art-lojban@. Lojban. Deprecated. Preferred value: @jbo@.
+artLojban :: LanguageTag
+artLojban = RegularGrandfathered $ Artlojban
+
+-- | Tag @cel-gaulish@. Gaulish. Deprecated. See @xcg@ (Cisalpine
+-- Gaulish), @xga@ (Galatian), @xtg@ (Transalpine Gaulish).
+celGaulish :: LanguageTag
+celGaulish = RegularGrandfathered $ Celgaulish
+
+-- | Tag @no-bok@. Norwegian Bokmal. Deprecated. Preferred value:
+-- @nb@.
+noBok :: LanguageTag
+noBok = RegularGrandfathered $ Nobok
+
+-- | Tag @no-nyn@. Norwegian Nynorsk. Deprecated. Preferred value:
+-- @nn@.
+noNyn :: LanguageTag
+noNyn = RegularGrandfathered $ Nonyn
+
+-- | Tag @zh-guoyu@. Mandarin or Standard
+-- Chinese. Deprecated. Preferred value: @cmn@.
+zhGuoyu :: LanguageTag
+zhGuoyu = RegularGrandfathered $ Zhguoyu
+
+-- | Tag @zh-hakka@. Hakka. Deprecated. Preferred value: @hak@.
+zhHakka :: LanguageTag
+zhHakka = RegularGrandfathered $ Zhhakka
+
+-- | Tag @zh-min@. Min, Fuzhou, Hokkien, Amoy, or
+-- Taiwanese. Deprecated. See @cdo@ (Min Dong Chinese), @cpx@ (Pu-Xian
+-- Chinese), @czo@ (Min Zhong Chinese), @mnp@ (Min Bei Chinese), @nan@
+-- (Min Nan Chinese).
+zhMin :: LanguageTag
+zhMin = RegularGrandfathered $ Zhmin
+
+-- | Tag @zh-min-nan@. Minnan, Hokkien, Amoy, Taiwanese, Southern Min,
+-- Southern Fujian, Hoklo, Southern Fukien,
+-- Ho-lo. Deprecated. Preferred value: @nan@.
+zhMinNan :: LanguageTag
+zhMinNan = RegularGrandfathered $ Zhminnan
+
+-- | Tag @zh-xiang@. Xiang or Hunanese. Deprecated. Preferred value:
+-- @hsn@.
+zhXiang :: LanguageTag
+zhXiang = RegularGrandfathered $ Zhxiang

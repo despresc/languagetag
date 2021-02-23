@@ -35,8 +35,6 @@ library
     bytestring
   ghc-options: -Wall
   exposed-modules:
-    Text.BCP47.Syntax
-    Text.BCP47.Internal.Syntax
     Text.BCP47.SyntaxAlt
     Text.BCP47.Internal.SyntaxAlt
 
