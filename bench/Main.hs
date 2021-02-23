@@ -6,8 +6,8 @@ module Main where
 import Test.Tasty.Bench
 import Control.DeepSeq (NFData(..))
 
-import Text.BCP47.SyntaxAlt
-import Text.BCP47.Internal.SyntaxAlt
+import Text.LanguageTag.BCP47.SyntaxAlt
+import Text.LanguageTag.Internal.BCP47.SyntaxAlt
 
 
 
@@ -22,12 +22,11 @@ main = defaultMain
      [ bench "stuff" $ nf parseBCP47 "en-GB-xxxxxx-xxxxxx-xxxxxx"
      , bench "other" $ nf parseBCP47 "en-GB-xxxxxx-xxxxxx-xxxxxx-xxxxxx-xxxxxx"
      , bench "blah"  $ nf parseBCP47 "foo-XX-xxxxxx-xxxxxx-xxxxxx-xxxxxx-xxxxxx"
-     , bench "privatenormal" $ nf parseBCP47 "x-XX-xxxxxx-xxxxxx-xxxxxx-xxxxxx-xxxxxx"
-     , bench "privatealt" $ nf parseBCP47 "x-XX-xxxxxx-xxxxxx-xxxxxx-xxxxxx-xxxxxx"
-     , bench "privatealt" $ nf parseBCP47 "x-XX-xxxxxx-xxxxxx-xxxxxx-xxxxxx-xxxxxx"
+     , bench "private" $ nf parseBCP47 "x-XX-xxxxxx-xxxxxx-xxxxxx-xxxxxx-xxxxxx"
      , bench "regalt" $ nf parseBCP47 "en-gb-1234-x-xxxxxx-foobar"
-     , bench "regalt" $ nf parseBCP47 "en-gb-1234-x-XXXXXX-FOOBAR"
-     , bench "regalt" $ nf parseBCP47 "en-123-1234-x-XXXXXX-FOOBAR"
+     , bench "regUp" $ nf parseBCP47 "en-gb-1234-x-XXXXXX-FOOBAR"
+     , bench "regUp2" $ nf parseBCP47 "en-123-1234-x-XXXXXX-FOOBAR"
+     , bench "regUp3" $ nf parseBCP47 "en-hans-gb-1234-x-XXXXXX-FOOBAR"
      , bench "render1" $ nf (fmap renderLanguageTag . parseBCP47) "en-123-1234-x-XXXXXX-FOOBAR"
      , bench "render2" $ nf (fmap renderLanguageTag . parseBCP47) "en-hans-gb-1234-x-XXXXXX-FOOBAR"
      , bench "render3" $ nf (fmap renderLanguageTagStrict . parseBCP47) "en-123-1234-x-XXXXXX-FOOBAR"

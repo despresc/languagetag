@@ -2,15 +2,13 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 
--- TODO: remove this file or integrate it with the other
--- is alternate internal syntax stuff.
-
 module Text.LanguageTag.Internal.BCP47.SyntaxAlt where
 
 import qualified Data.Bits as Bit
 import qualified Data.ByteString.Internal as BI
 import qualified Data.List as List
 import Data.List.NonEmpty (NonEmpty)
+import qualified Data.List.NonEmpty as NE
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -278,8 +276,8 @@ toSubtag = fmap fst . toSubtagDetail
 -- | Read a tag from the given text value, truncating it or replacing
 -- it with the singleton "a" if necessary, and replacing any
 -- characters other than ASCII digits or letters with @\'a\'@.
-toSubtagLax :: Text -> Subtag
-toSubtagLax t = readSubtag (fromIntegral len) (wchars [])
+toMangledSubtag :: Text -> Subtag
+toMangledSubtag t = readSubtag (fromIntegral len) (wchars [])
   where
     tlen = T.length t
     (t', len)
@@ -287,7 +285,7 @@ toSubtagLax t = readSubtag (fromIntegral len) (wchars [])
       | otherwise = (T.take 8 t, min 8 tlen)
     wchars = T.foldl' go id t'
     go l c = l . (packCharLax c :)
-{-# INLINE toSubtagLax #-}
+{-# INLINE toMangledSubtag #-}
 
 renderRegion :: MaybeSubtag -> TB.Builder
 renderRegion (MaybeSubtag s)
@@ -598,7 +596,7 @@ instance Finishing LanguageTag where
 -- $valueconstruction
 
 -- | Construct a normal tag from its components. This function uses
--- 'toSubtagLax' to construct the subtags from the given components,
+-- 'toMangledSubtag' to construct the subtags from the given components,
 -- so the warnings that accompany that function also apply here. This
 -- function will also not check if the input is a regular
 -- grandfathered language tag, and will not check if the subtags are
@@ -626,22 +624,21 @@ instance Finishing LanguageTag where
 --
 -- * Private use subtags: between one and eight digits or letters.
 --
--- All types of subtags but the primary language subtag are
--- optional. The empty text value @""@ should be used for subtags that
--- are not present.
+-- All types of subtags but the primary language subtag are optional;
+-- the empty text value @""@ should be used for subtags that are not
+-- present. All 'Text' values in the lists should be non-empty. Also
+-- note that a 'LanguageTag' is case-insensitive, so the subtag @en@
+-- and the subtag @EN@ will result in the same value.
 --
 -- Examples of well-formed normal tags:
 --
 -- >>> unsafeNormalTag "en" "" "" "US" [] [] []
 -- "en-US"
---
 -- >>> unsafeNormalTag "cmn" "" "" "" [] [] []
 -- "cmn"
---
--- >>> unsafeNormalTag "cmn" "" "" "" [] [] []
+-- >>> unsafeNormalTag "zh" "" "Hant" "HK" [] [] []
 -- "zh-Hant-HK"
---
--- >>> unsafeNormalTag "cmn" "" "" "" [] [] []
+-- >>> unsafeNormalTag "es" "" "" "419" [] [] []
 -- "es-419"
 --
 -- And a tag with all the parts labelled:
@@ -650,8 +647,8 @@ instance Finishing LanguageTag where
 -- "fr-frm-Armi-AU-1606nict-a-strange-x-tag"
 -- -- primary language  "fr"
 -- -- extended language "frm"
--- -- script            "Armi"
--- -- region            "AU"
+-- -- script            \"Armi\"
+-- -- region            \"AU\"
 -- -- variants          ["1606nict"]
 -- -- extensions        [(\'a\', "strange" :| [])]
 -- -- private use       ["tag"]
@@ -677,37 +674,54 @@ unsafeNormalTag ::
   -- | private use subtags
   [Text] ->
   LanguageTag
-unsafeNormalTag l me ms mr mv es pus = undefined
+unsafeNormalTag l me = unsafeFullNormalTag l me "" ""
 {-# INLINE unsafeNormalTag #-}
 
 -- | Construct a full normal tag from its components. You probably
 -- want 'unsafeNormalTag' instead of this function, since the third
--- extended language will always be null for valid tags and the only
--- valid tag with a non-null second extended language is the regular
+-- extended language will always absent in valid tags, and the only
+-- valid tag with a second extended language is the regular
 -- grandfathered tag @zh-min-nan@, which should be constructed with
 -- 'zhMinNan'. The warnings for 'unsafeNormalTag' also apply to this
 -- function.
 unsafeFullNormalTag ::
   -- | primary language
-  Subtag ->
+  Text ->
   -- | extended language
-  MaybeSubtag ->
+  Text ->
   -- | a second extended language
-  MaybeSubtag ->
+  Text ->
   -- | a third extended language
-  MaybeSubtag ->
+  Text ->
   -- | script
-  MaybeSubtag ->
+  Text ->
   -- | region
-  MaybeSubtag ->
+  Text ->
   -- | variant subtags
-  [Subtag] ->
+  [Text] ->
   -- | extension sections
-  [(Char, NonEmpty Subtag)] ->
+  [(Char, NonEmpty Text)] ->
   -- | private use subtags
-  [Subtag] ->
+  [Text] ->
   LanguageTag
-unsafeFullNormalTag l me me2 me3 ms mr mv es pus = undefined
+unsafeFullNormalTag l me me2 me3 ms mr vs es pus =
+  NormalTag $
+    Normal
+      { primlang = toMangledSubtag l,
+        extlang1 = mmangled me,
+        extlang2 = mmangled me2,
+        extlang3 = mmangled me3,
+        script = mmangled ms,
+        region = mmangled mr,
+        variants = strictMap toMangledSubtag vs,
+        extensions = strictMap toExtension es,
+        privateUse = strictMap toMangledSubtag pus
+      }
+  where
+    toExtension (c, ext) = Extension (packCharLax c) (strictMapNE toMangledSubtag ext)
+    mmangled t
+      | T.null t = nullSubtag
+      | otherwise = justSubtag $ toMangledSubtag t
 {-# INLINE unsafeFullNormalTag #-}
 
 -- | A private use tag starts with @x-@, which is followed by one or
@@ -717,8 +731,27 @@ unsafeFullNormalTag l me me2 me3 ms mr mv es pus = undefined
 -- the input list is not checked, and if it does not hold then certain
 -- functions in this library may behave unpredictably when given the
 -- resulting tag.
-privateTag :: NonEmpty Subtag -> LanguageTag
-privateTag = PrivateTag
+unsafePrivateTag :: NonEmpty Text -> LanguageTag
+unsafePrivateTag = PrivateTag . strictMapNE toMangledSubtag
+{-# INLINE unsafePrivateTag #-}
+
+----------------------------------------------------------------
+-- Utilities
+----------------------------------------------------------------
+
+strictMap :: (a -> b) -> [a] -> [b]
+strictMap f = ($ []) . List.foldl' go id
+  where
+    go l a = l . strictCons (f a)
+
+strictMapNE :: (a -> b) -> NonEmpty a -> NonEmpty b
+strictMapNE f (x NE.:| xs) = strictNE (f x) $ strictMap f xs
+
+strictNE :: a -> [a] -> NE.NonEmpty a
+strictNE !x !y = x NE.:| y
+
+strictCons :: a -> [a] -> [a]
+strictCons !x !y = x : y
 
 ----------------------------------------------------------------
 -- File auto-generated below this line. Do not edit by hand!

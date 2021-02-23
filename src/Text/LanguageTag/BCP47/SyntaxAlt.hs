@@ -388,12 +388,6 @@ parsePrivate initpos inp = do
         Nothing -> pure $ con []
 {-# INLINE parsePrivate #-}
 
-strictNE :: a -> [a] -> NE.NonEmpty a
-strictNE !x !y = x NE.:| y
-
-strictCons :: a -> [a] -> [a]
-strictCons !x !y = x : y
-
 ----------------------------------------------------------------
 -- Grandfathered (sub)tag constants
 ----------------------------------------------------------------

@@ -54,5 +54,5 @@ benchmark bench
   main-is: Main.hs
   hs-source-dirs:
     bench
-  build-depends: bcp47-full, tasty-bench, base, deepseq
+  build-depends: languagetags, tasty-bench, base, deepseq
   ghc-options: -O2
