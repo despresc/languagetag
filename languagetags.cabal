@@ -37,8 +37,8 @@ library
     bytestring
   ghc-options: -Wall
   exposed-modules:
-    Text.LanguageTag.BCP47.SyntaxAlt
-    Text.LanguageTag.Internal.BCP47.SyntaxAlt
+    Text.LanguageTag.BCP47.Syntax
+    Text.LanguageTag.Internal.BCP47.Syntax
 
 test-suite test
   type: exitcode-stdio-1.0
