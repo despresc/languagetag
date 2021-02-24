@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -213,7 +214,6 @@ mfinish !len !clast !pos !inp !con !pr = do
         pr con sbs sc clast pos' t'
     Nothing -> pure $ finish con
 
--- TODO: better name for this and the *Detail functions?
 mfinishSimple ::
   Finishing a =>
   Word8 ->
@@ -244,19 +244,19 @@ parseBCP47 inp = case T.uncons inp of
     -- FIXME: sufficient for the moment
     catchIrregulars (Right a) = Right a
     catchIrregulars (Left e)
-      | T.length inp == 9,
-        T.toLower inp == T.pack "en-gb-oed" =
-        Right $ IrregularGrandfathered EnGBoed
-      | T.length inp == 10,
-        T.toLower inp == T.pack "sgn-be-fr" =
-        Right $ IrregularGrandfathered SgnBEFR
-      | T.length inp == 10,
-        T.toLower inp == T.pack "sgn-be-nl" =
-        Right $ IrregularGrandfathered SgnBENL
-      | T.length inp == 10,
-        T.toLower inp == T.pack "sgn-ch-de" =
-        Right $ IrregularGrandfathered SgnCHDE
+      | T.length inp == 9 = testIrregs
       | otherwise = Left e
+      where
+        testIrregs
+          | T.toLower inp == "en-gb-oed" =
+            Right $ IrregularGrandfathered EnGBoed
+          | T.toLower inp == "sgn-be-fr" =
+            Right $ IrregularGrandfathered SgnBEFR
+          | T.toLower inp == "sgn-be-nl" =
+            Right $ IrregularGrandfathered SgnBENL
+          | T.toLower inp == "sgn-ch-de" =
+            Right $ IrregularGrandfathered SgnCHDE
+          | otherwise = Left e
 
 -- TODO: also test out the normal approach of 'split'ting the input beforehand
 parseBCP47' :: Char -> Text -> Either Err LanguageTag
@@ -287,7 +287,7 @@ parseBCP47' !initchar !inp = tagPopDetail initchar inp Cbeginning 0 >>= parsePri
 
     tryGrandPrimary st0 con st1 sc clast pos t =
       case (unSubtag st0, unSubtag st1) of
-        (14108546179528654851,15690354374758891526)
+        (14108546179528654851, 15690354374758891526)
           | T.null t -> pure $ RegularGrandfathered Artlojban
         (14382069488147234819, 14954113284221173767)
           | T.null t -> pure $ RegularGrandfathered Celgaulish
@@ -413,6 +413,7 @@ parseBCP47' !initchar !inp = tagPopDetail initchar inp Cbeginning 0 >>= parsePri
       14680466211245977096 -> Right $ IrregularGrandfathered Ienochian
       15098133032806121475 -> Right $ IrregularGrandfathered Ihak
       15542853518732230663 -> Right $ IrregularGrandfathered Iklingon
+      15697226132455686147 -> Right $ IrregularGrandfathered Ilux
       15827749698417983493 -> Right $ IrregularGrandfathered Imingo
       15962927641447628806 -> Right $ IrregularGrandfathered Inavajo
       16275850723642572803 -> Right $ IrregularGrandfathered Ipwn

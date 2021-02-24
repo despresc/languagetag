@@ -6,7 +6,7 @@ import Data.Foldable (traverse_)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Test.Hspec
-import Text.BCP47.Syntax
+import Text.LanguageTag.BCP47.Syntax
 
 {- TODO:
 
