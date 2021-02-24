@@ -44,11 +44,10 @@ TODO: docs on various function properties (e.g. fmap renderLanguageTag
 -- printed in upper or title case depending on their position and
 -- length.
 
--- The three lowest bits encode the length of the tag. The next two
--- bits encode whether or not the tag has letters or digits (in that
--- order). The highest chunks of 6 bits encode the actual characters
--- (first character the highest). (This leaves us with 11 bits left
--- over, in fact, not that this is useful to us at the moment).
+-- The three lowest bits encode the length of the tag. The highest
+-- chunks of 7 bits encode the actual characters (first character the
+-- highest). (This leaves us with 4 bits left over, in fact, not that
+-- this is useful to us at the moment).
 --
 -- TODO: add a test that toSubtag is actually an order homomorphism
 newtype Subtag = Subtag {unSubtag :: Word64}
@@ -66,13 +65,11 @@ instance Show MaybeSubtag where
 -- | Unwrap the internal representation of a 'Subtag'
 unwrapSubtag :: Subtag -> Word64
 unwrapSubtag = unSubtag
-{-# INLINE unwrapSubtag #-}
 
 -- | Convert the internal representation of a 'Subtag' back to a
 -- 'Subtag'
 wrapSubtag :: Word64 -> Maybe Subtag
 wrapSubtag = undefined
-{-# INLINE wrapSubtag #-}
 
 -- | Convert the internal representation of a 'Subtag' back to a
 -- 'Subtag' without checking the validity of the input. Invalid
@@ -81,7 +78,6 @@ wrapSubtag = undefined
 -- unpredictable behaviour.
 unsafeWrapSubtag :: Word64 -> Subtag
 unsafeWrapSubtag = Subtag
-{-# INLINE unsafeWrapSubtag #-}
 
 -- | A subtag that may not be present. Equivalent to @Maybe
 -- Subtag@. Use 'justSubtag' and 'nullSubtag' to construct these, and
@@ -94,17 +90,14 @@ fromMaybeSubtag :: MaybeSubtag -> Maybe Subtag
 fromMaybeSubtag (MaybeSubtag (Subtag n))
   | n == 0 = Nothing
   | otherwise = Just $ Subtag n
-{-# INLINE fromMaybeSubtag #-}
 
 -- | Convert a 'Subtag' to a 'MaybeSubtag' that is present
 justSubtag :: Subtag -> MaybeSubtag
 justSubtag = MaybeSubtag
-{-# INLINE justSubtag #-}
 
 -- | A 'MaybeSubtag' that is not present
 nullSubtag :: MaybeSubtag
 nullSubtag = MaybeSubtag (Subtag 0)
-{-# INLINE nullSubtag #-}
 
 -- | The encoding of a valid subtag character (an ASCII alphabetic
 -- character or digit)
@@ -125,7 +118,6 @@ onChar bad f g h c
   | c >= 'A' = g $! BI.c2w c
   | c <= '9' && c >= '0' = h $! BI.c2w c
   | otherwise = bad
-{-# INLINE onChar #-}
 
 data SeenChar
   = OnlyLetter
@@ -138,69 +130,55 @@ reportChar :: Bool -> SeenChar -> SeenChar
 reportChar True OnlyLetter = Both
 reportChar False OnlyDigit = Both
 reportChar _ s = s
-{-# INLINE reportChar #-}
 
 toSeenChar :: Bool -> SeenChar
 toSeenChar = toEnum . fromEnum
 
--- | Pack an ASCII alphanumeric character into the first 6 bits of a
--- 'Word8', if it is valid. Digits are mapped to @[0..9]@ and the
--- lower and upper case letters are both mapped to @[36..61]@. (The
--- gap is there in case we want to represent upper case letters in
--- tags while retaining backward compatibility.)
---
--- We also report whether the character was a letter or digit.
+-- | Pack an ASCII alphanumeric character into the first 7 bits of a
+-- 'Word8', if it is valid for a tag. This function also converts all
+-- letters to lower case, and reports whether the character was a
+-- letter or digit.
 packCharDetail :: Char -> Maybe (SubtagChar, Bool)
 packCharDetail = onChar Nothing low high dig
   where
-    low w = Just (SubtagChar $ w - 61, False)
-    high w = Just (SubtagChar $ w - 29, False)
-    dig w = Just (SubtagChar $ w - 48, True)
-{-# INLINE packCharDetail #-}
+    low w = Just (SubtagChar w, False)
+    high w = Just (SubtagChar $ w + 32, False)
+    dig w = Just (SubtagChar w, True)
 
 -- | Like 'packChar', but replaces any invalid character with the
 -- letter a.
 packCharMangled :: Char -> SubtagChar
-packCharMangled = fromMaybe (SubtagChar 36) . packChar
-{-# INLINE packCharMangled #-}
+packCharMangled = fromMaybe (SubtagChar 97) . packChar
 
 -- | Pack a normal 'Char' into a 'SubtagChar'.
 packChar :: Char -> Maybe SubtagChar
 packChar = fmap fst . packCharDetail
-{-# INLINE packChar #-}
 
--- | Unpack an ASCII alphanumeric character from a 'Word8'. If not
--- given a valid character, this may produce weird results.
+-- | Unpack an ASCII alphanumeric character from a 'SubtagChar'.
 unpackChar :: SubtagChar -> Char
-unpackChar (SubtagChar w)
-  | w < 10 = BI.w2c $ w + 48
-  | otherwise = BI.w2c $ w + 61
-{-# INLINE unpackChar #-}
+unpackChar (SubtagChar w) = BI.w2c w
 
--- | Convert a packed letter to an unpacked upper case letter.
+-- | Convert a packed letter to an unpacked upper case letter. The
+-- input must in fact be an upper case letter.
 unpackUpperLetter :: SubtagChar -> Char
 unpackUpperLetter (SubtagChar w) =
-  BI.w2c $ w + 29
-{-# INLINE unpackUpperLetter #-}
+  BI.w2c $ w - 32
 
 readSubtag :: Word64 -> [SubtagChar] -> Subtag
-readSubtag len = Subtag . fst . List.foldl' go (len, 58)
+readSubtag len = Subtag . fst . List.foldl' go (len, 57)
   where
     go :: (Word64, Int) -> SubtagChar -> (Word64, Int)
-    go (!acc, !idx) (SubtagChar !n) = (acc + Bit.shiftL (fromIntegral n) idx, idx - 6)
-{-# INLINE readSubtag #-}
+    go (!acc, !idx) (SubtagChar !n) = (acc + Bit.shiftL (fromIntegral n) idx, idx - 7)
 
 tagLength :: Subtag -> Word8
 tagLength = fromIntegral . (Bit..&.) sel . unSubtag
   where
     sel = 15
-{-# INLINE tagLength #-}
 
 -- | Pop a character from the head of a 'Subtag'. Note that this will
 -- mangle the stored length of a subtag!
 unsafePopChar :: Subtag -> (SubtagChar, Subtag)
-unsafePopChar (Subtag n) = (SubtagChar $ fromIntegral $ Bit.shiftR n 58, Subtag $ Bit.shiftL n 6)
-{-# INLINE unsafePopChar #-}
+unsafePopChar (Subtag n) = (SubtagChar $ fromIntegral $ Bit.shiftR n 57, Subtag $ Bit.shiftL n 7)
 
 -- | Index a subtag without bounds checking. Note that
 -- @'unsafeIndexSubtag' 0@ is equivalent to 'subtagHead'.
@@ -208,22 +186,19 @@ unsafeIndexSubtag :: Subtag -> Word8 -> SubtagChar
 unsafeIndexSubtag (Subtag n) idx =
   SubtagChar $
     fromIntegral $
-      Bit.shiftR n (58 - 6 * fromIntegral idx) Bit..&. sel
+      Bit.shiftR n (57 - 7 * fromIntegral idx) Bit..&. sel
   where
-    sel = 63
-{-# INLINE unsafeIndexSubtag #-}
+    sel = 127
 
 indexSubtag :: Subtag -> Word8 -> Maybe SubtagChar
 indexSubtag t idx
   | tagLength t >= idx = Nothing
   | otherwise = Just $ unsafeIndexSubtag t idx
-{-# INLINE indexSubtag #-}
 
 -- | Return the head of the 'Subtag'. Subtags are always non-empty, so
 -- this function is total.
 subtagHead :: Subtag -> SubtagChar
 subtagHead = (`unsafeIndexSubtag` 0)
-{-# INLINE subtagHead #-}
 
 -- | Unpack a 'Subtag' into its constituent 'SubtagChar' elements.
 unpackSubtag :: Subtag -> [SubtagChar]
@@ -235,7 +210,6 @@ unpackSubtag inp = List.unfoldr go (0, inp)
       | otherwise =
         let (!w, !n') = unsafePopChar n
          in Just (w, (idx + 1, n'))
-{-# INLINE unpackSubtag #-}
 
 -- Also returns whether or not we saw a letter or a digit,
 -- respectively. Will probably want a pop version.
@@ -255,7 +229,6 @@ toSubtagDetail inp
     go (!b, !l, !sc) c = case packCharDetail c of
       Just (w, sc') -> (b, l . (w :), reportChar sc' sc)
       Nothing -> (True, l, sc)
-{-# INLINE toSubtagDetail #-}
 
 popSubtagDetail :: Char -> Text -> Maybe (Subtag, SeenChar, Text)
 popSubtagDetail initchar inp = case packCharDetail initchar of
@@ -271,7 +244,6 @@ popSubtagDetail initchar inp = case packCharDetail initchar of
             Just (!w, !sc') -> go (idx + 1) (l . (w :)) (reportChar sc' sc) t'
             Nothing -> Nothing
         Nothing -> Just (readSubtag idx (l []), sc, t)
-{-# INLINE popSubtagDetail #-}
 
 -- | Like popSubtagDetail, but when we don't care about the 'SeenChar'.
 popSubtag :: Char -> Text -> Maybe (Subtag, Text)
@@ -288,11 +260,9 @@ popSubtag initchar inp = case packCharDetail initchar of
             Just !w -> go (idx + 1) (l . (w :)) t'
             Nothing -> Nothing
         Nothing -> Just (readSubtag idx (l []), t)
-{-# INLINE popSubtag #-}
 
 toSubtag :: Text -> Maybe Subtag
 toSubtag = fmap fst . toSubtagDetail
-{-# INLINE toSubtag #-}
 
 -- | Read a tag from the given text value, truncating it or replacing
 -- it with the singleton "a" if necessary, and replacing any
@@ -306,7 +276,6 @@ packSubtagMangled t = readSubtag (fromIntegral len) (wchars [])
       | otherwise = (T.take 8 t, min 8 tlen)
     wchars = T.foldl' go id t'
     go l c = l . (packCharMangled c :)
-{-# INLINE packSubtagMangled #-}
 
 renderRegion :: MaybeSubtag -> TB.Builder
 renderRegion (MaybeSubtag s)
@@ -319,7 +288,6 @@ renderRegion (MaybeSubtag s)
       | otherwise =
         let (c, n') = unsafePopChar n
          in Just (unpackUpperLetter c, (n', idx + 1))
-{-# INLINE renderRegion #-}
 
 -- TODO: should probably just do this more normally.
 renderScript :: MaybeSubtag -> TB.Builder
@@ -335,7 +303,6 @@ renderScript (MaybeSubtag s)
       | otherwise =
         let (c, n') = unsafePopChar n
          in Just (unpackChar c, (n', idx + 1))
-{-# INLINE renderScript #-}
 
 renderSubtagLow :: Subtag -> TB.Builder
 renderSubtagLow w = TB.fromString $ List.unfoldr go (w, 0)
@@ -346,7 +313,6 @@ renderSubtagLow w = TB.fromString $ List.unfoldr go (w, 0)
       | otherwise =
         let (c, n') = unsafePopChar n
          in Just (unpackChar c, (n', idx + 1))
-{-# INLINE renderSubtagLow #-}
 
 -- | A syntactically well-formed BCP47 tag. See
 -- <https://tools.ietf.org/html/bcp47#section-2.1> for the full
@@ -453,6 +419,7 @@ data Normal = Normal
   }
   deriving (Eq, Ord)
 
+
 instance Hashable Normal where
   hashWithSalt s (Normal p e1 e2 e3 sc r v e pv) =
     s `hashWithSalt` p `hashWithSalt` e1 `hashWithSalt` e2
@@ -542,12 +509,10 @@ instance Hashable IrregularGrandfathered where
 ----------------------------------------------------------------
 
 subtagChara :: SubtagChar
-subtagChara = SubtagChar 36
-{-# INLINE subtagChara #-}
+subtagChara = SubtagChar 97
 
 subtagCharx :: SubtagChar
-subtagCharx = SubtagChar 59
-{-# INLINE subtagCharx #-}
+subtagCharx = SubtagChar 120
 
 ----------------------------------------------------------------
 -- Internal convenience class
@@ -570,7 +535,6 @@ instance
     )
   where
   finish con = finish $ con nullSubtag
-  {-# INLINE finish #-}
 
 instance
   Finishing
@@ -612,7 +576,6 @@ instance
     )
   where
   finish con = finish $ con nullSubtag
-  {-# INLINE finish #-}
 
 instance
   Finishing
@@ -624,7 +587,6 @@ instance
     )
   where
   finish con = finish $ con nullSubtag
-  {-# INLINE finish #-}
 
 instance
   Finishing
@@ -635,7 +597,6 @@ instance
     )
   where
   finish con = finish $ con []
-  {-# INLINE finish #-}
 
 instance
   Finishing
@@ -645,15 +606,12 @@ instance
     )
   where
   finish con = finish $ con []
-  {-# INLINE finish #-}
 
 instance Finishing ([Subtag] -> LanguageTag) where
   finish con = finish $ con []
-  {-# INLINE finish #-}
 
 instance Finishing LanguageTag where
   finish = id
-  {-# INLINE finish #-}
 
 ----------------------------------------------------------------
 -- Value construction
@@ -742,7 +700,6 @@ unsafeNormalTag ::
   [Text] ->
   LanguageTag
 unsafeNormalTag l me = unsafeFullNormalTag l me "" ""
-{-# INLINE unsafeNormalTag #-}
 
 -- | Construct a full normal tag from its components. You probably
 -- want 'unsafeNormalTag' instead of this function, since the third

@@ -171,7 +171,6 @@ tagPopDetail ::
 tagPopDetail initchar inp clast pos = case popSubtagDetail initchar inp of
   Just (x, y, z) -> Right (x, y, z)
   Nothing -> Left $ Err pos clast ErrBadChar
-{-# INLINE tagPopDetail #-}
 
 -- | Pop a tag from the input stream when we don't care about the
 -- SeenChar.
@@ -184,7 +183,6 @@ tagPop ::
 tagPop initchar inp clast pos = case popSubtag initchar inp of
   Just (s, t) -> Right (s, t)
   Nothing -> Left $ Err pos clast ErrBadChar
-{-# INLINE tagPop #-}
 
 -- returns the character immediately after the separator if there was
 -- one, and Nothing on end of input.
@@ -196,7 +194,6 @@ tagSep !clast !pos !inp = case T.uncons inp of
       Nothing -> Left $ Err pos clast ErrTagEnd
     | otherwise -> Left $ Err pos clast ErrTagEnd
   Nothing -> Right Nothing
-{-# INLINE tagSep #-}
 
 mfinish ::
   Finishing a =>
@@ -215,7 +212,6 @@ mfinish !len !clast !pos !inp !con !pr = do
       tagPopDetail c t clast pos' >>= \(sbs, sc, t') ->
         pr con sbs sc clast pos' t'
     Nothing -> pure $ finish con
-{-# INLINE mfinish #-}
 
 -- TODO: better name for this and the *Detail functions?
 mfinishSimple ::
@@ -235,11 +231,9 @@ mfinishSimple !len !clast !pos !inp !con !pr = do
       tagPop c t clast pos' >>= \(sbs, t') ->
         pr con sbs clast pos' t'
     Nothing -> pure $ finish con
-{-# INLINE mfinishSimple #-}
 
 isDigit :: SubtagChar -> Bool
-isDigit (SubtagChar w) = w < 10
-{-# INLINE isDigit #-}
+isDigit (SubtagChar w) = w >= 48 && w <= 57
 
 -- | Parse a BCP47 language tag
 parseBCP47 :: Text -> Either Err LanguageTag
@@ -293,19 +287,19 @@ parseBCP47' !initchar !inp = tagPopDetail initchar inp Cbeginning 0 >>= parsePri
 
     tryGrandPrimary st0 con st1 sc clast pos t =
       case (unSubtag st0, unSubtag st1) of
-        (10618854602642030595, 13775215567545827334)
+        (14108546179528654851,15690354374758891526)
           | T.null t -> pure $ RegularGrandfathered Artlojban
-        (11136205609836216323, 12271798482267799559)
+        (14382069488147234819, 14954113284221173767)
           | T.null t -> pure $ RegularGrandfathered Celgaulish
-        (14348468412802400258, 10892940861214031875)
+        (15977645578003677186, 14249204503046782979)
           | T.null t -> pure $ RegularGrandfathered Nobok
-        (14348468412802400258, 14396952477540810755)
+        (15977645578003677186, 15989872147304546307)
           | T.null t -> pure $ RegularGrandfathered Nonyn
-        (17775707729231347714, 12361462747483865093)
+        (17699146535566049282, 14976579405109788677)
           | T.null t -> pure $ RegularGrandfathered Zhguoyu
-        (17775707729231347714, 12559323919351283717)
+        (17699146535566049282, 15098140437866610693)
           | T.null t -> pure $ RegularGrandfathered Zhhakka
-        (17775707729231347714, 14036664507351171075) -> do
+        (17699146535566049282, 15827742560719208451) -> do
           let pos' = pos + fromIntegral (tagLength st1) + 1
           msep <- tagSep clast pos' t
           case msep of
@@ -313,10 +307,10 @@ parseBCP47' !initchar !inp = tagPopDetail initchar inp Cbeginning 0 >>= parsePri
             Just (c, t') -> do
               (st2, sc', t'') <- tagPopDetail c t' Clext1 pos'
               case unSubtag st2 of
-                14288866086483918851
+                15962850549540323331
                   | T.null t'' -> pure $ RegularGrandfathered Zhminnan
                 _ -> tryLext2 (con $ justSubtag st1) st2 sc' Clext1 pos' t''
-        (17775707729231347714, 17206338448969957381)
+        (17699146535566049282, 17412902894784479237)
           | T.null t -> pure $ RegularGrandfathered Zhxiang
         _ -> tryLext1 con st1 sc clast pos t
 
@@ -413,20 +407,19 @@ parseBCP47' !initchar !inp = tagPopDetail initchar inp Cbeginning 0 >>= parsePri
     -- TODO: might want to test to make sure these constants remain
     -- accurate
     recognizeIrregI (Subtag n) = case n of
-      10595562548319223811 -> Right $ IrregularGrandfathered Iami
-      10888648367819194371 -> Right $ IrregularGrandfathered Ibnn
-      11424054330861289479 -> Right $ IrregularGrandfathered Idefault
-      11753452397160103944 -> Right $ IrregularGrandfathered Ienochian
-      12559272723341115395 -> Right $ IrregularGrandfathered Ihak
-      13473417321460531207 -> Right $ IrregularGrandfathered Iklingon
-      14036711545832996869 -> Right $ IrregularGrandfathered Imingo
-      14289469405371826182 -> Right $ IrregularGrandfathered Inavajo
-      14964406030589493251 -> Right $ IrregularGrandfathered Ipwn
-      16018318712138366979 -> Right $ IrregularGrandfathered Itao
-      16019022399580143619 -> Right $ IrregularGrandfathered Itay
-      16099805717896101891 -> Right $ IrregularGrandfathered Itsu
+      14102819922971197443 -> Right $ IrregularGrandfathered Iami
+      14248104991419006979 -> Right $ IrregularGrandfathered Ibnn
+      14526138628724883463 -> Right $ IrregularGrandfathered Idefault
+      14680466211245977096 -> Right $ IrregularGrandfathered Ienochian
+      15098133032806121475 -> Right $ IrregularGrandfathered Ihak
+      15542853518732230663 -> Right $ IrregularGrandfathered Iklingon
+      15827749698417983493 -> Right $ IrregularGrandfathered Imingo
+      15962927641447628806 -> Right $ IrregularGrandfathered Inavajo
+      16275850723642572803 -> Right $ IrregularGrandfathered Ipwn
+      16827550474088480771 -> Right $ IrregularGrandfathered Itao
+      16827638435018702851 -> Right $ IrregularGrandfathered Itay
+      16847869448969781251 -> Right $ IrregularGrandfathered Itsu
       _ -> Left $ Err 2 CirregI ErrBadTag
-{-# INLINE parseBCP47' #-}
 
 parsePrivate :: Int -> Text -> Either Err (NE.NonEmpty Subtag)
 parsePrivate initpos inp = do
@@ -444,14 +437,13 @@ parsePrivate initpos inp = do
           (st, t'') <- tagPop c t' Cprivateuse pos
           parsePrivateUseTag (con . strictCons st) (pos + fromIntegral (tagLength st) + 1) t''
         Nothing -> pure $ con []
-{-# INLINE parsePrivate #-}
 
 ----------------------------------------------------------------
 -- Grandfathered (sub)tag constants
 ----------------------------------------------------------------
 
 subtagI :: Subtag
-subtagI = Subtag 12682136550675316737
+subtagI = Subtag 15132094747964866561
 
 ----------------------------------------------------------------
 -- Renamed exports
@@ -461,7 +453,6 @@ subtagI = Subtag 12682136550675316737
 -- be in lower case.
 renderSubtagBuilder :: Subtag -> TB.Builder
 renderSubtagBuilder = renderSubtagLow
-{-# INLINE renderSubtagBuilder #-}
 
 -- | Render a subtag as a strict text value. The resulting value will
 -- be in lower case. This should be faster than converting the result
@@ -475,7 +466,6 @@ renderSubtag w = T.unfoldrN (fromIntegral len) go (w, 0)
       | otherwise =
         let (c, n') = unsafePopChar n
          in Just (unpackChar c, (n', idx + 1))
-{-# INLINE renderSubtag #-}
 
 -- $valueconstruction
 --
