@@ -24,12 +24,13 @@ TODO: may want to define some constants for some of these magic
 numbers (the 15 and 63 selectors, the indices starting at 58, the
 shifts)
 
-TODO: hashable, nfdata instances for subtag et al?
+TODO: nfdata instance for subtag et al?
 
 TODO: test that the contents are actually accurate
 
-TODO: docs on various function properties (e.g. fmap renderLanguageTag
-. parseBCP47 = Right up to case).
+TODO: consider splitting the subtag bits from the rest and putting
+them in their own module (notably should be done if we support
+multiple standards).
 
 -}
 
