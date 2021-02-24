@@ -48,6 +48,18 @@ regularTags =
     ("zh-xiang", zhXiang)
   ]
 
+-- TODO: Tests to check:
+-- - renderer is correct in the right direction
+-- - case insensitivity of parsing
+-- - case-insensitive grandfathered tag parsing
+-- - that regular grandfathered tags forming an initial segment of a
+--   tag get parsed properly
+-- - that irregular grandfathered tags with any components after them
+--   are never parsed
+-- - error positions
+-- - that random normal tags are parsed correctly, and random
+--   almost-normal tags are not
+
 main :: IO ()
 main = hspec $
   parallel $ do

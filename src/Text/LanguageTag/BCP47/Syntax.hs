@@ -99,6 +99,15 @@ import qualified Data.Text.Lazy.Builder as TB
 import Data.Word (Word8)
 import Text.LanguageTag.Internal.BCP47.Syntax
 
+{- TODO:
+- spin out the try* functions into their own functions?
+- better errors - might like to say something like: "subtag whatever
+  is not one of <stuff>, at <location>", but in a data type of course
+- benchmark a more straightforward implementation that does things
+  like pre-splitting the input
+- maybe benchmark the obvious megaparsec implementation?
+-}
+
 -- | The component just before what we're trying to parse.
 data Component
   = -- | just started
