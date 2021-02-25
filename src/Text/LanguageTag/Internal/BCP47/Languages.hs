@@ -2,6 +2,9 @@
 
 module Text.LanguageTag.Internal.BCP47.Languages where
 
+import Control.DeepSeq (NFData(..))
+import Data.Hashable (Hashable(..), hashUsing)
+
 -- | The BCP47 language tags as of 2021-02-23.
 data Language
   = Aa -- ^ @aa@. Description: Afar.
@@ -8736,3 +8739,11 @@ data Language
  | Zyp -- ^ @zyp@. Description: Zyphe Chin.
  | Zza -- ^ @zza@. Description: Zaza; Dimili; Dimli (macrolanguage); Kirdki; Kirmanjki (macrolanguage); Zazaki.
  | Zzj -- ^ @zzj@. Description: Zuojiang Zhuang.
+
+  deriving (Eq, Ord, Show, Enum, Bounded)
+
+instance NFData Language where
+  rnf a = seq a ()
+
+instance Hashable Language where
+  hashWithSalt = hashUsing fromEnum

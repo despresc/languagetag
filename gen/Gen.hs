@@ -466,10 +466,16 @@ renderLanguageModule (Registry d rs) =
       "",
       "module Text.LanguageTag.Internal.BCP47.Languages where",
       "",
+      "import Control.DeepSeq (NFData(..))",
+      "import Data.Hashable (Hashable(..), hashUsing)",
+      "",
       "-- | The BCP47 language tags as of " <> T.pack (show d) <> ".",
       "data Language"
     ]
-      <> theConstructors
+      <> theConstructors <> [""]
+      <> theInstances <> [""]
+      <> theNFData <> [""]
+      <> theHashable
   where
     getLanguage (TagRecord t (Language _ _ _) descr depr) = Just (t, descr, depr)
     getLanguage _ = Nothing
@@ -493,6 +499,15 @@ renderLanguageModule (Registry d rs) =
     theConstructors = case rs' of
       (x : xs) -> ("  = " <> conBody x) : fmap (\y -> " | " <> conBody y) xs
       [] -> error "given empty registry!"
+    theInstances = ["  deriving (Eq, Ord, Show, Enum, Bounded)"]
+    theNFData =
+      ["instance NFData Language where"
+      ,"  rnf a = seq a ()"
+      ]
+    theHashable
+      = ["instance Hashable Language where"
+        ,"  hashWithSalt = hashUsing fromEnum"
+        ]
 
 writeLanguageModule :: Registry -> IO ()
 writeLanguageModule =

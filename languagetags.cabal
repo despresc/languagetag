@@ -36,6 +36,7 @@ library
     bytestring,
     hashable,
     unordered-containers,
+    deepseq
   ghc-options: -Wall
   exposed-modules:
     Text.LanguageTag.BCP47.Syntax
