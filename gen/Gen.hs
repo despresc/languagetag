@@ -31,6 +31,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import Data.Time.Calendar (Day)
+import Control.Monad (unless)
 
 {-
 TODO:
@@ -54,7 +55,13 @@ Should move this to a separate package (making this a monorepo).
 -}
 
 main :: IO ()
-main = pure ()
+main = do
+  (u, r) <- readLocalRegistry
+  unless (null u) $ do
+    putStrLn "Unrecognized BCP47 registry tag fields:"
+    print u
+  putStrLn "Writing BCP47 language module"
+  writeLanguageModule r
 
 ----------------------------------------------------------------
 -- Parsing record jars and fetching the BCP47 registry
@@ -120,44 +127,6 @@ groupJars inp = start : manyJars inp'
 
 parseJarFile :: Text -> Either (LineNum, Text) [Jar]
 parseJarFile = traverse parseJar . groupJars . zip [0 ..] . T.lines
-
-{-
-type IsFullTag = Bool
-
--- | Tags are either not deprecated, deprecated without a preferred
--- value, or deprecated with a preferred value. For redundant,
--- grandfathered tags, and extlang tags, this will be an "extended
--- language range" (i.e. multiple tags), and for the rest this will be
--- a single subtag. The extlang tags will never appear with a
--- @DeprecatedPreferred@ value.
-
-data BCP47Scope
-  = Macrolanguage
-  | Collection
-  | Special
-  | PrivateUse
-
--- | The possible subtag types with their specific data. The
--- grandfathered and redundant types are both defined with an
--- accompanying Tag field. The rest are defined with a Subtag field.
-
-data BCP47TagType
-  = -- | optional script suppression, optional macrolanguage
-    BCP47Language (Maybe Text) (Maybe Text) (Maybe BCP47Scope)
-  | -- | optional preferred value, mandatory prefix, optional sript
-    -- suppression, optional macrolanguage
-    BCP47Extlang (Maybe Text) Text (Maybe Text) (Maybe Text) (Maybe BCP47Scope)
-  | BCP47Script
-  | BCP47Region
-  | -- | optional prefix values
-    BCP47Variant [Text]
-  | BCP47Grandfathered
-  | BCP47Redundant
-
--- | All tags have a type, some number of description fields, an
--- optional Deprecated field with an optional preferred value
-data BCP47Record = BCP47Record BCP47TagType [Text] Deprecation
--}
 
 -- | The tag types with their specific data
 data TagType
@@ -443,10 +412,12 @@ parseRegistryThrow inp = do
       tagErr ErrBadDate = fail "bad date record"
       tagErr ErrEmptyInput = fail "empty input"
   jars <- either jarErr pure $ parseJarFile inp
-  either tagErr pure $ parseRegistry jars
+  either tagErr (pure . fixRanges) $ parseRegistry jars
+  where
+    fixRanges (u, r) = (u, unpackRegistryRanges r)
 
-parseLocalRegistry :: IO ([(LineNum, Text)], Registry)
-parseLocalRegistry = T.readFile "./registry/bcp47" >>= parseRegistryThrow
+readLocalRegistry :: IO ([(LineNum, Text)], Registry)
+readLocalRegistry = T.readFile "./registry/bcp47" >>= parseRegistryThrow
 
 -- Unpack the four known registry ranges. In the unlikely even that
 -- more are added, the code generator will probably fail!
@@ -473,8 +444,6 @@ unpackRegistryRanges (Registry d rs) = Registry d $ concatMap unpackRecord rs
 warning :: Text
 warning = "-- This is an auto-generated file. Do not edit by hand"
 
--- \, /, ', `, ", @, <, $, #
-
 escapeHaddockChars :: Text -> Text
 escapeHaddockChars = T.concatMap go
   where
@@ -490,8 +459,8 @@ escapeHaddockChars = T.concatMap go
       '#' -> "\\#"
       _ -> T.singleton c
 
-languageModule :: Registry -> Text
-languageModule (Registry d rs) =
+renderLanguageModule :: Registry -> Text
+renderLanguageModule (Registry d rs) =
   T.unlines $
     [ warning,
       "",
@@ -528,7 +497,7 @@ languageModule (Registry d rs) =
 writeLanguageModule :: Registry -> IO ()
 writeLanguageModule =
   T.writeFile "./src/Text/LanguageTag/Internal/BCP47/Languages.hs"
-    . languageModule
+    . renderLanguageModule
 
 ----------------------------------------------------------------
 -- Testing functions
