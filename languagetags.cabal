@@ -39,6 +39,7 @@ library
   ghc-options: -Wall
   exposed-modules:
     Text.LanguageTag.BCP47.Syntax
+    Text.LanguageTag.BCP47.Validate
   other-modules:
     Text.LanguageTag.Internal.BCP47.Syntax
 
@@ -53,7 +54,23 @@ test-suite test
 benchmark bench
   type: exitcode-stdio-1.0
   default-language: Haskell2010
-  main-is: Main.hs
+  main-is: Bench.hs
   hs-source-dirs:
     bench
   build-depends: languagetags, tasty-bench, base, deepseq
+
+executable languagetags-gen
+  hs-source-dirs: gen
+  default-language: Haskell2010
+  main-is: Gen.hs
+  build-depends:
+    base >=4.12.0.0,
+    text >=1.2,
+    containers >=0.5,
+    bytestring,
+    hashable,
+    unordered-containers,
+    process,
+    languagetags,
+    time
+  ghc-options: -Wall
