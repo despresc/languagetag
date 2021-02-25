@@ -3,7 +3,73 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Text.LanguageTag.Internal.BCP47.Syntax where
+module Text.LanguageTag.Internal.BCP47.Syntax
+  ( Subtag (..),
+    toSubtag,
+    packSubtagMangled,
+    unpackSubtag,
+    wrapSubtag,
+    unwrapSubtag,
+    unsafeWrapSubtag,
+    renderSubtagLow,
+    tagLength,
+    subtagHead,
+    indexSubtag,
+    unsafeIndexSubtag,
+    unsafePopChar,
+    unpackChar,
+    MaybeSubtag,
+    fromMaybeSubtag,
+    justSubtag,
+    nullSubtag,
+    SubtagChar (..),
+    subtagCharx,
+    packChar,
+    packCharMangled,
+    LanguageTag (..),
+    renderLanguageTag,
+    renderLanguageTagBuilder,
+    RegularGrandfathered (..),
+    IrregularGrandfathered (..),
+    Normal (..),
+    unsafeNormalTag,
+    unsafeFullNormalTag,
+    unsafePrivateTag,
+    enGbOed,
+    iAmi,
+    iBnn,
+    iDefault,
+    iEnochian,
+    iHak,
+    iKlingon,
+    iLux,
+    iMingo,
+    iNavajo,
+    iPwn,
+    iTao,
+    iTay,
+    iTsu,
+    sgnBeFr,
+    sgnBeNl,
+    sgnChDe,
+    artLojban,
+    celGaulish,
+    noBok,
+    noNyn,
+    zhGuoyu,
+    zhHakka,
+    zhMin,
+    zhMinNan,
+    zhXiang,
+    Extension (..),
+    SeenChar (..),
+    Finishing (..),
+    popSubtagDetail,
+    popSubtag,
+    strictCons,
+    strictNE,
+  )
+where
 
 import qualified Data.Bits as Bit
 import qualified Data.ByteString.Internal as BI
@@ -177,7 +243,9 @@ tagLength = fromIntegral . (Bit..&.) sel . unSubtag
     sel = 15
 
 -- | Pop a character from the head of a 'Subtag'. Note that this will
--- mangle the stored length of a subtag!
+-- mangle the stored length of a subtag, so the resulting 'Subtag'
+-- should only be passed to functions like 'unsafeIndexSubtag',
+-- 'subtagHead', or 'unsafePopChar' itself.
 unsafePopChar :: Subtag -> (SubtagChar, Subtag)
 unsafePopChar (Subtag n) = (SubtagChar $ fromIntegral $ Bit.shiftR n 57, Subtag $ Bit.shiftL n 7)
 
@@ -212,8 +280,8 @@ unpackSubtag inp = List.unfoldr go (0, inp)
         let (!w, !n') = unsafePopChar n
          in Just (w, (idx + 1, n'))
 
--- Also returns whether or not we saw a letter or a digit,
--- respectively. Will probably want a pop version.
+-- | Attempt to parse a text string as a subtag. This also returns
+-- whether or not we saw a letter or a digit, respectively.
 toSubtagDetail :: Text -> Maybe (Subtag, SeenChar)
 toSubtagDetail inp
   | Just (c, t) <- T.uncons inp,
@@ -420,7 +488,6 @@ data Normal = Normal
   }
   deriving (Eq, Ord)
 
-
 instance Hashable Normal where
   hashWithSalt s (Normal p e1 e2 e3 sc r v e pv) =
     s `hashWithSalt` p `hashWithSalt` e1 `hashWithSalt` e2
@@ -508,9 +575,6 @@ instance Hashable IrregularGrandfathered where
 ----------------------------------------------------------------
 -- Various tag constants
 ----------------------------------------------------------------
-
-subtagChara :: SubtagChar
-subtagChara = SubtagChar 97
 
 subtagCharx :: SubtagChar
 subtagCharx = SubtagChar 120
