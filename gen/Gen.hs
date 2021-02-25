@@ -7,16 +7,16 @@
 -- License     : BSD-2-Clause
 -- Maintainer  : Christian Despres
 --
--- A quick executable to contact various registries, parse their
--- content, and render some internal modules. The sources for the
--- registries:
+-- A quick executable to parse the content of various registries and
+-- render some internal modules. The sources for the registries:
 --
 -- * The BCP47 data in @registry/bcp47@ can be obtained from
 --  <https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry>,
 --  which periodically updates in-place.
 module Main where
 
-import Data.Char (isSpace)
+import Control.Monad (unless)
+import Data.Char (isDigit, isSpace)
 import Data.Either (partitionEithers)
 import Data.Foldable (toList, traverse_)
 import Data.HashMap.Strict (HashMap)
@@ -26,12 +26,13 @@ import qualified Data.HashSet as HS
 import qualified Data.List as List
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as M
 import Data.Maybe (mapMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import Data.Time.Calendar (Day)
-import Control.Monad (unless)
 
 {-
 TODO:
@@ -60,8 +61,10 @@ main = do
   unless (null u) $ do
     putStrLn "Unrecognized BCP47 registry tag fields:"
     print u
-  putStrLn "Writing BCP47 language module"
-  writeLanguageModule r
+  putStrLn "writing the internal modules"
+  renderSplitRegistry $ splitRegistry r
+
+--  writeLanguageModule r
 
 ----------------------------------------------------------------
 -- Parsing record jars and fetching the BCP47 registry
@@ -266,11 +269,11 @@ parseRegistry ((_, datejar) : tagjars) = case HM.toList datejar of
       _ -> Left ErrBadDate
   _ -> Left ErrBadDate
   where
-    parseRegistry' date unexpecteds recs (j : js) = case parseRawRecord j of
-      Right r -> parseRegistry' date (unexpecteds . (unexpectedFields j ++)) (recs . (r :)) js
+    parseRegistry' rdate unexpecteds recs (j : js) = case parseRawRecord j of
+      Right r -> parseRegistry' rdate (unexpecteds . (unexpectedFields j ++)) (recs . (r :)) js
       Left e -> Left e
-    parseRegistry' date unexpecteds recs [] =
-      Right (unexpecteds [], Registry date $ recs [])
+    parseRegistry' rdate unexpecteds recs [] =
+      Right (unexpecteds [], Registry rdate $ recs [])
     parseRawRecord j = do
       combining
         [ parseLanguage j,
@@ -392,6 +395,7 @@ parseRegistry ((_, datejar) : tagjars) = case HM.toList datejar of
         pure $ TagRecord tag Redundant descr depr
 parseRegistry [] = Left ErrEmptyInput
 
+-- Does /not/ unpack ranges
 parseRegistryThrow :: Text -> IO ([(LineNum, Text)], Registry)
 parseRegistryThrow inp = do
   let jarErr (lineNum, t) =
@@ -412,17 +416,15 @@ parseRegistryThrow inp = do
       tagErr ErrBadDate = fail "bad date record"
       tagErr ErrEmptyInput = fail "empty input"
   jars <- either jarErr pure $ parseJarFile inp
-  either tagErr (pure . fixRanges) $ parseRegistry jars
-  where
-    fixRanges (u, r) = (u, unpackRegistryRanges r)
+  either tagErr pure $ parseRegistry jars
 
 readLocalRegistry :: IO ([(LineNum, Text)], Registry)
 readLocalRegistry = T.readFile "./registry/bcp47" >>= parseRegistryThrow
 
 -- Unpack the four known registry ranges. In the unlikely even that
 -- more are added, the code generator will probably fail!
-unpackRegistryRanges :: Registry -> Registry
-unpackRegistryRanges (Registry d rs) = Registry d $ concatMap unpackRecord rs
+unpackRegistryRanges :: [TagRecord] -> [TagRecord]
+unpackRegistryRanges = concatMap unpackRecord
   where
     unpackRecord r@(TagRecord t ty desc dep)
       | t == "qaa..qtz" = (\x -> TagRecord x ty desc dep) <$> qaa
@@ -436,6 +438,63 @@ unpackRegistryRanges (Registry d rs) = Registry d $ concatMap unpackRecord rs
         <> [T.pack ['Q', 'a', 'b', x] | x <- ['a' .. 'x']]
     qm = [T.pack ['Q', x] | x <- ['M' .. 'Z']]
     xa = [T.pack ['X', x] | x <- ['A' .. 'Z']]
+
+data SplitRegistry = SplitRegistry
+  { date :: Day,
+    -- | optional script suppression, macrolanguage, scope
+    languages ::
+      Map Text ([Text], Deprecation, Maybe Text, Maybe Text, Maybe Scope),
+    -- | optional preferred value without a deprecation notice,
+    -- mandatory prefix, optional script suppression, optional
+    -- macrolanguage, optional scope
+    extlangs ::
+      Map Text ([Text], Deprecation, Maybe Text, Text, Maybe Text, Maybe Text, Maybe Scope),
+    scripts :: Map Text ([Text], Deprecation),
+    regions :: Map Text ([Text], Deprecation),
+    -- | Optional prefix values
+    variants :: Map Text ([Text], Deprecation, [Text]),
+    grandfathered :: Map Text ([Text], Deprecation),
+    redundant :: Map Text ([Text], Deprecation)
+  }
+
+lookupSplit :: (SplitRegistry -> Map Text a) -> SplitRegistry -> Text -> Maybe a
+lookupSplit proj r t = M.lookup t $ proj r
+
+splitRegistry :: Registry -> SplitRegistry
+splitRegistry (Registry regdate rs) =
+  SplitRegistry
+    { date = regdate,
+      languages = go plang,
+      extlangs = go pextlang,
+      scripts = go pscr,
+      regions = go preg,
+      variants = go pvar,
+      grandfathered = go pgra,
+      redundant = go prdn
+    }
+  where
+    go proj = M.fromList $ mapMaybe proj $ unpackRegistryRanges rs
+    plang (TagRecord tg (Language x y z) descrs deprs) =
+      Just (tg, (descrs, deprs, x, y, z))
+    plang _ = Nothing
+    pextlang (TagRecord tg (Extlang a b c d e) descrs deprs) =
+      Just (tg, (descrs, deprs, a, b, c, d, e))
+    pextlang _ = Nothing
+    pscr (TagRecord tg Script descrs deprs) =
+      Just (tg, (descrs, deprs))
+    pscr _ = Nothing
+    preg (TagRecord tg Region descrs deprs) =
+      Just (tg, (descrs, deprs))
+    preg _ = Nothing
+    pvar (TagRecord tg (Variant l) descrs deprs) =
+      Just (tg, (descrs, deprs, l))
+    pvar _ = Nothing
+    pgra (TagRecord tg Grandfathered descrs deprs) =
+      Just (tg, (descrs, deprs))
+    pgra _ = Nothing
+    prdn (TagRecord tg Redundant descrs deprs) =
+      Just (tg, (descrs, deprs))
+    prdn _ = Nothing
 
 ----------------------------------------------------------------
 -- Rendering code
@@ -459,37 +518,54 @@ escapeHaddockChars = T.concatMap go
       '#' -> "\\#"
       _ -> T.singleton c
 
-renderLanguageModule :: Registry -> Text
-renderLanguageModule (Registry d rs) =
+renderModuleWith ::
+  Text ->
+  Text ->
+  Text ->
+  Text ->
+  Day ->
+  (a -> ([Text], Deprecation)) ->
+  (Map Text a) ->
+  Text
+renderModuleWith tyname typref tydescription docnote d sel rs =
   T.unlines $
     [ warning,
       "",
-      "module Text.LanguageTag.Internal.BCP47.Languages where",
+      "module Text.LanguageTag.Internal.BCP47." <> tyname <> " where",
       "",
       "import Control.DeepSeq (NFData(..))",
       "import Data.Hashable (Hashable(..), hashUsing)",
       "",
-      "-- | The BCP47 language tags as of " <> T.pack (show d) <> ".",
-      "data Language"
+      "-- | The BCP47 " <> tydescription <> " tags as of " <> T.pack (show d) <> "." <> docnote',
+      "data " <> tyname
     ]
-      <> theConstructors <> [""]
-      <> theInstances <> [""]
-      <> theNFData <> [""]
+      <> theConstructors
+      <> [""]
+      <> theInstances
+      <> [""]
+      <> theNFData
+      <> [""]
       <> theHashable
   where
-    getLanguage (TagRecord t (Language _ _ _) descr depr) = Just (t, descr, depr)
-    getLanguage _ = Nothing
-    tagsel (x, _, _) = x
-    rs' = List.sortBy (\x y -> tagsel x `compare` tagsel y) $ mapMaybe getLanguage rs
+    docnote'
+      | T.null docnote = ""
+      | otherwise = " " <> docnote
+    rs' = M.toAscList $ M.map sel rs
     renderDescrs descrs =
       "Description: " <> (T.intercalate "; " $ renderDescr <$> descrs) <> "."
     renderDescr = T.intercalate " " . T.words
     renderDepr NotDeprecated = ""
     renderDepr DeprecatedSimple = " Deprecated."
     renderDepr (DeprecatedPreferred t) = " Deprecated. Preferred value: " <> t <> "."
-    conBody (x, y, z) =
+    renderTyCon = (typref <>) . mconcat . renderTyPieces . T.split (== '-')
+    renderTyPieces (x : xs)
+      | isDigit (T.head x) = [T.singleton (T.head tyname), T.toLower x] <> renderTyTail xs
+      | otherwise = [T.toTitle x] <> renderTyTail xs
+    renderTyPieces [] = error "Gen.renderTyPieces: empty tag encountered"
+    renderTyTail = fmap T.toTitle
+    conBody (x, (y, z)) =
       mconcat
-        [ T.toTitle x,
+        [ renderTyCon x,
           " -- ^ @",
           escapeHaddockChars x,
           "@. ",
@@ -497,22 +573,50 @@ renderLanguageModule (Registry d rs) =
           escapeHaddockChars $ renderDepr z
         ]
     theConstructors = case rs' of
-      (x : xs) -> ("  = " <> conBody x) : fmap (\y -> " | " <> conBody y) xs
+      (x : xs) -> ("  = " <> conBody x) : fmap (\y -> "  | " <> conBody y) xs
       [] -> error "given empty registry!"
     theInstances = ["  deriving (Eq, Ord, Show, Enum, Bounded)"]
     theNFData =
-      ["instance NFData Language where"
-      ,"  rnf a = seq a ()"
+      [ "instance NFData " <> tyname <> " where",
+        "  rnf a = seq a ()"
       ]
-    theHashable
-      = ["instance Hashable Language where"
-        ,"  hashWithSalt = hashUsing fromEnum"
-        ]
+    theHashable =
+      [ "instance Hashable " <> tyname <> " where",
+        "  hashWithSalt = hashUsing fromEnum"
+      ]
 
-writeLanguageModule :: Registry -> IO ()
-writeLanguageModule =
-  T.writeFile "./src/Text/LanguageTag/Internal/BCP47/Languages.hs"
-    . renderLanguageModule
+renderSplitRegistry :: SplitRegistry -> IO ()
+renderSplitRegistry sr = do
+  T.writeFile "./src/Text/LanguageTag/Internal/BCP47/Language.hs" $
+    rendlang $ languages sr
+  T.writeFile "./src/Text/LanguageTag/Internal/BCP47/Extlang.hs" $
+    rendextlang $ extlangs sr
+  T.writeFile "./src/Text/LanguageTag/Internal/BCP47/Script.hs" $
+    rendscript $ scripts sr
+  T.writeFile "./src/Text/LanguageTag/Internal/BCP47/Region.hs" $
+    rendregion $ regions sr
+  T.writeFile "./src/Text/LanguageTag/Internal/BCP47/Variant.hs" $
+    rendvariant $ variants sr
+  T.writeFile "./src/Text/LanguageTag/Internal/BCP47/Grandfathered.hs" $
+    rendgrandfathered $ grandfathered sr
+  T.writeFile "./src/Text/LanguageTag/Internal/BCP47/Redundant.hs" $
+    rendredundant $ redundant sr
+  where
+    rendlang = renderModuleWith "Language" "" "primary language" "" (date sr) $
+      \(x, y, _, _, _) -> (x, y)
+    rendextlang = renderModuleWith
+      "Extlang"
+      "Ext"
+      "extended language"
+      "These are prefixed with \"Ext\" because they may overlap with primary language subtags. Note that if extended language subtags have a preferred value, then it refers to a primary subtag."
+      (date sr)
+      $ \(x, y, _, _, _, _, _) -> (x, y)
+    rendscript = renderModuleWith "Script" "" "script" "" (date sr) id
+    rendregion = renderModuleWith "Region" "" "region" "" (date sr) id
+    rendvariant = renderModuleWith "Variant" "" "variant" "" (date sr) $
+      \(x, y, _) -> (x, y)
+    rendgrandfathered = renderModuleWith "Grandfathered" "" "grandfathered" "" (date sr) id
+    rendredundant = renderModuleWith "Redundant" "" "redundant" "" (date sr) id
 
 ----------------------------------------------------------------
 -- Testing functions
@@ -576,8 +680,8 @@ rerenderRegistryFile :: Text -> [Text]
 rerenderRegistryFile = mapMaybe mParsed . T.lines
 
 renderRegistry :: Registry -> [Text]
-renderRegistry (Registry date rs) =
-  ("File-Date: " <> T.pack (show date)) :
+renderRegistry (Registry rdate rs) =
+  ("File-Date: " <> T.pack (show rdate)) :
   concatMap renderRecord rs
 
 -- The idea is that the rendered parsed registry should be equal to

@@ -1,0 +1,123 @@
+-- This is an auto-generated file. Do not edit by hand
+
+module Text.LanguageTag.Internal.BCP47.Variant where
+
+import Control.DeepSeq (NFData(..))
+import Data.Hashable (Hashable(..), hashUsing)
+
+-- | The BCP47 variant tags as of 2021-02-23.
+data Variant
+  = V1606nict -- ^ @1606nict@. Description: Late Middle French (to 1606).
+  | V1694acad -- ^ @1694acad@. Description: Early Modern French.
+  | V1901 -- ^ @1901@. Description: Traditional German orthography.
+  | V1959acad -- ^ @1959acad@. Description: \"Academic\" (\"governmental\") variant of Belarusian as codified in 1959.
+  | V1994 -- ^ @1994@. Description: Standardized Resian orthography.
+  | V1996 -- ^ @1996@. Description: German orthography of 1996.
+  | Abl1943 -- ^ @abl1943@. Description: Orthographic formulation of 1943 - Official in Brazil (Formulário Ortográfico de 1943 - Oficial no Brasil).
+  | Akuapem -- ^ @akuapem@. Description: Akuapem Twi.
+  | Alalc97 -- ^ @alalc97@. Description: ALA-LC Romanization, 1997 edition.
+  | Aluku -- ^ @aluku@. Description: Aluku dialect; Boni dialect.
+  | Ao1990 -- ^ @ao1990@. Description: Portuguese Language Orthographic Agreement of 1990 (Acordo Ortográfico da Língua Portuguesa de 1990).
+  | Aranes -- ^ @aranes@. Description: Aranese.
+  | Arevela -- ^ @arevela@. Description: Eastern Armenian. Deprecated.
+  | Arevmda -- ^ @arevmda@. Description: Western Armenian. Deprecated.
+  | Arkaika -- ^ @arkaika@. Description: Arcaicam Esperantom; Arkaika Esperanto.
+  | Asante -- ^ @asante@. Description: Asante Twi; Ashanti Twi.
+  | Auvern -- ^ @auvern@. Description: Auvergnat.
+  | Baku1926 -- ^ @baku1926@. Description: Unified Turkic Latin Alphabet (Historical).
+  | Balanka -- ^ @balanka@. Description: The Balanka dialect of Anii.
+  | Barla -- ^ @barla@. Description: The Barlavento dialect group of Kabuverdianu.
+  | Basiceng -- ^ @basiceng@. Description: Basic English.
+  | Bauddha -- ^ @bauddha@. Description: Buddhist Hybrid Sanskrit.
+  | Biscayan -- ^ @biscayan@. Description: Biscayan dialect of Basque.
+  | Biske -- ^ @biske@. Description: The San Giorgio dialect of Resian; The Bila dialect of Resian.
+  | Bohoric -- ^ @bohoric@. Description: Slovene in Bohorič alphabet.
+  | Boont -- ^ @boont@. Description: Boontling.
+  | Bornholm -- ^ @bornholm@. Description: Bornholmsk.
+  | Cisaup -- ^ @cisaup@. Description: Cisalpine.
+  | Colb1945 -- ^ @colb1945@. Description: Portuguese-Brazilian Orthographic Convention of 1945 (Convenção Ortográfica Luso-Brasileira de 1945).
+  | Cornu -- ^ @cornu@. Description: Cornu-English; Cornish English; Anglo-Cornish.
+  | Creiss -- ^ @creiss@. Description: Occitan variants of the Croissant area.
+  | Dajnko -- ^ @dajnko@. Description: Slovene in Dajnko alphabet.
+  | Ekavsk -- ^ @ekavsk@. Description: Serbian with Ekavian pronunciation.
+  | Emodeng -- ^ @emodeng@. Description: Early Modern English (1500-1700).
+  | Fonipa -- ^ @fonipa@. Description: International Phonetic Alphabet.
+  | Fonkirsh -- ^ @fonkirsh@. Description: Kirshenbaum Phonetic Alphabet.
+  | Fonnapa -- ^ @fonnapa@. Description: North American Phonetic Alphabet; Americanist Phonetic Notation.
+  | Fonupa -- ^ @fonupa@. Description: Uralic Phonetic Alphabet.
+  | Fonxsamp -- ^ @fonxsamp@. Description: X-SAMPA transcription.
+  | Gascon -- ^ @gascon@. Description: Gascon.
+  | Grclass -- ^ @grclass@. Description: Classical Occitan orthography.
+  | Grital -- ^ @grital@. Description: Italian-inspired Occitan orthography.
+  | Grmistr -- ^ @grmistr@. Description: Mistralian or Mistralian-inspired Occitan orthography.
+  | Hepburn -- ^ @hepburn@. Description: Hepburn romanization.
+  | Heploc -- ^ @heploc@. Description: Hepburn romanization, Library of Congress method. Deprecated. Preferred value: alalc97.
+  | Hognorsk -- ^ @hognorsk@. Description: Norwegian in Høgnorsk (High Norwegian) orthography.
+  | Hsistemo -- ^ @hsistemo@. Description: Standard H-system orthographic fallback for spelling Esperanto.
+  | Ijekavsk -- ^ @ijekavsk@. Description: Serbian with Ijekavian pronunciation.
+  | Itihasa -- ^ @itihasa@. Description: Epic Sanskrit.
+  | Ivanchov -- ^ @ivanchov@. Description: Bulgarian in 1899 orthography.
+  | Jauer -- ^ @jauer@. Description: Jauer dialect of Romansh.
+  | Jyutping -- ^ @jyutping@. Description: Jyutping Cantonese Romanization.
+  | Kkcor -- ^ @kkcor@. Description: Common Cornish orthography of Revived Cornish.
+  | Kociewie -- ^ @kociewie@. Description: The Kociewie dialect of Polish.
+  | Kscor -- ^ @kscor@. Description: Standard Cornish orthography of Revived Cornish; Kernowek Standard.
+  | Laukika -- ^ @laukika@. Description: Classical Sanskrit.
+  | Lemosin -- ^ @lemosin@. Description: Limousin.
+  | Lengadoc -- ^ @lengadoc@. Description: Languedocien.
+  | Lipaw -- ^ @lipaw@. Description: The Lipovaz dialect of Resian; The Lipovec dialect of Resian.
+  | Luna1918 -- ^ @luna1918@. Description: Post-1917 Russian orthography.
+  | Metelko -- ^ @metelko@. Description: Slovene in Metelko alphabet.
+  | Monoton -- ^ @monoton@. Description: Monotonic Greek.
+  | Ndyuka -- ^ @ndyuka@. Description: Ndyuka dialect; Aukan dialect.
+  | Nedis -- ^ @nedis@. Description: Natisone dialect; Nadiza dialect.
+  | Newfound -- ^ @newfound@. Description: Newfoundland English.
+  | Nicard -- ^ @nicard@. Description: Niçard.
+  | Njiva -- ^ @njiva@. Description: The Gniva dialect of Resian; The Njiva dialect of Resian.
+  | Nulik -- ^ @nulik@. Description: Volapük nulik; Volapük perevidöl; Volapük nulädik; de Jong\'s Volapük; New Volapük; Revised Volapük; Modern Volapük.
+  | Osojs -- ^ @osojs@. Description: The Oseacco dialect of Resian; The Osojane dialect of Resian.
+  | Oxendict -- ^ @oxendict@. Description: Oxford English Dictionary spelling.
+  | Pahawh2 -- ^ @pahawh2@. Description: Pahawh Hmong Second Stage Reduced orthography.
+  | Pahawh3 -- ^ @pahawh3@. Description: Pahawh Hmong Third Stage Reduced orthography.
+  | Pahawh4 -- ^ @pahawh4@. Description: Pahawh Hmong Final Version orthography.
+  | Pamaka -- ^ @pamaka@. Description: Pamaka dialect.
+  | Peano -- ^ @peano@. Description: Latino Sine Flexione; Interlingua de API; Interlingua de Peano.
+  | Petr1708 -- ^ @petr1708@. Description: Petrine orthography.
+  | Pinyin -- ^ @pinyin@. Description: Pinyin romanization.
+  | Polyton -- ^ @polyton@. Description: Polytonic Greek.
+  | Provenc -- ^ @provenc@. Description: Provençal.
+  | Puter -- ^ @puter@. Description: Puter idiom of Romansh.
+  | Rigik -- ^ @rigik@. Description: Volapük rigik; Schleyer\'s Volapük; Original Volapük; Classic Volapük.
+  | Rozaj -- ^ @rozaj@. Description: Resian; Resianic; Rezijan.
+  | Rumgr -- ^ @rumgr@. Description: Rumantsch Grischun.
+  | Scotland -- ^ @scotland@. Description: Scottish Standard English.
+  | Scouse -- ^ @scouse@. Description: Scouse.
+  | Simple -- ^ @simple@. Description: Simplified form.
+  | Solba -- ^ @solba@. Description: The Stolvizza dialect of Resian; The Solbica dialect of Resian.
+  | Sotav -- ^ @sotav@. Description: The Sotavento dialect group of Kabuverdianu.
+  | Spanglis -- ^ @spanglis@. Description: Spanglish.
+  | Surmiran -- ^ @surmiran@. Description: Surmiran idiom of Romansh.
+  | Sursilv -- ^ @sursilv@. Description: Sursilvan idiom of Romansh.
+  | Sutsilv -- ^ @sutsilv@. Description: Sutsilvan idiom of Romansh.
+  | Tarask -- ^ @tarask@. Description: Belarusian in Taraskievica orthography.
+  | Tongyong -- ^ @tongyong@. Description: Tongyong Pinyin romanization.
+  | Tunumiit -- ^ @tunumiit@. Description: Tunumiisiut; East Greenlandic; Østgrønlandsk.
+  | Uccor -- ^ @uccor@. Description: Unified Cornish orthography of Revived Cornish.
+  | Ucrcor -- ^ @ucrcor@. Description: Unified Cornish Revised orthography of Revived Cornish.
+  | Ulster -- ^ @ulster@. Description: Ulster dialect of Scots.
+  | Unifon -- ^ @unifon@. Description: Unifon phonetic alphabet.
+  | Vaidika -- ^ @vaidika@. Description: Vedic Sanskrit.
+  | Valencia -- ^ @valencia@. Description: Valencian.
+  | Vallader -- ^ @vallader@. Description: Vallader idiom of Romansh.
+  | Vecdruka -- ^ @vecdruka@. Description: Latvian orthography used before 1920s (\"vecā druka\").
+  | Vivaraup -- ^ @vivaraup@. Description: Vivaro-Alpine.
+  | Wadegile -- ^ @wadegile@. Description: Wade-Giles romanization.
+  | Xsistemo -- ^ @xsistemo@. Description: Standard X-system orthographic fallback for spelling Esperanto.
+
+  deriving (Eq, Ord, Show, Enum, Bounded)
+
+instance NFData Variant where
+  rnf a = seq a ()
+
+instance Hashable Variant where
+  hashWithSalt = hashUsing fromEnum

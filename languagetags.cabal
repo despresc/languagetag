@@ -43,7 +43,13 @@ library
     Text.LanguageTag.BCP47.Validate
   other-modules:
     Text.LanguageTag.Internal.BCP47.Syntax
-    Text.LanguageTag.Internal.BCP47.Languages
+    Text.LanguageTag.Internal.BCP47.Language
+    Text.LanguageTag.Internal.BCP47.Extlang
+    Text.LanguageTag.Internal.BCP47.Script
+    Text.LanguageTag.Internal.BCP47.Region
+    Text.LanguageTag.Internal.BCP47.Variant
+    Text.LanguageTag.Internal.BCP47.Grandfathered
+    Text.LanguageTag.Internal.BCP47.Redundant
 
 test-suite test
   type: exitcode-stdio-1.0
