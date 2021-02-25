@@ -18,7 +18,15 @@
 -- available at
 -- <https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry>.
 
-module Text.LanguageTag.BCP47.Validate where
+module Text.LanguageTag.BCP47.Validate
+  ( Language(..)
+  , Extlang(..)
+  , Script(..)
+  , Region(..)
+  , Variant(..)
+  , Grandfathered(..)
+  , Redundant(..)
+  ) where
 
 import Text.LanguageTag.Internal.BCP47.Extlang
 import Text.LanguageTag.Internal.BCP47.Grandfathered

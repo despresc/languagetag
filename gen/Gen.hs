@@ -518,16 +518,28 @@ escapeHaddockChars = T.concatMap go
       '#' -> "\\#"
       _ -> T.singleton c
 
+-- | Render an internal subtag module.
 renderModuleWith ::
+  -- | the desired type name
   Text ->
+  -- | a prefix to add to the data constructors
   Text ->
+  -- | a description of the type
   Text ->
+  -- | an additional note in the documentation
   Text ->
+  -- | a transformation to apply to the data constructors at the end
+  (Text -> Text) ->
+  -- | the date of the registry that was used
   Day ->
+  -- | projection returning the description, deprecation and optional
+  -- preferred value without deprecation (for extlang only,
+  -- essentially)
   (a -> ([Text], Deprecation, Maybe Text)) ->
+  -- | the actual subtag type registry
   (Map Text a) ->
   Text
-renderModuleWith tyname typref tydescription docnote d sel rs =
+renderModuleWith tyname typref tydescription docnote contrans d sel rs =
   T.unlines $
     [ warning,
       "",
@@ -567,7 +579,7 @@ renderModuleWith tyname typref tydescription docnote d sel rs =
     renderTyTail = fmap T.toTitle
     conBody (x, (y, z, mpref)) =
       mconcat
-        [ renderTyCon x,
+        [ contrans $ renderTyCon x,
           " -- ^ @",
           escapeHaddockChars x,
           "@. ",
@@ -588,6 +600,13 @@ renderModuleWith tyname typref tydescription docnote d sel rs =
         "  hashWithSalt = hashUsing fromEnum"
       ]
 
+-- | Write the various internal subtag modules.
+
+-- N.B. if four-letter primary language subtags are standardized (and
+-- we support the future standard using the same BCP47 modules and
+-- types) then there could be a name collision between the Language
+-- and Script modules. If that happens there will need to be special
+-- casing to deal with it.
 renderSplitRegistry :: SplitRegistry -> IO ()
 renderSplitRegistry sr = do
   T.writeFile "./src/Text/LanguageTag/Internal/BCP47/Language.hs" $
@@ -606,23 +625,38 @@ renderSplitRegistry sr = do
     rendredundant $ redundant sr
   where
     addNothing (x, y) = (x, y, Nothing)
-    rendlang = renderModuleWith "Language" "" "primary language" "" (date sr) $
+    rendlang = renderModuleWith "Language" "" "primary language" "" id (date sr) $
       \(x, y, _, _, _) -> (x, y, Nothing)
     rendextlang = renderModuleWith
       "Extlang"
       "Ext"
       "extended language"
       "These are prefixed with \"Ext\" because they may overlap with primary language subtags. Note that if extended language subtags have a preferred value, then it refers to a primary subtag."
+      id
       (date sr)
-      $ \(x, y,z, _, _, _, _) -> (x, y, z)
-    rendscript = renderModuleWith "Script" "" "script" "" (date sr) addNothing
-    rendregion = renderModuleWith "Region" "" "region" "" (date sr) addNothing
-    rendvariant = renderModuleWith "Variant" "" "variant" "" (date sr) $
+      $ \(x, y, z, _, _, _, _) -> (x, y, z)
+    rendscript = renderModuleWith "Script" "" "script" "" id (date sr) addNothing
+    rendregion = renderModuleWith "Region" "" "region" "" T.toUpper (date sr) addNothing
+    rendvariant = renderModuleWith "Variant" "" "variant" "" id (date sr) $
       \(x, y, _) -> (x, y, Nothing)
-    rendgrandfathered = renderModuleWith "Grandfathered" "" "grandfathered" "" (date sr)
-      addNothing
-    rendredundant = renderModuleWith "Redundant" "" "redundant" "" (date sr)
-      addNothing
+    rendgrandfathered =
+      renderModuleWith
+        "Grandfathered"
+        ""
+        "grandfathered"
+        ""
+        id
+        (date sr)
+        addNothing
+    rendredundant =
+      renderModuleWith
+        "Redundant"
+        ""
+        "redundant"
+        ""
+        id
+        (date sr)
+        addNothing
 
 ----------------------------------------------------------------
 -- Testing functions

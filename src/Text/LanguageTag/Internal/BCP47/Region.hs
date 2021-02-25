@@ -38,317 +38,317 @@ data Region
   | R155 -- ^ @155@. Description: Western Europe.
   | R202 -- ^ @202@. Description: Sub-Saharan Africa.
   | R419 -- ^ @419@. Description: Latin America and the Caribbean.
-  | Aa -- ^ @AA@. Description: Private use.
-  | Ac -- ^ @AC@. Description: Ascension Island.
-  | Ad -- ^ @AD@. Description: Andorra.
-  | Ae -- ^ @AE@. Description: United Arab Emirates.
-  | Af -- ^ @AF@. Description: Afghanistan.
-  | Ag -- ^ @AG@. Description: Antigua and Barbuda.
-  | Ai -- ^ @AI@. Description: Anguilla.
-  | Al -- ^ @AL@. Description: Albania.
-  | Am -- ^ @AM@. Description: Armenia.
-  | An -- ^ @AN@. Description: Netherlands Antilles. Deprecated.
-  | Ao -- ^ @AO@. Description: Angola.
-  | Aq -- ^ @AQ@. Description: Antarctica.
-  | Ar -- ^ @AR@. Description: Argentina.
-  | As -- ^ @AS@. Description: American Samoa.
-  | At -- ^ @AT@. Description: Austria.
-  | Au -- ^ @AU@. Description: Australia.
-  | Aw -- ^ @AW@. Description: Aruba.
-  | Ax -- ^ @AX@. Description: Åland Islands.
-  | Az -- ^ @AZ@. Description: Azerbaijan.
-  | Ba -- ^ @BA@. Description: Bosnia and Herzegovina.
-  | Bb -- ^ @BB@. Description: Barbados.
-  | Bd -- ^ @BD@. Description: Bangladesh.
-  | Be -- ^ @BE@. Description: Belgium.
-  | Bf -- ^ @BF@. Description: Burkina Faso.
-  | Bg -- ^ @BG@. Description: Bulgaria.
-  | Bh -- ^ @BH@. Description: Bahrain.
-  | Bi -- ^ @BI@. Description: Burundi.
-  | Bj -- ^ @BJ@. Description: Benin.
-  | Bl -- ^ @BL@. Description: Saint Barthélemy.
-  | Bm -- ^ @BM@. Description: Bermuda.
-  | Bn -- ^ @BN@. Description: Brunei Darussalam.
-  | Bo -- ^ @BO@. Description: Bolivia.
-  | Bq -- ^ @BQ@. Description: Bonaire, Sint Eustatius and Saba.
-  | Br -- ^ @BR@. Description: Brazil.
-  | Bs -- ^ @BS@. Description: Bahamas.
-  | Bt -- ^ @BT@. Description: Bhutan.
-  | Bu -- ^ @BU@. Description: Burma. Deprecated. Preferred value: MM.
-  | Bv -- ^ @BV@. Description: Bouvet Island.
-  | Bw -- ^ @BW@. Description: Botswana.
-  | By -- ^ @BY@. Description: Belarus.
-  | Bz -- ^ @BZ@. Description: Belize.
-  | Ca -- ^ @CA@. Description: Canada.
-  | Cc -- ^ @CC@. Description: Cocos (Keeling) Islands.
-  | Cd -- ^ @CD@. Description: The Democratic Republic of the Congo.
-  | Cf -- ^ @CF@. Description: Central African Republic.
-  | Cg -- ^ @CG@. Description: Congo.
-  | Ch -- ^ @CH@. Description: Switzerland.
-  | Ci -- ^ @CI@. Description: Côte d\'Ivoire.
-  | Ck -- ^ @CK@. Description: Cook Islands.
-  | Cl -- ^ @CL@. Description: Chile.
-  | Cm -- ^ @CM@. Description: Cameroon.
-  | Cn -- ^ @CN@. Description: China.
-  | Co -- ^ @CO@. Description: Colombia.
-  | Cp -- ^ @CP@. Description: Clipperton Island.
-  | Cr -- ^ @CR@. Description: Costa Rica.
-  | Cs -- ^ @CS@. Description: Serbia and Montenegro. Deprecated.
-  | Cu -- ^ @CU@. Description: Cuba.
-  | Cv -- ^ @CV@. Description: Cabo Verde; Cape Verde.
-  | Cw -- ^ @CW@. Description: Curaçao.
-  | Cx -- ^ @CX@. Description: Christmas Island.
-  | Cy -- ^ @CY@. Description: Cyprus.
-  | Cz -- ^ @CZ@. Description: Czechia; Czech Republic.
-  | Dd -- ^ @DD@. Description: German Democratic Republic. Deprecated. Preferred value: DE.
-  | De -- ^ @DE@. Description: Germany.
-  | Dg -- ^ @DG@. Description: Diego Garcia.
-  | Dj -- ^ @DJ@. Description: Djibouti.
-  | Dk -- ^ @DK@. Description: Denmark.
-  | Dm -- ^ @DM@. Description: Dominica.
-  | Do -- ^ @DO@. Description: Dominican Republic.
-  | Dz -- ^ @DZ@. Description: Algeria.
-  | Ea -- ^ @EA@. Description: Ceuta, Melilla.
-  | Ec -- ^ @EC@. Description: Ecuador.
-  | Ee -- ^ @EE@. Description: Estonia.
-  | Eg -- ^ @EG@. Description: Egypt.
-  | Eh -- ^ @EH@. Description: Western Sahara.
-  | Er -- ^ @ER@. Description: Eritrea.
-  | Es -- ^ @ES@. Description: Spain.
-  | Et -- ^ @ET@. Description: Ethiopia.
-  | Eu -- ^ @EU@. Description: European Union.
-  | Ez -- ^ @EZ@. Description: Eurozone.
-  | Fi -- ^ @FI@. Description: Finland.
-  | Fj -- ^ @FJ@. Description: Fiji.
-  | Fk -- ^ @FK@. Description: Falkland Islands (Malvinas).
-  | Fm -- ^ @FM@. Description: Federated States of Micronesia.
-  | Fo -- ^ @FO@. Description: Faroe Islands.
-  | Fr -- ^ @FR@. Description: France.
-  | Fx -- ^ @FX@. Description: Metropolitan France. Deprecated. Preferred value: FR.
-  | Ga -- ^ @GA@. Description: Gabon.
-  | Gb -- ^ @GB@. Description: United Kingdom.
-  | Gd -- ^ @GD@. Description: Grenada.
-  | Ge -- ^ @GE@. Description: Georgia.
-  | Gf -- ^ @GF@. Description: French Guiana.
-  | Gg -- ^ @GG@. Description: Guernsey.
-  | Gh -- ^ @GH@. Description: Ghana.
-  | Gi -- ^ @GI@. Description: Gibraltar.
-  | Gl -- ^ @GL@. Description: Greenland.
-  | Gm -- ^ @GM@. Description: Gambia.
-  | Gn -- ^ @GN@. Description: Guinea.
-  | Gp -- ^ @GP@. Description: Guadeloupe.
-  | Gq -- ^ @GQ@. Description: Equatorial Guinea.
-  | Gr -- ^ @GR@. Description: Greece.
-  | Gs -- ^ @GS@. Description: South Georgia and the South Sandwich Islands.
-  | Gt -- ^ @GT@. Description: Guatemala.
-  | Gu -- ^ @GU@. Description: Guam.
-  | Gw -- ^ @GW@. Description: Guinea-Bissau.
-  | Gy -- ^ @GY@. Description: Guyana.
-  | Hk -- ^ @HK@. Description: Hong Kong.
-  | Hm -- ^ @HM@. Description: Heard Island and McDonald Islands.
-  | Hn -- ^ @HN@. Description: Honduras.
-  | Hr -- ^ @HR@. Description: Croatia.
-  | Ht -- ^ @HT@. Description: Haiti.
-  | Hu -- ^ @HU@. Description: Hungary.
-  | Ic -- ^ @IC@. Description: Canary Islands.
-  | Id -- ^ @ID@. Description: Indonesia.
-  | Ie -- ^ @IE@. Description: Ireland.
-  | Il -- ^ @IL@. Description: Israel.
-  | Im -- ^ @IM@. Description: Isle of Man.
-  | In -- ^ @IN@. Description: India.
-  | Io -- ^ @IO@. Description: British Indian Ocean Territory.
-  | Iq -- ^ @IQ@. Description: Iraq.
-  | Ir -- ^ @IR@. Description: Islamic Republic of Iran.
-  | Is -- ^ @IS@. Description: Iceland.
-  | It -- ^ @IT@. Description: Italy.
-  | Je -- ^ @JE@. Description: Jersey.
-  | Jm -- ^ @JM@. Description: Jamaica.
-  | Jo -- ^ @JO@. Description: Jordan.
-  | Jp -- ^ @JP@. Description: Japan.
-  | Ke -- ^ @KE@. Description: Kenya.
-  | Kg -- ^ @KG@. Description: Kyrgyzstan.
-  | Kh -- ^ @KH@. Description: Cambodia.
-  | Ki -- ^ @KI@. Description: Kiribati.
-  | Km -- ^ @KM@. Description: Comoros.
-  | Kn -- ^ @KN@. Description: Saint Kitts and Nevis.
-  | Kp -- ^ @KP@. Description: Democratic People\'s Republic of Korea.
-  | Kr -- ^ @KR@. Description: Republic of Korea.
-  | Kw -- ^ @KW@. Description: Kuwait.
-  | Ky -- ^ @KY@. Description: Cayman Islands.
-  | Kz -- ^ @KZ@. Description: Kazakhstan.
-  | La -- ^ @LA@. Description: Lao People\'s Democratic Republic.
-  | Lb -- ^ @LB@. Description: Lebanon.
-  | Lc -- ^ @LC@. Description: Saint Lucia.
-  | Li -- ^ @LI@. Description: Liechtenstein.
-  | Lk -- ^ @LK@. Description: Sri Lanka.
-  | Lr -- ^ @LR@. Description: Liberia.
-  | Ls -- ^ @LS@. Description: Lesotho.
-  | Lt -- ^ @LT@. Description: Lithuania.
-  | Lu -- ^ @LU@. Description: Luxembourg.
-  | Lv -- ^ @LV@. Description: Latvia.
-  | Ly -- ^ @LY@. Description: Libya.
-  | Ma -- ^ @MA@. Description: Morocco.
-  | Mc -- ^ @MC@. Description: Monaco.
-  | Md -- ^ @MD@. Description: Moldova.
-  | Me -- ^ @ME@. Description: Montenegro.
-  | Mf -- ^ @MF@. Description: Saint Martin (French part).
-  | Mg -- ^ @MG@. Description: Madagascar.
-  | Mh -- ^ @MH@. Description: Marshall Islands.
-  | Mk -- ^ @MK@. Description: North Macedonia.
-  | Ml -- ^ @ML@. Description: Mali.
-  | Mm -- ^ @MM@. Description: Myanmar.
-  | Mn -- ^ @MN@. Description: Mongolia.
-  | Mo -- ^ @MO@. Description: Macao.
-  | Mp -- ^ @MP@. Description: Northern Mariana Islands.
-  | Mq -- ^ @MQ@. Description: Martinique.
-  | Mr -- ^ @MR@. Description: Mauritania.
-  | Ms -- ^ @MS@. Description: Montserrat.
-  | Mt -- ^ @MT@. Description: Malta.
-  | Mu -- ^ @MU@. Description: Mauritius.
-  | Mv -- ^ @MV@. Description: Maldives.
-  | Mw -- ^ @MW@. Description: Malawi.
-  | Mx -- ^ @MX@. Description: Mexico.
-  | My -- ^ @MY@. Description: Malaysia.
-  | Mz -- ^ @MZ@. Description: Mozambique.
-  | Na -- ^ @NA@. Description: Namibia.
-  | Nc -- ^ @NC@. Description: New Caledonia.
-  | Ne -- ^ @NE@. Description: Niger.
-  | Nf -- ^ @NF@. Description: Norfolk Island.
-  | Ng -- ^ @NG@. Description: Nigeria.
-  | Ni -- ^ @NI@. Description: Nicaragua.
-  | Nl -- ^ @NL@. Description: Netherlands.
-  | No -- ^ @NO@. Description: Norway.
-  | Np -- ^ @NP@. Description: Nepal.
-  | Nr -- ^ @NR@. Description: Nauru.
-  | Nt -- ^ @NT@. Description: Neutral Zone. Deprecated.
-  | Nu -- ^ @NU@. Description: Niue.
-  | Nz -- ^ @NZ@. Description: New Zealand.
-  | Om -- ^ @OM@. Description: Oman.
-  | Pa -- ^ @PA@. Description: Panama.
-  | Pe -- ^ @PE@. Description: Peru.
-  | Pf -- ^ @PF@. Description: French Polynesia.
-  | Pg -- ^ @PG@. Description: Papua New Guinea.
-  | Ph -- ^ @PH@. Description: Philippines.
-  | Pk -- ^ @PK@. Description: Pakistan.
-  | Pl -- ^ @PL@. Description: Poland.
-  | Pm -- ^ @PM@. Description: Saint Pierre and Miquelon.
-  | Pn -- ^ @PN@. Description: Pitcairn.
-  | Pr -- ^ @PR@. Description: Puerto Rico.
-  | Ps -- ^ @PS@. Description: State of Palestine.
-  | Pt -- ^ @PT@. Description: Portugal.
-  | Pw -- ^ @PW@. Description: Palau.
-  | Py -- ^ @PY@. Description: Paraguay.
-  | Qa -- ^ @QA@. Description: Qatar.
-  | Qm -- ^ @QM@. Description: Private use.
-  | Qn -- ^ @QN@. Description: Private use.
-  | Qo -- ^ @QO@. Description: Private use.
-  | Qp -- ^ @QP@. Description: Private use.
-  | Qq -- ^ @QQ@. Description: Private use.
-  | Qr -- ^ @QR@. Description: Private use.
-  | Qs -- ^ @QS@. Description: Private use.
-  | Qt -- ^ @QT@. Description: Private use.
-  | Qu -- ^ @QU@. Description: Private use.
-  | Qv -- ^ @QV@. Description: Private use.
-  | Qw -- ^ @QW@. Description: Private use.
-  | Qx -- ^ @QX@. Description: Private use.
-  | Qy -- ^ @QY@. Description: Private use.
-  | Qz -- ^ @QZ@. Description: Private use.
-  | Re -- ^ @RE@. Description: Réunion.
-  | Ro -- ^ @RO@. Description: Romania.
-  | Rs -- ^ @RS@. Description: Serbia.
-  | Ru -- ^ @RU@. Description: Russian Federation.
-  | Rw -- ^ @RW@. Description: Rwanda.
-  | Sa -- ^ @SA@. Description: Saudi Arabia.
-  | Sb -- ^ @SB@. Description: Solomon Islands.
-  | Sc -- ^ @SC@. Description: Seychelles.
-  | Sd -- ^ @SD@. Description: Sudan.
-  | Se -- ^ @SE@. Description: Sweden.
-  | Sg -- ^ @SG@. Description: Singapore.
-  | Sh -- ^ @SH@. Description: Saint Helena, Ascension and Tristan da Cunha.
-  | Si -- ^ @SI@. Description: Slovenia.
-  | Sj -- ^ @SJ@. Description: Svalbard and Jan Mayen.
-  | Sk -- ^ @SK@. Description: Slovakia.
-  | Sl -- ^ @SL@. Description: Sierra Leone.
-  | Sm -- ^ @SM@. Description: San Marino.
-  | Sn -- ^ @SN@. Description: Senegal.
-  | So -- ^ @SO@. Description: Somalia.
-  | Sr -- ^ @SR@. Description: Suriname.
-  | Ss -- ^ @SS@. Description: South Sudan.
-  | St -- ^ @ST@. Description: Sao Tome and Principe.
-  | Su -- ^ @SU@. Description: Union of Soviet Socialist Republics. Deprecated.
-  | Sv -- ^ @SV@. Description: El Salvador.
-  | Sx -- ^ @SX@. Description: Sint Maarten (Dutch part).
-  | Sy -- ^ @SY@. Description: Syrian Arab Republic.
-  | Sz -- ^ @SZ@. Description: Eswatini; eSwatini; Swaziland.
-  | Ta -- ^ @TA@. Description: Tristan da Cunha.
-  | Tc -- ^ @TC@. Description: Turks and Caicos Islands.
-  | Td -- ^ @TD@. Description: Chad.
-  | Tf -- ^ @TF@. Description: French Southern Territories.
-  | Tg -- ^ @TG@. Description: Togo.
-  | Th -- ^ @TH@. Description: Thailand.
-  | Tj -- ^ @TJ@. Description: Tajikistan.
-  | Tk -- ^ @TK@. Description: Tokelau.
-  | Tl -- ^ @TL@. Description: Timor-Leste.
-  | Tm -- ^ @TM@. Description: Turkmenistan.
-  | Tn -- ^ @TN@. Description: Tunisia.
-  | To -- ^ @TO@. Description: Tonga.
-  | Tp -- ^ @TP@. Description: East Timor. Deprecated. Preferred value: TL.
-  | Tr -- ^ @TR@. Description: Turkey.
-  | Tt -- ^ @TT@. Description: Trinidad and Tobago.
-  | Tv -- ^ @TV@. Description: Tuvalu.
-  | Tw -- ^ @TW@. Description: Taiwan, Province of China.
-  | Tz -- ^ @TZ@. Description: United Republic of Tanzania.
-  | Ua -- ^ @UA@. Description: Ukraine.
-  | Ug -- ^ @UG@. Description: Uganda.
-  | Um -- ^ @UM@. Description: United States Minor Outlying Islands.
-  | Un -- ^ @UN@. Description: United Nations.
-  | Us -- ^ @US@. Description: United States.
-  | Uy -- ^ @UY@. Description: Uruguay.
-  | Uz -- ^ @UZ@. Description: Uzbekistan.
-  | Va -- ^ @VA@. Description: Holy See (Vatican City State).
-  | Vc -- ^ @VC@. Description: Saint Vincent and the Grenadines.
-  | Ve -- ^ @VE@. Description: Venezuela.
-  | Vg -- ^ @VG@. Description: British Virgin Islands.
-  | Vi -- ^ @VI@. Description: U.S. Virgin Islands.
-  | Vn -- ^ @VN@. Description: Viet Nam.
-  | Vu -- ^ @VU@. Description: Vanuatu.
-  | Wf -- ^ @WF@. Description: Wallis and Futuna.
-  | Ws -- ^ @WS@. Description: Samoa.
-  | Xa -- ^ @XA@. Description: Private use.
-  | Xb -- ^ @XB@. Description: Private use.
-  | Xc -- ^ @XC@. Description: Private use.
-  | Xd -- ^ @XD@. Description: Private use.
-  | Xe -- ^ @XE@. Description: Private use.
-  | Xf -- ^ @XF@. Description: Private use.
-  | Xg -- ^ @XG@. Description: Private use.
-  | Xh -- ^ @XH@. Description: Private use.
-  | Xi -- ^ @XI@. Description: Private use.
-  | Xj -- ^ @XJ@. Description: Private use.
-  | Xk -- ^ @XK@. Description: Private use.
-  | Xl -- ^ @XL@. Description: Private use.
-  | Xm -- ^ @XM@. Description: Private use.
-  | Xn -- ^ @XN@. Description: Private use.
-  | Xo -- ^ @XO@. Description: Private use.
-  | Xp -- ^ @XP@. Description: Private use.
-  | Xq -- ^ @XQ@. Description: Private use.
-  | Xr -- ^ @XR@. Description: Private use.
-  | Xs -- ^ @XS@. Description: Private use.
-  | Xt -- ^ @XT@. Description: Private use.
-  | Xu -- ^ @XU@. Description: Private use.
-  | Xv -- ^ @XV@. Description: Private use.
-  | Xw -- ^ @XW@. Description: Private use.
-  | Xx -- ^ @XX@. Description: Private use.
-  | Xy -- ^ @XY@. Description: Private use.
-  | Xz -- ^ @XZ@. Description: Private use.
-  | Yd -- ^ @YD@. Description: Democratic Yemen. Deprecated. Preferred value: YE.
-  | Ye -- ^ @YE@. Description: Yemen.
-  | Yt -- ^ @YT@. Description: Mayotte.
-  | Yu -- ^ @YU@. Description: Yugoslavia. Deprecated.
-  | Za -- ^ @ZA@. Description: South Africa.
-  | Zm -- ^ @ZM@. Description: Zambia.
-  | Zr -- ^ @ZR@. Description: Zaire. Deprecated. Preferred value: CD.
-  | Zw -- ^ @ZW@. Description: Zimbabwe.
-  | Zz -- ^ @ZZ@. Description: Private use.
+  | AA -- ^ @AA@. Description: Private use.
+  | AC -- ^ @AC@. Description: Ascension Island.
+  | AD -- ^ @AD@. Description: Andorra.
+  | AE -- ^ @AE@. Description: United Arab Emirates.
+  | AF -- ^ @AF@. Description: Afghanistan.
+  | AG -- ^ @AG@. Description: Antigua and Barbuda.
+  | AI -- ^ @AI@. Description: Anguilla.
+  | AL -- ^ @AL@. Description: Albania.
+  | AM -- ^ @AM@. Description: Armenia.
+  | AN -- ^ @AN@. Description: Netherlands Antilles. Deprecated.
+  | AO -- ^ @AO@. Description: Angola.
+  | AQ -- ^ @AQ@. Description: Antarctica.
+  | AR -- ^ @AR@. Description: Argentina.
+  | AS -- ^ @AS@. Description: American Samoa.
+  | AT -- ^ @AT@. Description: Austria.
+  | AU -- ^ @AU@. Description: Australia.
+  | AW -- ^ @AW@. Description: Aruba.
+  | AX -- ^ @AX@. Description: Åland Islands.
+  | AZ -- ^ @AZ@. Description: Azerbaijan.
+  | BA -- ^ @BA@. Description: Bosnia and Herzegovina.
+  | BB -- ^ @BB@. Description: Barbados.
+  | BD -- ^ @BD@. Description: Bangladesh.
+  | BE -- ^ @BE@. Description: Belgium.
+  | BF -- ^ @BF@. Description: Burkina Faso.
+  | BG -- ^ @BG@. Description: Bulgaria.
+  | BH -- ^ @BH@. Description: Bahrain.
+  | BI -- ^ @BI@. Description: Burundi.
+  | BJ -- ^ @BJ@. Description: Benin.
+  | BL -- ^ @BL@. Description: Saint Barthélemy.
+  | BM -- ^ @BM@. Description: Bermuda.
+  | BN -- ^ @BN@. Description: Brunei Darussalam.
+  | BO -- ^ @BO@. Description: Bolivia.
+  | BQ -- ^ @BQ@. Description: Bonaire, Sint Eustatius and Saba.
+  | BR -- ^ @BR@. Description: Brazil.
+  | BS -- ^ @BS@. Description: Bahamas.
+  | BT -- ^ @BT@. Description: Bhutan.
+  | BU -- ^ @BU@. Description: Burma. Deprecated. Preferred value: MM.
+  | BV -- ^ @BV@. Description: Bouvet Island.
+  | BW -- ^ @BW@. Description: Botswana.
+  | BY -- ^ @BY@. Description: Belarus.
+  | BZ -- ^ @BZ@. Description: Belize.
+  | CA -- ^ @CA@. Description: Canada.
+  | CC -- ^ @CC@. Description: Cocos (Keeling) Islands.
+  | CD -- ^ @CD@. Description: The Democratic Republic of the Congo.
+  | CF -- ^ @CF@. Description: Central African Republic.
+  | CG -- ^ @CG@. Description: Congo.
+  | CH -- ^ @CH@. Description: Switzerland.
+  | CI -- ^ @CI@. Description: Côte d\'Ivoire.
+  | CK -- ^ @CK@. Description: Cook Islands.
+  | CL -- ^ @CL@. Description: Chile.
+  | CM -- ^ @CM@. Description: Cameroon.
+  | CN -- ^ @CN@. Description: China.
+  | CO -- ^ @CO@. Description: Colombia.
+  | CP -- ^ @CP@. Description: Clipperton Island.
+  | CR -- ^ @CR@. Description: Costa Rica.
+  | CS -- ^ @CS@. Description: Serbia and Montenegro. Deprecated.
+  | CU -- ^ @CU@. Description: Cuba.
+  | CV -- ^ @CV@. Description: Cabo Verde; Cape Verde.
+  | CW -- ^ @CW@. Description: Curaçao.
+  | CX -- ^ @CX@. Description: Christmas Island.
+  | CY -- ^ @CY@. Description: Cyprus.
+  | CZ -- ^ @CZ@. Description: Czechia; Czech Republic.
+  | DD -- ^ @DD@. Description: German Democratic Republic. Deprecated. Preferred value: DE.
+  | DE -- ^ @DE@. Description: Germany.
+  | DG -- ^ @DG@. Description: Diego Garcia.
+  | DJ -- ^ @DJ@. Description: Djibouti.
+  | DK -- ^ @DK@. Description: Denmark.
+  | DM -- ^ @DM@. Description: Dominica.
+  | DO -- ^ @DO@. Description: Dominican Republic.
+  | DZ -- ^ @DZ@. Description: Algeria.
+  | EA -- ^ @EA@. Description: Ceuta, Melilla.
+  | EC -- ^ @EC@. Description: Ecuador.
+  | EE -- ^ @EE@. Description: Estonia.
+  | EG -- ^ @EG@. Description: Egypt.
+  | EH -- ^ @EH@. Description: Western Sahara.
+  | ER -- ^ @ER@. Description: Eritrea.
+  | ES -- ^ @ES@. Description: Spain.
+  | ET -- ^ @ET@. Description: Ethiopia.
+  | EU -- ^ @EU@. Description: European Union.
+  | EZ -- ^ @EZ@. Description: Eurozone.
+  | FI -- ^ @FI@. Description: Finland.
+  | FJ -- ^ @FJ@. Description: Fiji.
+  | FK -- ^ @FK@. Description: Falkland Islands (Malvinas).
+  | FM -- ^ @FM@. Description: Federated States of Micronesia.
+  | FO -- ^ @FO@. Description: Faroe Islands.
+  | FR -- ^ @FR@. Description: France.
+  | FX -- ^ @FX@. Description: Metropolitan France. Deprecated. Preferred value: FR.
+  | GA -- ^ @GA@. Description: Gabon.
+  | GB -- ^ @GB@. Description: United Kingdom.
+  | GD -- ^ @GD@. Description: Grenada.
+  | GE -- ^ @GE@. Description: Georgia.
+  | GF -- ^ @GF@. Description: French Guiana.
+  | GG -- ^ @GG@. Description: Guernsey.
+  | GH -- ^ @GH@. Description: Ghana.
+  | GI -- ^ @GI@. Description: Gibraltar.
+  | GL -- ^ @GL@. Description: Greenland.
+  | GM -- ^ @GM@. Description: Gambia.
+  | GN -- ^ @GN@. Description: Guinea.
+  | GP -- ^ @GP@. Description: Guadeloupe.
+  | GQ -- ^ @GQ@. Description: Equatorial Guinea.
+  | GR -- ^ @GR@. Description: Greece.
+  | GS -- ^ @GS@. Description: South Georgia and the South Sandwich Islands.
+  | GT -- ^ @GT@. Description: Guatemala.
+  | GU -- ^ @GU@. Description: Guam.
+  | GW -- ^ @GW@. Description: Guinea-Bissau.
+  | GY -- ^ @GY@. Description: Guyana.
+  | HK -- ^ @HK@. Description: Hong Kong.
+  | HM -- ^ @HM@. Description: Heard Island and McDonald Islands.
+  | HN -- ^ @HN@. Description: Honduras.
+  | HR -- ^ @HR@. Description: Croatia.
+  | HT -- ^ @HT@. Description: Haiti.
+  | HU -- ^ @HU@. Description: Hungary.
+  | IC -- ^ @IC@. Description: Canary Islands.
+  | ID -- ^ @ID@. Description: Indonesia.
+  | IE -- ^ @IE@. Description: Ireland.
+  | IL -- ^ @IL@. Description: Israel.
+  | IM -- ^ @IM@. Description: Isle of Man.
+  | IN -- ^ @IN@. Description: India.
+  | IO -- ^ @IO@. Description: British Indian Ocean Territory.
+  | IQ -- ^ @IQ@. Description: Iraq.
+  | IR -- ^ @IR@. Description: Islamic Republic of Iran.
+  | IS -- ^ @IS@. Description: Iceland.
+  | IT -- ^ @IT@. Description: Italy.
+  | JE -- ^ @JE@. Description: Jersey.
+  | JM -- ^ @JM@. Description: Jamaica.
+  | JO -- ^ @JO@. Description: Jordan.
+  | JP -- ^ @JP@. Description: Japan.
+  | KE -- ^ @KE@. Description: Kenya.
+  | KG -- ^ @KG@. Description: Kyrgyzstan.
+  | KH -- ^ @KH@. Description: Cambodia.
+  | KI -- ^ @KI@. Description: Kiribati.
+  | KM -- ^ @KM@. Description: Comoros.
+  | KN -- ^ @KN@. Description: Saint Kitts and Nevis.
+  | KP -- ^ @KP@. Description: Democratic People\'s Republic of Korea.
+  | KR -- ^ @KR@. Description: Republic of Korea.
+  | KW -- ^ @KW@. Description: Kuwait.
+  | KY -- ^ @KY@. Description: Cayman Islands.
+  | KZ -- ^ @KZ@. Description: Kazakhstan.
+  | LA -- ^ @LA@. Description: Lao People\'s Democratic Republic.
+  | LB -- ^ @LB@. Description: Lebanon.
+  | LC -- ^ @LC@. Description: Saint Lucia.
+  | LI -- ^ @LI@. Description: Liechtenstein.
+  | LK -- ^ @LK@. Description: Sri Lanka.
+  | LR -- ^ @LR@. Description: Liberia.
+  | LS -- ^ @LS@. Description: Lesotho.
+  | LT -- ^ @LT@. Description: Lithuania.
+  | LU -- ^ @LU@. Description: Luxembourg.
+  | LV -- ^ @LV@. Description: Latvia.
+  | LY -- ^ @LY@. Description: Libya.
+  | MA -- ^ @MA@. Description: Morocco.
+  | MC -- ^ @MC@. Description: Monaco.
+  | MD -- ^ @MD@. Description: Moldova.
+  | ME -- ^ @ME@. Description: Montenegro.
+  | MF -- ^ @MF@. Description: Saint Martin (French part).
+  | MG -- ^ @MG@. Description: Madagascar.
+  | MH -- ^ @MH@. Description: Marshall Islands.
+  | MK -- ^ @MK@. Description: North Macedonia.
+  | ML -- ^ @ML@. Description: Mali.
+  | MM -- ^ @MM@. Description: Myanmar.
+  | MN -- ^ @MN@. Description: Mongolia.
+  | MO -- ^ @MO@. Description: Macao.
+  | MP -- ^ @MP@. Description: Northern Mariana Islands.
+  | MQ -- ^ @MQ@. Description: Martinique.
+  | MR -- ^ @MR@. Description: Mauritania.
+  | MS -- ^ @MS@. Description: Montserrat.
+  | MT -- ^ @MT@. Description: Malta.
+  | MU -- ^ @MU@. Description: Mauritius.
+  | MV -- ^ @MV@. Description: Maldives.
+  | MW -- ^ @MW@. Description: Malawi.
+  | MX -- ^ @MX@. Description: Mexico.
+  | MY -- ^ @MY@. Description: Malaysia.
+  | MZ -- ^ @MZ@. Description: Mozambique.
+  | NA -- ^ @NA@. Description: Namibia.
+  | NC -- ^ @NC@. Description: New Caledonia.
+  | NE -- ^ @NE@. Description: Niger.
+  | NF -- ^ @NF@. Description: Norfolk Island.
+  | NG -- ^ @NG@. Description: Nigeria.
+  | NI -- ^ @NI@. Description: Nicaragua.
+  | NL -- ^ @NL@. Description: Netherlands.
+  | NO -- ^ @NO@. Description: Norway.
+  | NP -- ^ @NP@. Description: Nepal.
+  | NR -- ^ @NR@. Description: Nauru.
+  | NT -- ^ @NT@. Description: Neutral Zone. Deprecated.
+  | NU -- ^ @NU@. Description: Niue.
+  | NZ -- ^ @NZ@. Description: New Zealand.
+  | OM -- ^ @OM@. Description: Oman.
+  | PA -- ^ @PA@. Description: Panama.
+  | PE -- ^ @PE@. Description: Peru.
+  | PF -- ^ @PF@. Description: French Polynesia.
+  | PG -- ^ @PG@. Description: Papua New Guinea.
+  | PH -- ^ @PH@. Description: Philippines.
+  | PK -- ^ @PK@. Description: Pakistan.
+  | PL -- ^ @PL@. Description: Poland.
+  | PM -- ^ @PM@. Description: Saint Pierre and Miquelon.
+  | PN -- ^ @PN@. Description: Pitcairn.
+  | PR -- ^ @PR@. Description: Puerto Rico.
+  | PS -- ^ @PS@. Description: State of Palestine.
+  | PT -- ^ @PT@. Description: Portugal.
+  | PW -- ^ @PW@. Description: Palau.
+  | PY -- ^ @PY@. Description: Paraguay.
+  | QA -- ^ @QA@. Description: Qatar.
+  | QM -- ^ @QM@. Description: Private use.
+  | QN -- ^ @QN@. Description: Private use.
+  | QO -- ^ @QO@. Description: Private use.
+  | QP -- ^ @QP@. Description: Private use.
+  | QQ -- ^ @QQ@. Description: Private use.
+  | QR -- ^ @QR@. Description: Private use.
+  | QS -- ^ @QS@. Description: Private use.
+  | QT -- ^ @QT@. Description: Private use.
+  | QU -- ^ @QU@. Description: Private use.
+  | QV -- ^ @QV@. Description: Private use.
+  | QW -- ^ @QW@. Description: Private use.
+  | QX -- ^ @QX@. Description: Private use.
+  | QY -- ^ @QY@. Description: Private use.
+  | QZ -- ^ @QZ@. Description: Private use.
+  | RE -- ^ @RE@. Description: Réunion.
+  | RO -- ^ @RO@. Description: Romania.
+  | RS -- ^ @RS@. Description: Serbia.
+  | RU -- ^ @RU@. Description: Russian Federation.
+  | RW -- ^ @RW@. Description: Rwanda.
+  | SA -- ^ @SA@. Description: Saudi Arabia.
+  | SB -- ^ @SB@. Description: Solomon Islands.
+  | SC -- ^ @SC@. Description: Seychelles.
+  | SD -- ^ @SD@. Description: Sudan.
+  | SE -- ^ @SE@. Description: Sweden.
+  | SG -- ^ @SG@. Description: Singapore.
+  | SH -- ^ @SH@. Description: Saint Helena, Ascension and Tristan da Cunha.
+  | SI -- ^ @SI@. Description: Slovenia.
+  | SJ -- ^ @SJ@. Description: Svalbard and Jan Mayen.
+  | SK -- ^ @SK@. Description: Slovakia.
+  | SL -- ^ @SL@. Description: Sierra Leone.
+  | SM -- ^ @SM@. Description: San Marino.
+  | SN -- ^ @SN@. Description: Senegal.
+  | SO -- ^ @SO@. Description: Somalia.
+  | SR -- ^ @SR@. Description: Suriname.
+  | SS -- ^ @SS@. Description: South Sudan.
+  | ST -- ^ @ST@. Description: Sao Tome and Principe.
+  | SU -- ^ @SU@. Description: Union of Soviet Socialist Republics. Deprecated.
+  | SV -- ^ @SV@. Description: El Salvador.
+  | SX -- ^ @SX@. Description: Sint Maarten (Dutch part).
+  | SY -- ^ @SY@. Description: Syrian Arab Republic.
+  | SZ -- ^ @SZ@. Description: Eswatini; eSwatini; Swaziland.
+  | TA -- ^ @TA@. Description: Tristan da Cunha.
+  | TC -- ^ @TC@. Description: Turks and Caicos Islands.
+  | TD -- ^ @TD@. Description: Chad.
+  | TF -- ^ @TF@. Description: French Southern Territories.
+  | TG -- ^ @TG@. Description: Togo.
+  | TH -- ^ @TH@. Description: Thailand.
+  | TJ -- ^ @TJ@. Description: Tajikistan.
+  | TK -- ^ @TK@. Description: Tokelau.
+  | TL -- ^ @TL@. Description: Timor-Leste.
+  | TM -- ^ @TM@. Description: Turkmenistan.
+  | TN -- ^ @TN@. Description: Tunisia.
+  | TO -- ^ @TO@. Description: Tonga.
+  | TP -- ^ @TP@. Description: East Timor. Deprecated. Preferred value: TL.
+  | TR -- ^ @TR@. Description: Turkey.
+  | TT -- ^ @TT@. Description: Trinidad and Tobago.
+  | TV -- ^ @TV@. Description: Tuvalu.
+  | TW -- ^ @TW@. Description: Taiwan, Province of China.
+  | TZ -- ^ @TZ@. Description: United Republic of Tanzania.
+  | UA -- ^ @UA@. Description: Ukraine.
+  | UG -- ^ @UG@. Description: Uganda.
+  | UM -- ^ @UM@. Description: United States Minor Outlying Islands.
+  | UN -- ^ @UN@. Description: United Nations.
+  | US -- ^ @US@. Description: United States.
+  | UY -- ^ @UY@. Description: Uruguay.
+  | UZ -- ^ @UZ@. Description: Uzbekistan.
+  | VA -- ^ @VA@. Description: Holy See (Vatican City State).
+  | VC -- ^ @VC@. Description: Saint Vincent and the Grenadines.
+  | VE -- ^ @VE@. Description: Venezuela.
+  | VG -- ^ @VG@. Description: British Virgin Islands.
+  | VI -- ^ @VI@. Description: U.S. Virgin Islands.
+  | VN -- ^ @VN@. Description: Viet Nam.
+  | VU -- ^ @VU@. Description: Vanuatu.
+  | WF -- ^ @WF@. Description: Wallis and Futuna.
+  | WS -- ^ @WS@. Description: Samoa.
+  | XA -- ^ @XA@. Description: Private use.
+  | XB -- ^ @XB@. Description: Private use.
+  | XC -- ^ @XC@. Description: Private use.
+  | XD -- ^ @XD@. Description: Private use.
+  | XE -- ^ @XE@. Description: Private use.
+  | XF -- ^ @XF@. Description: Private use.
+  | XG -- ^ @XG@. Description: Private use.
+  | XH -- ^ @XH@. Description: Private use.
+  | XI -- ^ @XI@. Description: Private use.
+  | XJ -- ^ @XJ@. Description: Private use.
+  | XK -- ^ @XK@. Description: Private use.
+  | XL -- ^ @XL@. Description: Private use.
+  | XM -- ^ @XM@. Description: Private use.
+  | XN -- ^ @XN@. Description: Private use.
+  | XO -- ^ @XO@. Description: Private use.
+  | XP -- ^ @XP@. Description: Private use.
+  | XQ -- ^ @XQ@. Description: Private use.
+  | XR -- ^ @XR@. Description: Private use.
+  | XS -- ^ @XS@. Description: Private use.
+  | XT -- ^ @XT@. Description: Private use.
+  | XU -- ^ @XU@. Description: Private use.
+  | XV -- ^ @XV@. Description: Private use.
+  | XW -- ^ @XW@. Description: Private use.
+  | XX -- ^ @XX@. Description: Private use.
+  | XY -- ^ @XY@. Description: Private use.
+  | XZ -- ^ @XZ@. Description: Private use.
+  | YD -- ^ @YD@. Description: Democratic Yemen. Deprecated. Preferred value: YE.
+  | YE -- ^ @YE@. Description: Yemen.
+  | YT -- ^ @YT@. Description: Mayotte.
+  | YU -- ^ @YU@. Description: Yugoslavia. Deprecated.
+  | ZA -- ^ @ZA@. Description: South Africa.
+  | ZM -- ^ @ZM@. Description: Zambia.
+  | ZR -- ^ @ZR@. Description: Zaire. Deprecated. Preferred value: CD.
+  | ZW -- ^ @ZW@. Description: Zimbabwe.
+  | ZZ -- ^ @ZZ@. Description: Private use.
 
   deriving (Eq, Ord, Show, Enum, Bounded)
 
