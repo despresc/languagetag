@@ -524,7 +524,7 @@ renderModuleWith ::
   Text ->
   Text ->
   Day ->
-  (a -> ([Text], Deprecation)) ->
+  (a -> ([Text], Deprecation, Maybe Text)) ->
   (Map Text a) ->
   Text
 renderModuleWith tyname typref tydescription docnote d sel rs =
@@ -557,20 +557,23 @@ renderModuleWith tyname typref tydescription docnote d sel rs =
     renderDepr NotDeprecated = ""
     renderDepr DeprecatedSimple = " Deprecated."
     renderDepr (DeprecatedPreferred t) = " Deprecated. Preferred value: " <> t <> "."
+    renderPref Nothing = ""
+    renderPref (Just x) = " Preferred value: " <> x <> "."
     renderTyCon = (typref <>) . mconcat . renderTyPieces . T.split (== '-')
     renderTyPieces (x : xs)
       | isDigit (T.head x) = [T.singleton (T.head tyname), T.toLower x] <> renderTyTail xs
       | otherwise = [T.toTitle x] <> renderTyTail xs
     renderTyPieces [] = error "Gen.renderTyPieces: empty tag encountered"
     renderTyTail = fmap T.toTitle
-    conBody (x, (y, z)) =
+    conBody (x, (y, z, mpref)) =
       mconcat
         [ renderTyCon x,
           " -- ^ @",
           escapeHaddockChars x,
           "@. ",
           escapeHaddockChars $ renderDescrs y,
-          escapeHaddockChars $ renderDepr z
+          escapeHaddockChars $ renderDepr z,
+          escapeHaddockChars $ renderPref mpref
         ]
     theConstructors = case rs' of
       (x : xs) -> ("  = " <> conBody x) : fmap (\y -> "  | " <> conBody y) xs
@@ -602,21 +605,24 @@ renderSplitRegistry sr = do
   T.writeFile "./src/Text/LanguageTag/Internal/BCP47/Redundant.hs" $
     rendredundant $ redundant sr
   where
+    addNothing (x, y) = (x, y, Nothing)
     rendlang = renderModuleWith "Language" "" "primary language" "" (date sr) $
-      \(x, y, _, _, _) -> (x, y)
+      \(x, y, _, _, _) -> (x, y, Nothing)
     rendextlang = renderModuleWith
       "Extlang"
       "Ext"
       "extended language"
       "These are prefixed with \"Ext\" because they may overlap with primary language subtags. Note that if extended language subtags have a preferred value, then it refers to a primary subtag."
       (date sr)
-      $ \(x, y, _, _, _, _, _) -> (x, y)
-    rendscript = renderModuleWith "Script" "" "script" "" (date sr) id
-    rendregion = renderModuleWith "Region" "" "region" "" (date sr) id
+      $ \(x, y,z, _, _, _, _) -> (x, y, z)
+    rendscript = renderModuleWith "Script" "" "script" "" (date sr) addNothing
+    rendregion = renderModuleWith "Region" "" "region" "" (date sr) addNothing
     rendvariant = renderModuleWith "Variant" "" "variant" "" (date sr) $
-      \(x, y, _) -> (x, y)
-    rendgrandfathered = renderModuleWith "Grandfathered" "" "grandfathered" "" (date sr) id
-    rendredundant = renderModuleWith "Redundant" "" "redundant" "" (date sr) id
+      \(x, y, _) -> (x, y, Nothing)
+    rendgrandfathered = renderModuleWith "Grandfathered" "" "grandfathered" "" (date sr)
+      addNothing
+    rendredundant = renderModuleWith "Redundant" "" "redundant" "" (date sr)
+      addNothing
 
 ----------------------------------------------------------------
 -- Testing functions
