@@ -1,4 +1,4 @@
--- This is an auto-generated file. Do not edit by hand
+-- This is an auto-generated file. Do not edit by hand.
 
 module Text.LanguageTag.Internal.BCP47.Grandfathered where
 

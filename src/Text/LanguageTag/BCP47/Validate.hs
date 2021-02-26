@@ -17,22 +17,31 @@
 -- the tags in the IANA registry, the current version of which is
 -- available at
 -- <https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry>.
-
 module Text.LanguageTag.BCP47.Validate
-  ( Language(..)
-  , Extlang(..)
-  , Script(..)
-  , Region(..)
-  , Variant(..)
-  , Grandfathered(..)
-  , Redundant(..)
-  ) where
+  ( -- * The registered subtags
+    -- $thetags
+    bcp47RegistryDate,
+    Language (..),
+    Extlang (..),
+    Script (..),
+    Region (..),
+    Variant (..),
+    Grandfathered (..),
+    Redundant (..),
+  )
+where
 
 import Text.LanguageTag.Internal.BCP47.Extlang
 import Text.LanguageTag.Internal.BCP47.Grandfathered
 import Text.LanguageTag.Internal.BCP47.Language
 import Text.LanguageTag.Internal.BCP47.Redundant
 import Text.LanguageTag.Internal.BCP47.Region
+import Text.LanguageTag.Internal.BCP47.RegistryDate
 import Text.LanguageTag.Internal.BCP47.Script
 import Text.LanguageTag.Internal.BCP47.Variant
 
+-- $thetags
+--
+-- Below are all of the subtags that are registered with the
+-- IANA. Check 'bcp47RegistryDate' for the version of the registry
+-- that this library uses.

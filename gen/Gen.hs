@@ -32,7 +32,7 @@ import Data.Maybe (mapMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
-import Data.Time.Calendar (Day)
+import Data.Time.Calendar (Day (..))
 
 {-
 TODO:
@@ -501,7 +501,7 @@ splitRegistry (Registry regdate rs) =
 ----------------------------------------------------------------
 
 warning :: Text
-warning = "-- This is an auto-generated file. Do not edit by hand"
+warning = "-- This is an auto-generated file. Do not edit by hand."
 
 escapeHaddockChars :: Text -> Text
 escapeHaddockChars = T.concatMap go
@@ -537,7 +537,7 @@ renderModuleWith ::
   -- essentially)
   (a -> ([Text], Deprecation, Maybe Text)) ->
   -- | the actual subtag type registry
-  (Map Text a) ->
+  Map Text a ->
   Text
 renderModuleWith tyname typref tydescription docnote contrans d sel rs =
   T.unlines $
@@ -564,7 +564,7 @@ renderModuleWith tyname typref tydescription docnote contrans d sel rs =
       | otherwise = " " <> docnote
     rs' = M.toAscList $ M.map sel rs
     renderDescrs descrs =
-      "Description: " <> (T.intercalate "; " $ renderDescr <$> descrs) <> "."
+      "Description: " <> T.intercalate "; " (renderDescr <$> descrs) <> "."
     renderDescr = T.intercalate " " . T.words
     renderDepr NotDeprecated = ""
     renderDepr DeprecatedSimple = " Deprecated."
@@ -623,6 +623,19 @@ renderSplitRegistry sr = do
     rendgrandfathered $ grandfathered sr
   T.writeFile "./src/Text/LanguageTag/Internal/BCP47/Redundant.hs" $
     rendredundant $ redundant sr
+  T.writeFile "./src/Text/LanguageTag/Internal/BCP47/RegistryDate.hs" $
+    T.unlines
+      [ warning,
+        "",
+        "module Text.LanguageTag.Internal.BCP47.RegistryDate where",
+        "",
+        "import Data.Time.Calendar (Day(..))",
+        "",
+        "-- | The date of the BCP47 subtag registry that this library uses. The current value is: " <> T.pack (show (date sr)) <> ".",
+        "bcp47RegistryDate :: Day",
+        "bcp47RegistryDate = ModifiedJulianDay "
+          <> T.pack (show $ toModifiedJulianDay $ date sr)
+      ]
   where
     addNothing (x, y) = (x, y, Nothing)
     rendlang = renderModuleWith "Language" "" "primary language" "" id (date sr) $
