@@ -12,7 +12,7 @@ module Text.LanguageTag.Internal.BCP47.Syntax
     unwrapSubtag,
     unsafeWrapSubtag,
     renderSubtagLow,
-    tagLength,
+    subtagLength,
     subtagHead,
     indexSubtag,
     unsafeIndexSubtag,
@@ -237,8 +237,9 @@ readSubtag len = Subtag . fst . List.foldl' go (len, 57)
     go :: (Word64, Int) -> SubtagChar -> (Word64, Int)
     go (!acc, !idx) (SubtagChar !n) = (acc + Bit.shiftL (fromIntegral n) idx, idx - 7)
 
-tagLength :: Subtag -> Word8
-tagLength = fromIntegral . (Bit..&.) sel . unSubtag
+-- | Return the length of a subtag, which will be between 1 and 8.
+subtagLength :: Subtag -> Word8
+subtagLength = fromIntegral . (Bit..&.) sel . unSubtag
   where
     sel = 15
 
@@ -259,9 +260,10 @@ unsafeIndexSubtag (Subtag n) idx =
   where
     sel = 127
 
+-- | Index a subtag.
 indexSubtag :: Subtag -> Word8 -> Maybe SubtagChar
 indexSubtag t idx
-  | tagLength t >= idx = Nothing
+  | subtagLength t >= idx = Nothing
   | otherwise = Just $ unsafeIndexSubtag t idx
 
 -- | Return the head of the 'Subtag'. Subtags are always non-empty, so
@@ -273,7 +275,7 @@ subtagHead = (`unsafeIndexSubtag` 0)
 unpackSubtag :: Subtag -> [SubtagChar]
 unpackSubtag inp = List.unfoldr go (0, inp)
   where
-    len = tagLength inp
+    len = subtagLength inp
     go (idx, n)
       | idx == len = Nothing
       | otherwise =
@@ -349,7 +351,7 @@ packSubtagMangled t = readSubtag (fromIntegral len) (wchars [])
 renderRegion :: MaybeSubtag -> TB.Builder
 renderRegion (MaybeSubtag s)
   | unSubtag s == 0 = ""
-  | tagLength s == 2 = TB.fromString $ '-' : List.unfoldr capgo (s, 0)
+  | subtagLength s == 2 = TB.fromString $ '-' : List.unfoldr capgo (s, 0)
   | otherwise = renderSubtagLow s
   where
     capgo (n, idx)
@@ -376,7 +378,7 @@ renderScript (MaybeSubtag s)
 renderSubtagLow :: Subtag -> TB.Builder
 renderSubtagLow w = TB.fromString $ List.unfoldr go (w, 0)
   where
-    len = tagLength w
+    len = subtagLength w
     go (n, idx)
       | idx == len = Nothing
       | otherwise =

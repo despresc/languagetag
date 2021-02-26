@@ -18,10 +18,8 @@ description:
   as of its current 2009 version, as well as canonicalizing such
   tags. The pertinent functions are generated automatically using data
   from the IANA Language Subtag Registry, available from
-  <https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry>. The
-  version that is used in the library is stored in the
-  'Text.LanguageTag.BCP47.Validate.bcp47RegistryDate' constant.  (If
-  there is a more recent release, please open an issue).
+  <https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry>. This
+  library uses the version of 2021-02-23.
 
 extra-source-files:
   CHANGELOG.md

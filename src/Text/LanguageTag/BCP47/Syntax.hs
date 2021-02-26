@@ -77,6 +77,7 @@ module Text.LanguageTag.BCP47.Syntax
     unpackSubtag,
     subtagHead,
     indexSubtag,
+    subtagLength,
     unsafeIndexSubtag,
     MaybeSubtag,
     justSubtag,
@@ -277,7 +278,7 @@ parseBCP47' !initchar !inp = tagPopDetail initchar inp Cbeginning 0 >>= parsePri
 
     -- TODO: could be optimized a bit
     parsePrimary (st, OnlyLetter, t)
-      | tagLength st == 1 =
+      | subtagLength st == 1 =
         if subtagHead st == subtagCharx
           then PrivateTag <$> parsePrivate 0 t
           else do
@@ -285,15 +286,15 @@ parseBCP47' !initchar !inp = tagPopDetail initchar inp Cbeginning 0 >>= parsePri
             case msep of
               Just (c, t') -> parseIrregularI st c t'
               Nothing -> Left $ Err 0 Cprimary ErrNeededTag
-      | tagLength st >= 4 =
+      | subtagLength st >= 4 =
         mfinish
-          (tagLength st)
+          (subtagLength st)
           Cprimary
           0
           t
           (initcon st nullSubtag nullSubtag nullSubtag)
           tryScript
-      | otherwise = mfinish (tagLength st) Cprimary 0 t (initcon st) (tryGrandPrimary st)
+      | otherwise = mfinish (subtagLength st) Cprimary 0 t (initcon st) (tryGrandPrimary st)
     parsePrimary _ = Left $ Err 0 Cbeginning ErrBadChar
 
     tryGrandPrimary st0 con st1 sc clast pos t =
@@ -311,7 +312,7 @@ parseBCP47' !initchar !inp = tagPopDetail initchar inp Cbeginning 0 >>= parsePri
         (17699146535566049282, 15098140437866610693)
           | T.null t -> pure $ RegularGrandfathered Zhhakka
         (17699146535566049282, 15827742560719208451) -> do
-          let pos' = pos + fromIntegral (tagLength st1) + 1
+          let pos' = pos + fromIntegral (subtagLength st1) + 1
           msep <- tagSep clast pos' t
           case msep of
             Nothing -> pure $ RegularGrandfathered Zhmin
@@ -327,48 +328,48 @@ parseBCP47' !initchar !inp = tagPopDetail initchar inp Cbeginning 0 >>= parsePri
 
     tryLext1 !con st sc clast pos t
       | OnlyLetter <- sc,
-        tagLength st == 3 =
-        mfinish (tagLength st) Clext1 pos t (con $ justSubtag st) tryLext2
+        subtagLength st == 3 =
+        mfinish (subtagLength st) Clext1 pos t (con $ justSubtag st) tryLext2
       | otherwise = tryScript (con nullSubtag nullSubtag nullSubtag) st sc clast pos t
 
     tryLext2 !con st sc clast pos t
       | OnlyLetter <- sc,
-        tagLength st == 3 =
-        mfinish (tagLength st) Clext2 pos t (con $ justSubtag st) tryLext3
+        subtagLength st == 3 =
+        mfinish (subtagLength st) Clext2 pos t (con $ justSubtag st) tryLext3
       | otherwise = tryScript (con nullSubtag nullSubtag) st sc clast pos t
 
     tryLext3 !con st sc clast pos t
       | OnlyLetter <- sc,
-        tagLength st == 3 =
-        mfinish (tagLength st) Clanguage pos t (con $ justSubtag st) tryScript
+        subtagLength st == 3 =
+        mfinish (subtagLength st) Clanguage pos t (con $ justSubtag st) tryScript
       | otherwise = tryScript (con nullSubtag) st sc clast pos t
 
     tryScript !con st sc clast pos t
-      | tagLength st == 4,
+      | subtagLength st == 4,
         OnlyLetter <- sc =
-        mfinish (tagLength st) Cscript pos t (con $ justSubtag st) tryRegion
+        mfinish (subtagLength st) Cscript pos t (con $ justSubtag st) tryRegion
       | otherwise = tryRegion (con nullSubtag) st sc clast pos t
 
     tryRegion !con st sc clast pos t
-      | tagLength st == 2 = case sc of
-        OnlyLetter -> mfinishSimple (tagLength st) Cregion pos t (con $ justSubtag st) tryVariant
+      | subtagLength st == 2 = case sc of
+        OnlyLetter -> mfinishSimple (subtagLength st) Cregion pos t (con $ justSubtag st) tryVariant
         _ -> Left $ Err pos clast ErrBadTag
-      | tagLength st == 3 = case sc of
-        OnlyDigit -> mfinishSimple (tagLength st) Cregion pos t (con $ justSubtag st) tryVariant
+      | subtagLength st == 3 = case sc of
+        OnlyDigit -> mfinishSimple (subtagLength st) Cregion pos t (con $ justSubtag st) tryVariant
         _ -> Left $ Err pos clast ErrBadTag
       | otherwise = tryVariant (con nullSubtag) st clast pos t
 
     tryVariant !con st clast pos t
-      | tagLength st == 4 =
+      | subtagLength st == 4 =
         if isDigit $ subtagHead st
-          then mfinishSimple (tagLength st) Cvariant pos t (con . strictCons st) tryVariant
+          then mfinishSimple (subtagLength st) Cvariant pos t (con . strictCons st) tryVariant
           else Left $ Err pos clast ErrBadTag
-      | tagLength st >= 5 =
-        mfinishSimple (tagLength st) Cvariant pos t (con . strictCons st) tryVariant
+      | subtagLength st >= 5 =
+        mfinishSimple (subtagLength st) Cvariant pos t (con . strictCons st) tryVariant
       | otherwise = trySingleton (con []) st clast pos t
 
     trySingleton con st clast pos t
-      | tagLength st /= 1 = Left $ Err pos clast ErrBadTag
+      | subtagLength st /= 1 = Left $ Err pos clast ErrBadTag
       | subtagHead st == subtagCharx =
         parsePrivateUse (con []) pos t
       | otherwise = parseExtension (\ne -> con . strictCons (Extension (subtagHead st) ne)) pos t
@@ -383,7 +384,7 @@ parseBCP47' !initchar !inp = tagPopDetail initchar inp Cbeginning 0 >>= parsePri
         Nothing -> Left $ Err pos Cprivateuse ErrNeededTag
 
     parsePrivateUseTag con st _ _ pos t =
-      mfinish (tagLength st) Cprivateuse pos t (con . strictCons st) parsePrivateUseTag
+      mfinish (subtagLength st) Cprivateuse pos t (con . strictCons st) parsePrivateUseTag
 
     parseExtension con pos t = do
       let pos' = pos + 2
@@ -391,10 +392,10 @@ parseBCP47' !initchar !inp = tagPopDetail initchar inp Cbeginning 0 >>= parsePri
       case ms of
         Just (c, t') -> do
           (st, t'') <- tagPop c t' Cextension pos'
-          if tagLength st >= 2
+          if subtagLength st >= 2
             then
               mfinishSimple
-                (tagLength st)
+                (subtagLength st)
                 Cextension
                 pos'
                 t''
@@ -404,8 +405,8 @@ parseBCP47' !initchar !inp = tagPopDetail initchar inp Cbeginning 0 >>= parsePri
         Nothing -> Left $ Err pos Cextension ErrNeededTag
 
     parseExtensionTag con st _ pos t
-      | tagLength st == 1 = trySingleton (con []) st Cextension pos t
-      | otherwise = mfinishSimple (tagLength st) Cextension pos t (con . strictCons st) parseExtensionTag
+      | subtagLength st == 1 = trySingleton (con []) st Cextension pos t
+      | otherwise = mfinishSimple (subtagLength st) Cextension pos t (con . strictCons st) parseExtensionTag
 
     parseIrregularI st c t
       | st /= subtagI = Left $ Err 0 Cbeginning ErrBadChar
@@ -439,7 +440,7 @@ parsePrivate initpos inp = do
   case ms of
     Just (c, t) -> do
       (st, t') <- tagPop c t Cprivateuse initpos
-      parsePrivateUseTag (strictNE st) (initpos + fromIntegral (tagLength st) + 1) t'
+      parsePrivateUseTag (strictNE st) (initpos + fromIntegral (subtagLength st) + 1) t'
     Nothing -> Left $ Err initpos Cprivateuse ErrNeededTag
   where
     parsePrivateUseTag con pos t = do
@@ -447,7 +448,7 @@ parsePrivate initpos inp = do
       case mc of
         Just (c, t') -> do
           (st, t'') <- tagPop c t' Cprivateuse pos
-          parsePrivateUseTag (con . strictCons st) (pos + fromIntegral (tagLength st) + 1) t''
+          parsePrivateUseTag (con . strictCons st) (pos + fromIntegral (subtagLength st) + 1) t''
         Nothing -> pure $ con []
 
 ----------------------------------------------------------------
@@ -472,7 +473,7 @@ renderSubtagBuilder = renderSubtagLow
 renderSubtag :: Subtag -> Text
 renderSubtag w = T.unfoldrN (fromIntegral len) go (w, 0)
   where
-    len = tagLength w
+    len = subtagLength w
     go (n, idx)
       | idx == len = Nothing
       | otherwise =
