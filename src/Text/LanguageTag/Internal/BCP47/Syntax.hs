@@ -282,6 +282,8 @@ unpackSubtag inp = List.unfoldr go (0, inp)
         let (!w, !n') = unsafePopChar n
          in Just (w, (idx + 1, n'))
 
+-- TODO: call this parseSubtagDetail? and toSubtag -> parseSubtag?
+
 -- | Attempt to parse a text string as a subtag. This also returns
 -- whether or not we saw a letter or a digit, respectively.
 toSubtagDetail :: Text -> Maybe (Subtag, SeenChar)

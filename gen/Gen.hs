@@ -33,6 +33,8 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import Data.Time.Calendar (Day (..))
+import Text.LanguageTag.BCP47.Syntax (toSubtag, unwrapSubtag)
+import Text.LanguageTag.BCP47.Validate (Deprecation (..), Scope (..))
 
 {-
 TODO:
@@ -158,19 +160,6 @@ data FieldTagType
   | FieldUnknown
   deriving (Show)
 
-data Scope
-  = Macrolanguage
-  | Collection
-  | Special
-  | PrivateUse
-  deriving (Show)
-
-data Deprecation
-  = NotDeprecated
-  | DeprecatedSimple
-  | DeprecatedPreferred Text
-  deriving (Show)
-
 -- | A raw record with the fields: tag or subtag, tag type,
 -- descriptions, deprecation, preferred value, prefixes, script
 -- suppression, macrolanguage, scope
@@ -178,15 +167,15 @@ data TagRecord
   = TagRecord
       Text
       TagType
-      [Text]
-      Deprecation
+      (NonEmpty Text)
+      (Deprecation Text)
   deriving (Show)
 
 -- The registry with the date and the raw tag information.
-data Registry = Registry Day [TagRecord]
+data RawRegistry = RawRegistry Day [TagRecord]
 
-lookupInRegistry :: Text -> Registry -> Maybe TagRecord
-lookupInRegistry t (Registry _ rs) = List.find (\(TagRecord x _ _ _) -> x == t) rs
+lookupInRawRegistry :: Text -> RawRegistry -> Maybe TagRecord
+lookupInRawRegistry t (RawRegistry _ rs) = List.find (\(TagRecord x _ _ _) -> x == t) rs
 
 field :: FieldTagType -> Jar -> Text -> Either Err (NonEmpty (LineNum, Text))
 field t (ln, j) k = case HM.lookup k j of
@@ -261,7 +250,7 @@ data Err
 -- empty exactly when the file date is malformed or the input is empty.
 
 --TODO: split off parseRawRecord
-parseRegistry :: [Jar] -> Either Err ([(LineNum, Text)], Registry)
+parseRegistry :: [Jar] -> Either Err ([(LineNum, Text)], RawRegistry)
 parseRegistry ((_, datejar) : tagjars) = case HM.toList datejar of
   [("File-Date", (_, dv) NE.:| [])] ->
     case reads (T.unpack dv) of
@@ -273,7 +262,7 @@ parseRegistry ((_, datejar) : tagjars) = case HM.toList datejar of
       Right r -> parseRegistry' rdate (unexpecteds . (unexpectedFields j ++)) (recs . (r :)) js
       Left e -> Left e
     parseRegistry' rdate unexpecteds recs [] =
-      Right (unexpecteds [], Registry rdate $ recs [])
+      Right (unexpecteds [], RawRegistry rdate $ recs [])
     parseRawRecord j = do
       combining
         [ parseLanguage j,
@@ -300,7 +289,7 @@ parseRegistry ((_, datejar) : tagjars) = case HM.toList datejar of
 
     withStandardFields tt ty p j = do
       guardTy j ty
-      descriptions <- fmap snd <$> mfield j "Description"
+      descriptions <- fmap snd <$> field tt j "Description"
       deprecation <- do
         mdep <- optionalOne tt j "Deprecated"
         case mdep of
@@ -318,7 +307,7 @@ parseRegistry ((_, datejar) : tagjars) = case HM.toList datejar of
           "macrolanguage" -> pure $ Just Macrolanguage
           "collection" -> pure $ Just Collection
           "special" -> pure $ Just Special
-          "private-use" -> pure $ Just PrivateUse
+          "private-use" -> pure $ Just PrivateUseScope
           _ ->
             Left $
               ErrRecord
@@ -396,7 +385,7 @@ parseRegistry ((_, datejar) : tagjars) = case HM.toList datejar of
 parseRegistry [] = Left ErrEmptyInput
 
 -- Does /not/ unpack ranges
-parseRegistryThrow :: Text -> IO ([(LineNum, Text)], Registry)
+parseRegistryThrow :: Text -> IO ([(LineNum, Text)], RawRegistry)
 parseRegistryThrow inp = do
   let jarErr (lineNum, t) =
         fail $
@@ -418,7 +407,7 @@ parseRegistryThrow inp = do
   jars <- either jarErr pure $ parseJarFile inp
   either tagErr pure $ parseRegistry jars
 
-readLocalRegistry :: IO ([(LineNum, Text)], Registry)
+readLocalRegistry :: IO ([(LineNum, Text)], RawRegistry)
 readLocalRegistry = T.readFile "./registry/bcp47" >>= parseRegistryThrow
 
 -- Unpack the four known registry ranges. In the unlikely even that
@@ -439,6 +428,79 @@ unpackRegistryRanges = concatMap unpackRecord
     qm = [T.pack ['Q', x] | x <- ['M' .. 'Z']]
     xa = [T.pack ['X', x] | x <- ['A' .. 'Z']]
 
+----------------------------------------------------------------
+-- Parsing the registry and tag records
+----------------------------------------------------------------
+
+data LanguageRecord = LanguageRecord
+  { langDescription :: NonEmpty Text,
+    langDeprecation :: Deprecation Text,
+    langScriptSuppression :: Maybe Text,
+    langMacrolanguage :: Maybe Text,
+    langScope :: Maybe Scope
+  }
+
+data ExtlangRecord = ExtlangRecord
+  { extlangDescription :: NonEmpty Text,
+    extlangDeprecation :: Deprecation Text,
+    extlangPrefix :: Text,
+    extlangScriptSuppression :: Maybe Text,
+    extlangMacrolanguage :: Maybe Text,
+    extlangScope :: Maybe Scope
+  }
+
+data VariantRecord = VariantRecord
+  { variantDescription :: NonEmpty Text,
+    variantDeprecation :: Deprecation Text,
+    variantPrefixes :: [Text]
+  }
+
+data ScriptRecord = ScriptRecord
+  { scriptDescription :: NonEmpty Text,
+    scriptDeprecation :: Deprecation Text
+  }
+
+data RegionRecord = RegionRecord
+  { regionDescription :: NonEmpty Text,
+    regionDeprecation :: Deprecation Text
+  }
+
+-- | A grandfathered or redundant subtag record. These records are
+-- distinguished from the others in that they define entire tags, and
+-- that the preferred values associated to their deprecation are an
+-- "extended language range", which is an entire tag that is strongly
+-- recommended as the replacement for the tag.
+data RangeRecord = RangeRecord
+  { rangeDescription :: NonEmpty Text,
+    rangeDeprecation :: Deprecation Text
+  }
+
+-- TODO HERE: replace SplitRegistry with this Registry, and call the
+-- other Registry something else. Then finish deleting the Registry
+-- module, etc.
+--
+-- Also will want to create the Tag -> Record functions right now, I
+-- think, before the representation of the tags is changed.
+
+-- | The full BCP47 subtag registry. Note that the registry file may
+-- also contain ranges of values, like @a..c@ for @a, b, c@. These are
+-- expanded here, so that only individual values remain.
+
+-- TODO HERE: I think we need a raw version of the various records,
+-- actually! At least if we have the tags in a big constructor -
+-- otherwise we'll never be able to parse new subtags!
+data Registry = Registry
+  { date :: Day,
+    languageRecords :: Map Text LanguageRecord,
+    extlangRecords :: Map Text ExtlangRecord,
+    scriptRecords :: Map Text ScriptRecord,
+    regionRecords :: Map Text RegionRecord,
+    variantRecords :: Map Text VariantRecord,
+    grandfatheredRecords :: Map Text RangeRecord,
+    redundantRecords :: Map Text RangeRecord
+  }
+
+{-
 data SplitRegistry = SplitRegistry
   { date :: Day,
     -- | optional script suppression, macrolanguage, scope
@@ -456,44 +518,45 @@ data SplitRegistry = SplitRegistry
     grandfathered :: Map Text ([Text], Deprecation),
     redundant :: Map Text ([Text], Deprecation)
   }
+-}
 
-lookupSplit :: (SplitRegistry -> Map Text a) -> SplitRegistry -> Text -> Maybe a
+lookupSplit :: (Registry -> Map Text a) -> Registry -> Text -> Maybe a
 lookupSplit proj r t = M.lookup t $ proj r
 
-splitRegistry :: Registry -> SplitRegistry
-splitRegistry (Registry regdate rs) =
-  SplitRegistry
+splitRegistry :: RawRegistry -> Registry
+splitRegistry (RawRegistry regdate rs) =
+  Registry
     { date = regdate,
-      languages = go plang,
-      extlangs = go pextlang,
-      scripts = go pscr,
-      regions = go preg,
-      variants = go pvar,
-      grandfathered = go pgra,
-      redundant = go prdn
+      languageRecords = go plang,
+      extlangRecords = go pextlang,
+      scriptRecords = go pscr,
+      regionRecords = go preg,
+      variantRecords = go pvar,
+      grandfatheredRecords = go pgra,
+      redundantRecords = go prdn
     }
   where
     go proj = M.fromList $ mapMaybe proj $ unpackRegistryRanges rs
     plang (TagRecord tg (Language x y z) descrs deprs) =
-      Just (tg, (descrs, deprs, x, y, z))
+      Just (tg, LanguageRecord descrs deprs x y z)
     plang _ = Nothing
-    pextlang (TagRecord tg (Extlang a b c d e) descrs deprs) =
-      Just (tg, (descrs, deprs, a, b, c, d, e))
+    pextlang (TagRecord tg (Extlang _ b c d e) descrs deprs) =
+      Just (tg, ExtlangRecord descrs deprs b c d e)
     pextlang _ = Nothing
     pscr (TagRecord tg Script descrs deprs) =
-      Just (tg, (descrs, deprs))
+      Just (tg, ScriptRecord descrs deprs)
     pscr _ = Nothing
     preg (TagRecord tg Region descrs deprs) =
-      Just (tg, (descrs, deprs))
+      Just (tg, RegionRecord descrs deprs)
     preg _ = Nothing
     pvar (TagRecord tg (Variant l) descrs deprs) =
-      Just (tg, (descrs, deprs, l))
+      Just (tg, VariantRecord descrs deprs l)
     pvar _ = Nothing
     pgra (TagRecord tg Grandfathered descrs deprs) =
-      Just (tg, (descrs, deprs))
+      Just (tg, RangeRecord descrs deprs)
     pgra _ = Nothing
     prdn (TagRecord tg Redundant descrs deprs) =
-      Just (tg, (descrs, deprs))
+      Just (tg, RangeRecord descrs deprs)
     prdn _ = Nothing
 
 ----------------------------------------------------------------
@@ -518,6 +581,58 @@ escapeHaddockChars = T.concatMap go
       '#' -> "\\#"
       _ -> T.singleton c
 
+-- | Render a subtag parser and renderer for anything other than the
+-- redundant or grandfathered tags
+
+-- I initially tried this with a case statement, but as it turns out
+-- ghci does not react well to case statements that have over 8000
+-- branches.
+renderParseRend :: Text -> [(Text, Text)] -> [Text]
+renderParseRend tyname cons =
+  [ parsename <> " :: Subtag -> Maybe " <> tyname,
+    parsename <> " = flip HM.lookup table . unwrapSubtag",
+    "  where",
+    "    table = HM.fromList"
+  ]
+    <> renderlist (renderlistitem <$> cons)
+    <> [ rendername <> " :: " <> tyname <> " -> Subtag",
+         rendername <> " x = case x of"
+       ]
+    <> (rendercase <$> cons)
+  where
+    parsename = "parse" <> tyname
+    renderlistitem (x, y) = case toSubtag x of
+      Just n -> "(" <> T.pack (show $ unwrapSubtag n) <> ", " <> y <> ")"
+      Nothing ->
+        error $
+          T.unpack $
+            "could not parse tag " <> x
+              <> " when generating parser for "
+              <> tyname
+    renderlist (x : xs) = "      [ " <> x : renderlistmid xs
+    renderlist [] = error $ T.unpack $ tyname <> " should have more than one entry"
+    renderlistmid [x] = ["      , " <> x <> "]"]
+    renderlistmid (x : xs) = "      , " <> x : renderlistmid xs
+    renderlistmid [] = error $ T.unpack $ tyname <> " should have more than two entries"
+
+    rendername = T.toLower tyname <> "ToSubtag"
+    rendercase (x, y) = case toSubtag x of
+      Just n -> "  " <> y <> " -> Subtag " <> T.pack (show $ unwrapSubtag n)
+      Nothing ->
+        error $
+          T.unpack $
+            "could not parse tag " <> x
+              <> " when generating parser for "
+              <> tyname
+
+-- | The parser and renderer for grandfathered tags will be written manually.
+renderGrandParseRend :: Text -> [(Text, Text)] -> [Text]
+renderGrandParseRend _ _ = []
+
+-- | The redundant tags do not require a separate parser.
+renderRedundantParseRend :: Text -> [(Text, Text)] -> [Text]
+renderRedundantParseRend _ _ = []
+
 -- | Render an internal subtag module.
 renderModuleWith ::
   -- | the desired type name
@@ -532,25 +647,34 @@ renderModuleWith ::
   (Text -> Text) ->
   -- | the date of the registry that was used
   Day ->
+  -- | module-specific imports
+  [Text] ->
+  -- | renderer for the parser and renderer
+  (Text -> [(Text, Text)] -> [Text]) ->
   -- | projection returning the description, deprecation and optional
   -- preferred value without deprecation (for extlang only,
   -- essentially)
-  (a -> ([Text], Deprecation, Maybe Text)) ->
+  (a -> (NonEmpty Text, (Deprecation Text), Maybe Text)) ->
   -- | the actual subtag type registry
   Map Text a ->
   Text
-renderModuleWith tyname typref tydescription docnote contrans d sel rs =
+renderModuleWith tyname typref tydescription docnote contrans d imps renderpr sel rs =
   T.unlines $
     [ warning,
       "",
+      "{-# LANGUAGE NoImplicitPrelude #-}",
+      "",
       "module Text.LanguageTag.Internal.BCP47." <> tyname <> " where",
       "",
+      "import Prelude hiding (LT, GT)",
       "import Control.DeepSeq (NFData(..))",
-      "import Data.Hashable (Hashable(..), hashUsing)",
-      "",
-      "-- | The BCP47 " <> tydescription <> " tags as of " <> T.pack (show d) <> "." <> docnote',
-      "data " <> tyname
+      "import Data.Hashable (Hashable(..), hashUsing)"
     ]
+      <> imps
+      <> [ "",
+           "-- | The BCP47 " <> tydescription <> " tags as of " <> T.pack (show d) <> "." <> docnote',
+           "data " <> tyname
+         ]
       <> theConstructors
       <> [""]
       <> theInstances
@@ -558,20 +682,22 @@ renderModuleWith tyname typref tydescription docnote contrans d sel rs =
       <> theNFData
       <> [""]
       <> theHashable
+      <> [""]
+      <> theParserRender
   where
     docnote'
       | T.null docnote = ""
       | otherwise = " " <> docnote
     rs' = M.toAscList $ M.map sel rs
     renderDescrs descrs =
-      "Description: " <> T.intercalate "; " (renderDescr <$> descrs) <> "."
+      "Description: " <> T.intercalate "; " (toList $ renderDescr <$> descrs) <> "."
     renderDescr = T.intercalate " " . T.words
     renderDepr NotDeprecated = ""
     renderDepr DeprecatedSimple = " Deprecated."
     renderDepr (DeprecatedPreferred t) = " Deprecated. Preferred value: " <> t <> "."
     renderPref Nothing = ""
     renderPref (Just x) = " Preferred value: " <> x <> "."
-    renderTyCon = (typref <>) . mconcat . renderTyPieces . T.split (== '-')
+    renderTyCon = contrans . (typref <>) . mconcat . renderTyPieces . T.split (== '-')
     renderTyPieces (x : xs)
       | isDigit (T.head x) = [T.singleton (T.head tyname), T.toLower x] <> renderTyTail xs
       | otherwise = [T.toTitle x] <> renderTyTail xs
@@ -579,7 +705,7 @@ renderModuleWith tyname typref tydescription docnote contrans d sel rs =
     renderTyTail = fmap T.toTitle
     conBody (x, (y, z, mpref)) =
       mconcat
-        [ contrans $ renderTyCon x,
+        [ renderTyCon x,
           " -- ^ @",
           escapeHaddockChars x,
           "@. ",
@@ -599,6 +725,7 @@ renderModuleWith tyname typref tydescription docnote contrans d sel rs =
       [ "instance Hashable " <> tyname <> " where",
         "  hashWithSalt = hashUsing fromEnum"
       ]
+    theParserRender = renderpr tyname $ (\(x, _) -> (x, renderTyCon x)) <$> rs'
 
 -- | Write the various internal subtag modules.
 
@@ -607,22 +734,22 @@ renderModuleWith tyname typref tydescription docnote contrans d sel rs =
 -- types) then there could be a name collision between the Language
 -- and Script modules. If that happens there will need to be special
 -- casing to deal with it.
-renderSplitRegistry :: SplitRegistry -> IO ()
+renderSplitRegistry :: Registry -> IO ()
 renderSplitRegistry sr = do
   T.writeFile "./src/Text/LanguageTag/Internal/BCP47/Language.hs" $
-    rendlang $ languages sr
+    rendlang $ languageRecords sr
   T.writeFile "./src/Text/LanguageTag/Internal/BCP47/Extlang.hs" $
-    rendextlang $ extlangs sr
+    rendextlang $ extlangRecords sr
   T.writeFile "./src/Text/LanguageTag/Internal/BCP47/Script.hs" $
-    rendscript $ scripts sr
+    rendscript $ scriptRecords sr
   T.writeFile "./src/Text/LanguageTag/Internal/BCP47/Region.hs" $
-    rendregion $ regions sr
+    rendregion $ regionRecords sr
   T.writeFile "./src/Text/LanguageTag/Internal/BCP47/Variant.hs" $
-    rendvariant $ variants sr
+    rendvariant $ variantRecords sr
   T.writeFile "./src/Text/LanguageTag/Internal/BCP47/Grandfathered.hs" $
-    rendgrandfathered $ grandfathered sr
+    rendgrandfathered $ grandfatheredRecords sr
   T.writeFile "./src/Text/LanguageTag/Internal/BCP47/Redundant.hs" $
-    rendredundant $ redundant sr
+    rendredundant $ redundantRecords sr
   T.writeFile "./src/Text/LanguageTag/Internal/BCP47/RegistryDate.hs" $
     T.unlines
       [ warning,
@@ -637,9 +764,22 @@ renderSplitRegistry sr = do
           <> T.pack (show $ toModifiedJulianDay $ date sr)
       ]
   where
-    addNothing (x, y) = (x, y, Nothing)
-    rendlang = renderModuleWith "Language" "" "primary language" "" id (date sr) $
-      \(x, y, _, _, _) -> (x, y, Nothing)
+    standardImp =
+      [ "import Text.LanguageTag.Internal.BCP47.Syntax (Subtag(..), unwrapSubtag)",
+        "import qualified Data.HashMap.Strict as HM"
+      ]
+    grandfatheredImp = []
+    redundantImp = []
+    rendlang = renderModuleWith
+      "Language"
+      ""
+      "primary language"
+      ""
+      id
+      (date sr)
+      standardImp
+      renderParseRend
+      $ \(LanguageRecord x y _ _ _) -> (x, y, Nothing)
     rendextlang = renderModuleWith
       "Extlang"
       "Ext"
@@ -647,11 +787,41 @@ renderSplitRegistry sr = do
       "These are prefixed with \"Ext\" because they may overlap with primary language subtags. Note that if extended language subtags have a preferred value, then it refers to a primary subtag."
       id
       (date sr)
-      $ \(x, y, z, _, _, _, _) -> (x, y, z)
-    rendscript = renderModuleWith "Script" "" "script" "" id (date sr) addNothing
-    rendregion = renderModuleWith "Region" "" "region" "" T.toUpper (date sr) addNothing
-    rendvariant = renderModuleWith "Variant" "" "variant" "" id (date sr) $
-      \(x, y, _) -> (x, y, Nothing)
+      standardImp
+      renderParseRend
+      $ \(ExtlangRecord x y z _ _ _) -> (x, y, Just z)
+    rendscript =
+      renderModuleWith
+        "Script"
+        ""
+        "script"
+        ""
+        id
+        (date sr)
+        standardImp
+        renderParseRend
+        $ \(ScriptRecord x y) -> (x, y, Nothing)
+    rendregion =
+      renderModuleWith
+        "Region"
+        ""
+        "region"
+        ""
+        T.toUpper
+        (date sr)
+        standardImp
+        renderParseRend
+        $ \(RegionRecord x y) -> (x, y, Nothing)
+    rendvariant = renderModuleWith
+      "Variant"
+      ""
+      "variant"
+      ""
+      id
+      (date sr)
+      standardImp
+      renderParseRend
+      $ \(VariantRecord x y _) -> (x, y, Nothing)
     rendgrandfathered =
       renderModuleWith
         "Grandfathered"
@@ -660,7 +830,9 @@ renderSplitRegistry sr = do
         ""
         id
         (date sr)
-        addNothing
+        grandfatheredImp
+        renderGrandParseRend
+        $ \(RangeRecord x y) -> (x, y, Nothing)
     rendredundant =
       renderModuleWith
         "Redundant"
@@ -669,7 +841,22 @@ renderSplitRegistry sr = do
         ""
         id
         (date sr)
-        addNothing
+        redundantImp
+        renderRedundantParseRend
+        $ \(RangeRecord x y) -> (x, y, Nothing)
+
+{- TODO HERE:
+
+Okay, so we're going to want to generate the to/fromSubtag code for
+all of the registered subtags. I think this can be done by
+
+- import the standalone subtag parser
+- parse all of the extensions in each section
+- write a parseTycon and render(?)Tycon function using the raw numbers
+  from previous step
+- might want to benchmark the hashset version.
+
+-}
 
 ----------------------------------------------------------------
 -- Testing functions
@@ -692,7 +879,7 @@ renderRecord (TagRecord t tt descs dep) = case tt of
   Region -> ["Type: region", "Subtag: " <> t] <> renderDescs <> renderDep
   Variant vs ->
     ["Type: variant", "Subtag: " <> t] <> renderDescs <> renderDep
-      <> fmap (\x -> "Prefix: " <> x) vs
+      <> fmap ("Prefix: " <>) vs
   Grandfathered -> ["Type: grandfathered", "Tag: " <> t] <> renderDescs <> renderDep
   Redundant -> ["Type: redundant", "Tag: " <> t] <> renderDescs <> renderDep
   where
@@ -707,11 +894,11 @@ renderRecord (TagRecord t tt descs dep) = case tt of
       NotDeprecated -> []
       DeprecatedSimple -> ["Deprecated"]
       DeprecatedPreferred v -> ["Deprecated", "Preferred-Value: " <> v]
-    renderDescs = fmap (\d -> takeFirstLine $ "Description: " <> d) descs
+    renderDescs = toList $ fmap (\d -> takeFirstLine $ "Description: " <> d) descs
     renderScope (Just Macrolanguage) = ["Scope: macrolanguage"]
     renderScope (Just Collection) = ["Scope: collection"]
     renderScope (Just Special) = ["Scope: special"]
-    renderScope (Just PrivateUse) = ["Scope: private-use"]
+    renderScope (Just PrivateUseScope) = ["Scope: private-use"]
     renderScope Nothing = []
 
 mParsed :: Text -> Maybe Text
@@ -732,8 +919,8 @@ mParsed t
 rerenderRegistryFile :: Text -> [Text]
 rerenderRegistryFile = mapMaybe mParsed . T.lines
 
-renderRegistry :: Registry -> [Text]
-renderRegistry (Registry rdate rs) =
+renderRegistry :: RawRegistry -> [Text]
+renderRegistry (RawRegistry rdate rs) =
   ("File-Date: " <> T.pack (show rdate)) :
   concatMap renderRecord rs
 

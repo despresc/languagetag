@@ -32,6 +32,25 @@ module Text.LanguageTag.BCP47.Validate
     toExtensionChar,
     fromExtensionChar,
 
+    -- ** Valid tag parsers
+
+    {-    parseLanguage,
+        parseExtlang,
+        parseScript,
+        parseRegion,
+        parseVariant, -}
+
+    -- * Registry records
+    -- $therecords
+    LanguageRecord (..),
+    ExtlangRecord (..),
+    ScriptRecord (..),
+    RegionRecord (..),
+    VariantRecord (..),
+    RangeRecord (..),
+    Scope (..),
+    Deprecation (..),
+
     -- * The registered subtags
     -- $thetags
     bcp47RegistryDate,
@@ -63,9 +82,7 @@ import Control.DeepSeq (NFData (..))
 import Data.Hashable (Hashable (..), hashUsing)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as M
 import Data.Set (Set)
-import qualified Data.Set as S
 import Data.Text (Text)
 import Text.LanguageTag.BCP47.Syntax (Subtag, subtagLength)
 import Text.LanguageTag.Internal.BCP47.Extlang
@@ -77,12 +94,37 @@ import Text.LanguageTag.Internal.BCP47.RegistryDate
 import Text.LanguageTag.Internal.BCP47.Script
 import Text.LanguageTag.Internal.BCP47.Variant
 
--- | A valid (not merely well-formed) BCP47 language tag.
+-- | A valid (not merely well-formed) BCP47 language tag. These fall
+-- into three categories:
+--
+-- * 'Normal' language tags consist of a primary langauge subtag and
+--   zero or more additional subtags that qualify the meaning of the
+--   tag. Most tags that you will encounter are normal tags.
+--
+-- * 'PrivateUse' language tags start with @x-@ and are followed by
+--   one or more private use subtags. These tags are totally
+--   uninterpreted; their meaning is specified by private agreement,
+--   and the only condition on their validity is that the subtags be
+--   syntactically well-formed.
+--
+-- * 'Grandfathered' language tags are tags that were grandfathered in
+--   their entirety into the current standard. These tags might not be
+--   well-formed according to the normal tag grammar, and if they are,
+--   then one or more of their subtags will be unregistered. As of
+--   2021-02-23, all of these but 'IMingo' and 'IDefault' have been
+--   deprecated (but note that the 'Grandfathered' documentation may
+--   have more up-to-date information).
+--
+-- Note that there is also third type of tag, the "redundant" tags,
+-- that are valid 'Normal' tags but for historical reasons are also
+-- registered in their entirety. These are represented as normal tags;
+-- the fact that they are so registered will only influence
+-- canonicalization, and only when the redundant tag has been
+-- deprecated.
 data BCP47Tag
   = NormalTag Normal
-  | PrivateUse (NonEmpty Text)
+  | PrivateUse (NonEmpty Subtag)
   | GrandfatheredTag Grandfathered
-  | RedundantTag Redundant
 
 {-
 
@@ -132,8 +174,10 @@ form -> extlang form transformation can be defined as a CanonicalTag
 
 -}
 
--- | A normal language tag, as opposed to a private use, redundant, or
--- grandfathered tag.
+-- | A normal language tag, as opposed to a private use or
+-- grandfathered tag. Note that validating the subtags in an extension
+-- section of a tag is not required by the standard, and we do not
+-- attempt to do so.
 data Normal = Normal
   { language :: Language,
     extlang :: Maybe Extlang,
@@ -348,3 +392,111 @@ instance NFData ExtensionSubtag where
 -- -- for the redundant subtag en-scouse
 -- 'EnScouse' :: 'Redundant'
 -- @
+
+----------------------------------------------------------------
+-- Language records
+----------------------------------------------------------------
+
+-- $therecords
+--
+-- The subtag registry contains records for language, extended
+-- language, script, and region subtags, and grandfathered and
+-- redundants tags. Some general notes on these records:
+--
+-- * Each record contains at least one (non-normative) description of
+--   what the subtag represents. The registry does not guarantee that
+--   this description will be in any particular language, and these
+--   descriptions may be added, changed, or removed as the registry
+--   updates.
+--
+-- * Each record may contain a deprecation notice, indicating that the
+--   associated tag or subtag should not be used. This value may be
+--   added, changed, or removed as the registry updates.
+--
+-- * If deprecated, a record may contain a preferred value that is
+--   recommended for use instead of the deprected tag. Note that for
+--   regions, this preferred value may not have exactly the same
+--   meaning as the old tag. This value may be added, removed or
+--   modified as the registry updates, and a change in this value does
+--   not imply that the affected subtag needs to be retagged. Tags
+--   that appear as preferred values will never have a preferred value
+--   themselves.
+--
+-- * Extlang and variant records may have a prefix (more than one in
+--   the case of variant records) that is recommended as a prefix to
+--   the record's subtag. If a record does not have a prefix field,
+--   one will not be added as the registry updates, and changes to a
+--   prefix field must only widen the range of possible prefixes.
+--
+-- * Language an extlang records have macrolanguage and scope fields,
+--   which are informational, and indicate an encompassing language
+--   and a classification of the language, respectively. These may be
+--   added, removed, or changed as the registry updates.
+
+-- | A primary language subtag record
+data LanguageRecord = LanguageRecord
+  { langDescription :: NonEmpty Text,
+    langDeprecation :: Deprecation Language,
+    langScriptSuppression :: Maybe Script,
+    langMacrolanguage :: Maybe Language,
+    langScope :: Maybe Scope
+  }
+
+-- | An extended language subtag record. In these records, a preferred
+-- value always appears and is always equal to the subtag, so the
+-- 'extlangDeprecation' is a simple 'Bool' ('True' being "is
+-- deprecated").
+data ExtlangRecord = ExtlangRecord
+  { extlangDescription :: NonEmpty Text,
+    extlangDeprecation :: Bool,
+    extlangPrefix :: BCP47Tag,
+    extlangScriptSuppression :: Maybe Script,
+    extlangMacrolanguage :: Maybe Language,
+    extlangScope :: Maybe Scope
+  }
+
+-- | A variant subtag record
+data VariantRecord = VariantRecord
+  { variantDescription :: NonEmpty Text,
+    variantDeprecation :: Deprecation Variant,
+    variantPrefixes :: [BCP47Tag]
+  }
+
+-- | A script subtag record
+data ScriptRecord = ScriptRecord
+  { scriptDescription :: NonEmpty Text,
+    scriptDeprecation :: Deprecation Script
+  }
+
+-- | A region subtag record. Note that for deprecated region records,
+--  the associated preferred value may not represent the same meaning
+--  as the deprecated subtag.
+data RegionRecord = RegionRecord
+  { regionDescription :: NonEmpty Text,
+    regionDeprecation :: Deprecation Region
+  }
+
+-- | A grandfathered or redundant subtag record. These records are
+-- distinguished from the others in that they define entire tags, and
+-- that the preferred values associated to their deprecation are an
+-- "extended language range", which is an entire tag that is strongly
+-- recommended as the replacement for the tag.
+data RangeRecord = RangeRecord
+  { rangeDescription :: NonEmpty Text,
+    rangeDeprecation :: Deprecation BCP47Tag
+  }
+
+-- | The scope of a language or extended language
+data Scope
+  = Macrolanguage
+  | Collection
+  | Special
+  | PrivateUseScope
+  deriving (Show)
+
+-- | The deprecation status of a subtag
+data Deprecation a
+  = NotDeprecated
+  | DeprecatedSimple
+  | DeprecatedPreferred a
+  deriving (Show)

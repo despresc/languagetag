@@ -1,7 +1,10 @@
 -- This is an auto-generated file. Do not edit by hand.
 
+{-# LANGUAGE NoImplicitPrelude #-}
+
 module Text.LanguageTag.Internal.BCP47.Redundant where
 
+import Prelude hiding (LT, GT)
 import Control.DeepSeq (NFData(..))
 import Data.Hashable (Hashable(..), hashUsing)
 
@@ -82,3 +85,4 @@ instance NFData Redundant where
 
 instance Hashable Redundant where
   hashWithSalt = hashUsing fromEnum
+

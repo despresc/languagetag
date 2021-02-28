@@ -1,7 +1,10 @@
 -- This is an auto-generated file. Do not edit by hand.
 
+{-# LANGUAGE NoImplicitPrelude #-}
+
 module Text.LanguageTag.Internal.BCP47.Grandfathered where
 
+import Prelude hiding (LT, GT)
 import Control.DeepSeq (NFData(..))
 import Data.Hashable (Hashable(..), hashUsing)
 
@@ -41,3 +44,4 @@ instance NFData Grandfathered where
 
 instance Hashable Grandfathered where
   hashWithSalt = hashUsing fromEnum
+
