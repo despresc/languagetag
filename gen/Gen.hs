@@ -433,7 +433,8 @@ unpackRegistryRanges = concatMap unpackRecord
 ----------------------------------------------------------------
 
 data LanguageRecord = LanguageRecord
-  { langDescription :: NonEmpty Text,
+  { langTyCon :: Text,
+    langDescription :: NonEmpty Text,
     langDeprecation :: Deprecation Text,
     langScriptSuppression :: Maybe Text,
     langMacrolanguage :: Maybe Text,
@@ -441,8 +442,10 @@ data LanguageRecord = LanguageRecord
   }
 
 data ExtlangRecord = ExtlangRecord
-  { extlangDescription :: NonEmpty Text,
-    extlangDeprecation :: Deprecation Text,
+  { extlangTyCon :: Text,
+    extlangDescription :: NonEmpty Text,
+    extlangDeprecation :: Bool,
+    extlangPreferredValue :: Text,
     extlangPrefix :: Text,
     extlangScriptSuppression :: Maybe Text,
     extlangMacrolanguage :: Maybe Text,
@@ -450,18 +453,21 @@ data ExtlangRecord = ExtlangRecord
   }
 
 data VariantRecord = VariantRecord
-  { variantDescription :: NonEmpty Text,
+  { variantTyCon :: Text,
+    variantDescription :: NonEmpty Text,
     variantDeprecation :: Deprecation Text,
     variantPrefixes :: [Text]
   }
 
 data ScriptRecord = ScriptRecord
-  { scriptDescription :: NonEmpty Text,
+  { scriptTyCon :: Text,
+    scriptDescription :: NonEmpty Text,
     scriptDeprecation :: Deprecation Text
   }
 
 data RegionRecord = RegionRecord
-  { regionDescription :: NonEmpty Text,
+  { regionTyCon :: Text,
+    regionDescription :: NonEmpty Text,
     regionDeprecation :: Deprecation Text
   }
 
@@ -471,7 +477,8 @@ data RegionRecord = RegionRecord
 -- "extended language range", which is an entire tag that is strongly
 -- recommended as the replacement for the tag.
 data RangeRecord = RangeRecord
-  { rangeDescription :: NonEmpty Text,
+  { rangeTyCon :: Text,
+    rangeDescription :: NonEmpty Text,
     rangeDeprecation :: Deprecation Text
   }
 
@@ -537,26 +544,38 @@ splitRegistry (RawRegistry regdate rs) =
     }
   where
     go proj = M.fromList $ mapMaybe proj $ unpackRegistryRanges rs
+    rendertycon contrans tyname typref =
+      contrans . (typref <>) . mconcat . renderTyPieces tyname . T.split (== '-')
+    renderTyPieces tyname (x : xs)
+      | isDigit (T.head x) = [T.singleton (T.head tyname), T.toLower x] <> renderTyTail xs
+      | otherwise = [T.toTitle x] <> renderTyTail xs
+    renderTyPieces _ [] = error "Gen.renderTyPieces: empty tag encountered"
+    renderTyTail = fmap T.toTitle
+
     plang (TagRecord tg (Language x y z) descrs deprs) =
-      Just (tg, LanguageRecord descrs deprs x y z)
+      Just (tg, LanguageRecord (rendertycon id "Language" "" tg) descrs deprs x y z)
     plang _ = Nothing
     pextlang (TagRecord tg (Extlang _ b c d e) descrs deprs) =
-      Just (tg, ExtlangRecord descrs deprs b c d e)
+      Just (tg, ExtlangRecord (rendertycon id "Extlang" "Ext" tg) descrs deprs' tg b c d e)
+      where
+        deprs' = case deprs of
+          NotDeprecated -> False
+          _ -> True
     pextlang _ = Nothing
     pscr (TagRecord tg Script descrs deprs) =
-      Just (tg, ScriptRecord descrs deprs)
+      Just (tg, ScriptRecord (rendertycon id "Script" "" tg) descrs deprs)
     pscr _ = Nothing
     preg (TagRecord tg Region descrs deprs) =
-      Just (tg, RegionRecord descrs deprs)
+      Just (tg, RegionRecord (rendertycon T.toUpper "Region" "" tg) descrs deprs)
     preg _ = Nothing
     pvar (TagRecord tg (Variant l) descrs deprs) =
-      Just (tg, VariantRecord descrs deprs l)
+      Just (tg, VariantRecord (rendertycon id "Variant" "" tg) descrs deprs l)
     pvar _ = Nothing
     pgra (TagRecord tg Grandfathered descrs deprs) =
-      Just (tg, RangeRecord descrs deprs)
+      Just (tg, RangeRecord (rendertycon id "Grandfathered" "" tg) descrs deprs)
     pgra _ = Nothing
     prdn (TagRecord tg Redundant descrs deprs) =
-      Just (tg, RangeRecord descrs deprs)
+      Just (tg, RangeRecord (rendertycon id "Redundant" "" tg) descrs deprs)
     prdn _ = Nothing
 
 ----------------------------------------------------------------
@@ -637,28 +656,24 @@ renderRedundantParseRend _ _ = []
 renderModuleWith ::
   -- | the desired type name
   Text ->
-  -- | a prefix to add to the data constructors
-  Text ->
   -- | a description of the type
   Text ->
   -- | an additional note in the documentation
   Text ->
-  -- | a transformation to apply to the data constructors at the end
-  (Text -> Text) ->
   -- | the date of the registry that was used
   Day ->
   -- | module-specific imports
   [Text] ->
   -- | renderer for the parser and renderer
   (Text -> [(Text, Text)] -> [Text]) ->
-  -- | projection returning the description, deprecation and optional
-  -- preferred value without deprecation (for extlang only,
-  -- essentially)
-  (a -> (NonEmpty Text, (Deprecation Text), Maybe Text)) ->
+  -- | projection returning the constructor name, description,
+  -- deprecation and optional preferred value without deprecation (for
+  -- extlang only, essentially)
+  (a -> (Text, NonEmpty Text, Deprecation Text, Maybe Text)) ->
   -- | the actual subtag type registry
   Map Text a ->
   Text
-renderModuleWith tyname typref tydescription docnote contrans d imps renderpr sel rs =
+renderModuleWith tyname tydescription docnote d imps renderpr sel rs =
   T.unlines $
     [ warning,
       "",
@@ -697,15 +712,9 @@ renderModuleWith tyname typref tydescription docnote contrans d imps renderpr se
     renderDepr (DeprecatedPreferred t) = " Deprecated. Preferred value: " <> t <> "."
     renderPref Nothing = ""
     renderPref (Just x) = " Preferred value: " <> x <> "."
-    renderTyCon = contrans . (typref <>) . mconcat . renderTyPieces . T.split (== '-')
-    renderTyPieces (x : xs)
-      | isDigit (T.head x) = [T.singleton (T.head tyname), T.toLower x] <> renderTyTail xs
-      | otherwise = [T.toTitle x] <> renderTyTail xs
-    renderTyPieces [] = error "Gen.renderTyPieces: empty tag encountered"
-    renderTyTail = fmap T.toTitle
-    conBody (x, (y, z, mpref)) =
+    conBody (x, (a, y, z, mpref)) =
       mconcat
-        [ renderTyCon x,
+        [ a,
           " -- ^ @",
           escapeHaddockChars x,
           "@. ",
@@ -725,7 +734,7 @@ renderModuleWith tyname typref tydescription docnote contrans d imps renderpr se
       [ "instance Hashable " <> tyname <> " where",
         "  hashWithSalt = hashUsing fromEnum"
       ]
-    theParserRender = renderpr tyname $ (\(x, _) -> (x, renderTyCon x)) <$> rs'
+    theParserRender = renderpr tyname $ (\(x, (a, _, _, _)) -> (x, a)) <$> rs'
 
 -- | Write the various internal subtag modules.
 
@@ -772,78 +781,69 @@ renderSplitRegistry sr = do
     redundantImp = []
     rendlang = renderModuleWith
       "Language"
-      ""
       "primary language"
       ""
-      id
       (date sr)
       standardImp
       renderParseRend
-      $ \(LanguageRecord x y _ _ _) -> (x, y, Nothing)
+      $ \(LanguageRecord a x y _ _ _) -> (a, x, y, Nothing)
     rendextlang = renderModuleWith
       "Extlang"
-      "Ext"
       "extended language"
       "These are prefixed with \"Ext\" because they may overlap with primary language subtags. Note that if extended language subtags have a preferred value, then it refers to a primary subtag."
-      id
       (date sr)
       standardImp
       renderParseRend
-      $ \(ExtlangRecord x y z _ _ _) -> (x, y, Just z)
+      $ \(ExtlangRecord a x y z _ _ _ _) ->
+        ( a,
+          x,
+          if y then DeprecatedPreferred z else NotDeprecated,
+          if y then Nothing else Just z
+        )
     rendscript =
       renderModuleWith
         "Script"
-        ""
         "script"
         ""
-        id
         (date sr)
         standardImp
         renderParseRend
-        $ \(ScriptRecord x y) -> (x, y, Nothing)
+        $ \(ScriptRecord a x y) -> (a, x, y, Nothing)
     rendregion =
       renderModuleWith
         "Region"
-        ""
         "region"
         ""
-        T.toUpper
         (date sr)
         standardImp
         renderParseRend
-        $ \(RegionRecord x y) -> (x, y, Nothing)
+        $ \(RegionRecord a x y) -> (a, x, y, Nothing)
     rendvariant = renderModuleWith
       "Variant"
-      ""
       "variant"
       ""
-      id
       (date sr)
       standardImp
       renderParseRend
-      $ \(VariantRecord x y _) -> (x, y, Nothing)
+      $ \(VariantRecord a x y _) -> (a, x, y, Nothing)
     rendgrandfathered =
       renderModuleWith
         "Grandfathered"
-        ""
         "grandfathered"
         ""
-        id
         (date sr)
         grandfatheredImp
         renderGrandParseRend
-        $ \(RangeRecord x y) -> (x, y, Nothing)
+        $ \(RangeRecord a x y) -> (a, x, y, Nothing)
     rendredundant =
       renderModuleWith
         "Redundant"
-        ""
         "redundant"
         ""
-        id
         (date sr)
         redundantImp
         renderRedundantParseRend
-        $ \(RangeRecord x y) -> (x, y, Nothing)
+        $ \(RangeRecord a x y) -> (a, x, y, Nothing)
 
 {- TODO HERE:
 
