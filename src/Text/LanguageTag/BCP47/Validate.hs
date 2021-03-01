@@ -43,11 +43,25 @@ module Text.LanguageTag.BCP47.Validate
     -- * Registry records
     -- $therecords
     LanguageRecord (..),
+    lookupLanguageDetails,
+    lookupSubtagLanguage,
     ExtlangRecord (..),
+    lookupExtlangDetails,
+    lookupSubtagExtlang,
     ScriptRecord (..),
+    lookupScriptDetails,
+    lookupSubtagScript,
     RegionRecord (..),
+    lookupRegionDetails,
+    lookupSubtagRegion,
     VariantRecord (..),
+    lookupVariantDetails,
+    lookupSubtagVariant,
     RangeRecord (..),
+    lookupGrandfatheredDetails,
+    lookupSubtagGrandfathered,
+    lookupRedundantDetails,
+    lookupSubtagRedundant,
     Scope (..),
     Deprecation (..),
 
@@ -86,14 +100,21 @@ import Data.Set (Set)
 import Data.Text (Text)
 import Text.LanguageTag.BCP47.Syntax (Subtag, subtagLength)
 import Text.LanguageTag.Internal.BCP47.Extlang
+import Text.LanguageTag.Internal.BCP47.ExtlangRecords
 import Text.LanguageTag.Internal.BCP47.Grandfathered
+import Text.LanguageTag.Internal.BCP47.GrandfatheredRecords
 import Text.LanguageTag.Internal.BCP47.Language
+import Text.LanguageTag.Internal.BCP47.LanguageRecords
 import Text.LanguageTag.Internal.BCP47.Redundant
+import Text.LanguageTag.Internal.BCP47.RedundantRecords
 import Text.LanguageTag.Internal.BCP47.Region
+import Text.LanguageTag.Internal.BCP47.RegionRecords
 import Text.LanguageTag.Internal.BCP47.RegistryDate
 import Text.LanguageTag.Internal.BCP47.Script
-import Text.LanguageTag.Internal.BCP47.Variant
+import Text.LanguageTag.Internal.BCP47.ScriptRecords
 import Text.LanguageTag.Internal.BCP47.Validate
+import Text.LanguageTag.Internal.BCP47.Variant
+import Text.LanguageTag.Internal.BCP47.VariantRecords
 
 {-
 

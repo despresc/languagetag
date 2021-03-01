@@ -55,6 +55,7 @@ data BCP47Tag
   = NormalTag Normal
   | PrivateUse (NonEmpty Subtag)
   | GrandfatheredTag Grandfathered
+  deriving (Show) -- FIXME: temporary show instance
 
 {-
 
@@ -117,6 +118,7 @@ data Normal = Normal
     extensions :: Map ExtensionChar (NonEmpty ExtensionSubtag),
     privateuse :: [Subtag]
   }
+  deriving (Show) -- FIXME: temporary show instance
 
 -- | The possible single character extensions; all the ASCII
 -- alphanumeric characters (case-insensitive) except the letter X.
@@ -298,6 +300,7 @@ data LanguageRecord = LanguageRecord
     langMacrolanguage :: Maybe Language,
     langScope :: Maybe Scope
   }
+  deriving (Show)
 
 -- | An extended language subtag record. In these records, a preferred
 -- value always appears and is always equal to the subtag, so the
@@ -312,6 +315,7 @@ data ExtlangRecord = ExtlangRecord
     extlangMacrolanguage :: Maybe Language,
     extlangScope :: Maybe Scope
   }
+  deriving (Show)
 
 -- | A variant subtag record
 data VariantRecord = VariantRecord
@@ -319,12 +323,14 @@ data VariantRecord = VariantRecord
     variantDeprecation :: Deprecation Variant,
     variantPrefixes :: [BCP47Tag]
   }
+  deriving (Show)
 
 -- | A script subtag record
 data ScriptRecord = ScriptRecord
   { scriptDescription :: NonEmpty Text,
     scriptDeprecation :: Deprecation Script
   }
+  deriving (Show)
 
 -- | A region subtag record. Note that for deprecated region records,
 --  the associated preferred value may not represent the same meaning
@@ -333,6 +339,7 @@ data RegionRecord = RegionRecord
   { regionDescription :: NonEmpty Text,
     regionDeprecation :: Deprecation Region
   }
+  deriving (Show)
 
 -- | A grandfathered or redundant subtag record. These records are
 -- distinguished from the others in that they define entire tags, and
@@ -343,6 +350,7 @@ data RangeRecord = RangeRecord
   { rangeDescription :: NonEmpty Text,
     rangeDeprecation :: Deprecation BCP47Tag
   }
+  deriving (Show)
 
 -- | The scope of a language or extended language
 data Scope
