@@ -17,7 +17,8 @@
 -- <https://tools.ietf.org/html/bcp47>.
 module Text.LanguageTag.BCP47.Syntax
   ( -- * Parsing and rendering tags
-    LanguageTag,
+    LanguageTag(..),
+    Normal(..),
     parseBCP47,
     renderLanguageTag,
     renderLanguageTagBuilder,

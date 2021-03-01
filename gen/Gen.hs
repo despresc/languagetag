@@ -16,7 +16,7 @@
 module Main where
 
 import Control.Monad (unless)
-import Data.Char (isDigit, isSpace)
+import Data.Char (isDigit, isSpace, toUpper)
 import Data.Either (partitionEithers)
 import Data.Foldable (toList, traverse_)
 import Data.HashMap.Strict (HashMap)
@@ -33,7 +33,16 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import Data.Time.Calendar (Day (..))
-import Text.LanguageTag.BCP47.Syntax (toSubtag, unwrapSubtag)
+import Text.LanguageTag.BCP47.Syntax
+  ( LanguageTag (..),
+    Normal (..),
+    fromMaybeSubtag,
+    nullSubtag,
+    parseBCP47,
+    renderSubtag,
+    toSubtag,
+    unwrapSubtag,
+  )
 import Text.LanguageTag.BCP47.Validate (Deprecation (..), Scope (..))
 
 {-
@@ -652,6 +661,222 @@ renderGrandParseRend _ _ = []
 renderRedundantParseRend :: Text -> [(Text, Text)] -> [Text]
 renderRedundantParseRend _ _ = []
 
+-- | Render an internal subtag module
+renderSubtagModuleWith ::
+  -- | the desired type name
+  Text ->
+  -- | a description of the type
+  Text ->
+  -- | an additional note in the documentation
+  Text ->
+  -- | module-specific imports
+  [Text] ->
+  -- | Projection returning the appropriate map
+  (Registry -> Map Text a) ->
+  -- | projection returning the constructor name, description,
+  -- deprecation and optional preferred value without deprecation (for
+  -- extlang only, essentially)
+  (a -> (Text, NonEmpty Text, Deprecation Text, Maybe Text)) ->
+  -- | The registry itself
+  Registry ->
+  Text
+renderSubtagModuleWith tyname tydescription docnote imps proj sel reg =
+  T.unlines $
+    [ warning,
+      "",
+      "{-# LANGUAGE NoImplicitPrelude #-}",
+      "",
+      "module Text.LanguageTag.Internal.BCP47." <> tyname <> " where",
+      "",
+      "import Prelude hiding (LT, GT)",
+      "import Control.DeepSeq (NFData(..))",
+      "import Data.Hashable (Hashable(..), hashUsing)"
+    ]
+      <> imps
+      <> [ "",
+           "-- | The BCP47 " <> tydescription <> " tags as of " <> T.pack (show $ date reg) <> "." <> docnote',
+           "data " <> tyname
+         ]
+      <> theConstructors
+      <> [""]
+      <> theInstances
+      <> [""]
+      <> theNFData
+      <> [""]
+      <> theHashable
+  where
+    docnote'
+      | T.null docnote = ""
+      | otherwise = " " <> docnote
+    rs' = M.toAscList $ M.map sel $ proj reg
+    renderDescrs descrs =
+      "Description: " <> T.intercalate "; " (toList $ renderDescr <$> descrs) <> "."
+    renderDescr = T.intercalate " " . T.words
+    renderDepr NotDeprecated = ""
+    renderDepr DeprecatedSimple = " Deprecated."
+    renderDepr (DeprecatedPreferred t) = " Deprecated. Preferred value: " <> t <> "."
+    renderPref Nothing = ""
+    renderPref (Just x) = " Preferred value: " <> x <> "."
+    conBody (x, (a, y, z, mpref)) =
+      mconcat
+        [ a,
+          " -- ^ @",
+          escapeHaddockChars x,
+          "@. ",
+          escapeHaddockChars $ renderDescrs y,
+          escapeHaddockChars $ renderDepr z,
+          escapeHaddockChars $ renderPref mpref
+        ]
+    theConstructors = case rs' of
+      (x : xs) -> ("  = " <> conBody x) : fmap (\y -> "  | " <> conBody y) xs
+      [] -> error "given empty registry!"
+    theInstances = ["  deriving (Eq, Ord, Show, Enum, Bounded)"]
+    theNFData =
+      [ "instance NFData " <> tyname <> " where",
+        "  rnf a = seq a ()"
+      ]
+    theHashable =
+      [ "instance Hashable " <> tyname <> " where",
+        "  hashWithSalt = hashUsing fromEnum"
+      ]
+
+renderRecordModuleWith ::
+  -- | the type name
+  Text ->
+  -- | additional imports
+  [Text] ->
+  -- | project the relevant map from the registry
+  (Registry -> Map Text a) ->
+  -- | render an entry in the record table
+  (Registry -> Text -> a -> Text) ->
+  -- | the registry itself
+  Registry ->
+  Text
+renderRecordModuleWith tyname imps proj rend reg =
+  T.unlines $
+    [ warning,
+      "",
+      "{-# LANGUAGE NoImplicitPrelude #-}",
+      "{-# LANGUAGE OverloadedStrings #-}",
+      "",
+      "module Text.LanguageTag.Internal.BCP47." <> tyname <> "Records ",
+      "  (" <> lookupname1 <> ", " <> lookupname2 <> ") where",
+      "",
+      "import Prelude hiding (LT, GT)",
+      "import Text.LanguageTag.Internal.BCP47." <> tyname,
+      "import Text.LanguageTag.Internal.BCP47.Validate",
+      "import Data.List.NonEmpty (NonEmpty(..))",
+      "import Text.LanguageTag.Internal.BCP47.Syntax (Subtag(..))",
+      "import qualified Data.HashMap.Strict as HM"
+    ]
+      <> imps
+      <> [""]
+      <> theDataTable
+      <> [""]
+      <> lookup1
+      <> [""]
+      <> lookup2
+  where
+    tablename = T.toLower tyname <> "Table"
+    rend' = uncurry $ rend reg
+    tableEntries = case M.toAscList $ proj reg of
+      (x : xs) -> "  [" <> rend' x : tableMid xs
+      [] -> error $ "renderRecordModuleWith: given an empty registry for" <> T.unpack tyname
+    tableMid [x] = ["  ," <> rend' x <> "]"]
+    tableMid (x : xs) = "  ," <> rend' x : tableMid xs
+    tableMid [] =
+      error $ "renderRecordModuleWith: given a registry with one entry for" <> T.unpack tyname
+    lookupname1 = "lookup" <> tyname <> "Details"
+    lookup1 =
+      [ lookupname1 <> " :: " <> tyname <> " -> (Subtag, " <> tyname <> "Record)",
+        "lookup" <> tyname <> "Details x = case HM.lookup x tab of",
+        "  Nothing -> error $ \"internal invariant violated: subtag \" <> show x <> \" does not have an associated record\"",
+        "  Just r -> r",
+        "  where",
+        "    tab = HM.fromList $ (\\(a, b, c) -> (a, (b, c))) <$> " <> tablename
+      ]
+    lookupname2 = "lookupSubtag" <> tyname
+    lookup2 =
+      [ lookupname2 <> " :: Subtag -> Maybe " <> tyname,
+        lookupname2 <> " = flip HM.lookup tab",
+        "  where",
+        "    tab = HM.fromList $ (\\(a, b, _) -> (b, a)) <$> " <> tablename
+      ]
+    theDataTable =
+      [ tablename <> " :: [(" <> tyname <> ", Subtag, " <> tyname <> "Record)]",
+        tablename <> " ="
+      ]
+        <> tableEntries
+
+-- TODO: duplication, obviously
+renderRangeRecordModuleWith ::
+  -- | the type name
+  Text ->
+  -- | additional imports
+  [Text] ->
+  -- | project the relevant map from the registry
+  (Registry -> Map Text a) ->
+  -- | render an entry in the record table
+  (Registry -> Text -> a -> Text) ->
+  -- | the registry itself
+  Registry ->
+  Text
+renderRangeRecordModuleWith tyname imps proj rend reg =
+  T.unlines $
+    [ warning,
+      "",
+      "{-# LANGUAGE NoImplicitPrelude #-}",
+      "{-# LANGUAGE OverloadedStrings #-}",
+      "",
+      "module Text.LanguageTag.Internal.BCP47." <> tyname <> "Records ",
+      "  (" <> lookupname1 <> ", " <> lookupname2 <> ") where",
+      "",
+      "import Prelude hiding (LT, GT)",
+      "import Text.LanguageTag.Internal.BCP47." <> tyname,
+      "import Text.LanguageTag.Internal.BCP47.Validate",
+      "import Data.List.NonEmpty (NonEmpty(..))",
+      "import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn",
+      "import qualified Data.HashMap.Strict as HM"
+    ]
+      <> imps
+      <> [""]
+      <> theDataTable
+      <> [""]
+      <> lookup1
+      <> [""]
+      <> lookup2
+  where
+    tablename = T.toLower tyname <> "Table"
+    rend' = uncurry $ rend reg
+    tableEntries = case M.toAscList $ proj reg of
+      (x : xs) -> "  [" <> rend' x : tableMid xs
+      [] -> error $ "renderRecordModuleWith: given an empty registry for" <> T.unpack tyname
+    tableMid [x] = ["  ," <> rend' x <> "]"]
+    tableMid (x : xs) = "  ," <> rend' x : tableMid xs
+    tableMid [] =
+      error $ "renderRecordModuleWith: given a registry with one entry for" <> T.unpack tyname
+    lookupname1 = "lookup" <> tyname <> "Details"
+    lookup1 =
+      [ lookupname1 <> " :: " <> tyname <> " -> (Syn.LanguageTag, " <> "RangeRecord)",
+        "lookup" <> tyname <> "Details x = case HM.lookup x tab of",
+        "  Nothing -> error $ \"internal invariant violated: subtag \" <> show x <> \" does not have an associated record\"",
+        "  Just r -> r",
+        "  where",
+        "    tab = HM.fromList $ (\\(a, b, c) -> (a, (b, c))) <$> " <> tablename
+      ]
+    lookupname2 = "lookupSubtag" <> tyname
+    lookup2 =
+      [ lookupname2 <> " :: Syn.LanguageTag -> Maybe " <> tyname,
+        lookupname2 <> " = flip HM.lookup tab",
+        "  where",
+        "    tab = HM.fromList $ (\\(a, b, _) -> (b, a)) <$> " <> tablename
+      ]
+    theDataTable =
+      [ tablename <> " :: [(" <> tyname <> ", Syn.LanguageTag, " <> "RangeRecord)]",
+        tablename <> " ="
+      ]
+        <> tableEntries
+
 -- | Render an internal subtag module.
 renderModuleWith ::
   -- | the desired type name
@@ -664,7 +889,6 @@ renderModuleWith ::
   Day ->
   -- | module-specific imports
   [Text] ->
-  -- | renderer for the parser and renderer
   (Text -> [(Text, Text)] -> [Text]) ->
   -- | projection returning the constructor name, description,
   -- deprecation and optional preferred value without deprecation (for
@@ -743,22 +967,39 @@ renderModuleWith tyname tydescription docnote d imps renderpr sel rs =
 -- types) then there could be a name collision between the Language
 -- and Script modules. If that happens there will need to be special
 -- casing to deal with it.
+
+-- TODO: write resolveRef functions for each of the registry components
+
 renderSplitRegistry :: Registry -> IO ()
 renderSplitRegistry sr = do
   T.writeFile "./src/Text/LanguageTag/Internal/BCP47/Language.hs" $
-    rendlang $ languageRecords sr
+    rendlang sr
+  T.writeFile "./src/Text/LanguageTag/Internal/BCP47/LanguageRecords.hs" $
+    rendreclang sr
   T.writeFile "./src/Text/LanguageTag/Internal/BCP47/Extlang.hs" $
-    rendextlang $ extlangRecords sr
+    rendextlang sr
+  T.writeFile "./src/Text/LanguageTag/Internal/BCP47/ExtlangRecords.hs" $
+    rendrecextlang sr
   T.writeFile "./src/Text/LanguageTag/Internal/BCP47/Script.hs" $
-    rendscript $ scriptRecords sr
+    rendscript sr
+  T.writeFile "./src/Text/LanguageTag/Internal/BCP47/ScriptRecords.hs" $
+    rendrecscript sr
   T.writeFile "./src/Text/LanguageTag/Internal/BCP47/Region.hs" $
-    rendregion $ regionRecords sr
+    rendregion sr
+  T.writeFile "./src/Text/LanguageTag/Internal/BCP47/RegionRecords.hs" $
+    rendrecregion sr
   T.writeFile "./src/Text/LanguageTag/Internal/BCP47/Variant.hs" $
-    rendvariant $ variantRecords sr
+    rendvariant sr
+  T.writeFile "./src/Text/LanguageTag/Internal/BCP47/VariantRecords.hs" $
+    rendrecvariant sr
   T.writeFile "./src/Text/LanguageTag/Internal/BCP47/Grandfathered.hs" $
     rendgrandfathered $ grandfatheredRecords sr
+  T.writeFile "./src/Text/LanguageTag/Internal/BCP47/GrandfatheredRecords.hs" $
+    rendrecgrandfathered sr
   T.writeFile "./src/Text/LanguageTag/Internal/BCP47/Redundant.hs" $
     rendredundant $ redundantRecords sr
+  T.writeFile "./src/Text/LanguageTag/Internal/BCP47/RedundantRecords.hs" $
+    rendrecredundant sr
   T.writeFile "./src/Text/LanguageTag/Internal/BCP47/RegistryDate.hs" $
     T.unlines
       [ warning,
@@ -773,27 +1014,23 @@ renderSplitRegistry sr = do
           <> T.pack (show $ toModifiedJulianDay $ date sr)
       ]
   where
-    standardImp =
-      [ "import Text.LanguageTag.Internal.BCP47.Syntax (Subtag(..), unwrapSubtag)",
-        "import qualified Data.HashMap.Strict as HM"
-      ]
+    -- TODO: do we even need imp anymore?
+    standardImp = []
     grandfatheredImp = []
     redundantImp = []
-    rendlang = renderModuleWith
+    rendlang = renderSubtagModuleWith
       "Language"
       "primary language"
       ""
-      (date sr)
       standardImp
-      renderParseRend
+      languageRecords
       $ \(LanguageRecord a x y _ _ _) -> (a, x, y, Nothing)
-    rendextlang = renderModuleWith
+    rendextlang = renderSubtagModuleWith
       "Extlang"
       "extended language"
       "These are prefixed with \"Ext\" because they may overlap with primary language subtags. Note that if extended language subtags have a preferred value, then it refers to a primary subtag."
-      (date sr)
       standardImp
-      renderParseRend
+      extlangRecords
       $ \(ExtlangRecord a x y z _ _ _ _) ->
         ( a,
           x,
@@ -801,30 +1038,27 @@ renderSplitRegistry sr = do
           if y then Nothing else Just z
         )
     rendscript =
-      renderModuleWith
+      renderSubtagModuleWith
         "Script"
         "script"
         ""
-        (date sr)
         standardImp
-        renderParseRend
+        scriptRecords
         $ \(ScriptRecord a x y) -> (a, x, y, Nothing)
     rendregion =
-      renderModuleWith
+      renderSubtagModuleWith
         "Region"
         "region"
         ""
-        (date sr)
         standardImp
-        renderParseRend
+        regionRecords
         $ \(RegionRecord a x y) -> (a, x, y, Nothing)
-    rendvariant = renderModuleWith
+    rendvariant = renderSubtagModuleWith
       "Variant"
       "variant"
       ""
-      (date sr)
       standardImp
-      renderParseRend
+      variantRecords
       $ \(VariantRecord a x y _) -> (a, x, y, Nothing)
     rendgrandfathered =
       renderModuleWith
@@ -844,6 +1078,259 @@ renderSplitRegistry sr = do
         redundantImp
         renderRedundantParseRend
         $ \(RangeRecord a x y) -> (a, x, y, Nothing)
+
+    rendsubtag x = case toSubtag x of
+      Nothing -> error $ T.unpack $ "couldn't parse subtag: " <> x
+      Just s -> T.pack $ "Subtag " <> show (unwrapSubtag s)
+
+    parens x = "(" <> x <> ")"
+
+    resolveRef m proj x = case M.lookup x m of
+      Nothing -> error $ T.unpack $ "reference to subtag " <> x <> ", which doesn't exist"
+      Just r -> proj r
+
+    resolveDepr _ _ NotDeprecated = "NotDeprecated"
+    resolveDepr _ _ DeprecatedSimple = "DeprecatedSimple"
+    resolveDepr m proj (DeprecatedPreferred y) =
+      parens $
+        "DeprecatedPreferred " <> resolveRef m proj y
+
+    -- TODO: showPrec?
+    mrender Nothing _ = "Nothing"
+    mrender (Just x) f = parens $ "Just " <> f x
+
+    rendreclang = renderRecordModuleWith
+      "Language"
+      [ "import Text.LanguageTag.Internal.BCP47.Script"
+      ]
+      languageRecords
+      $ \reg tag (LanguageRecord tyc desc depr ssup ml sc) ->
+        let rendRec =
+              T.intercalate " " $
+                [ "LanguageRecord",
+                  parens $ T.pack $ show desc,
+                  resolveDepr (languageRecords reg) langTyCon depr,
+                  mrender ssup $ resolveRef (scriptRecords reg) scriptTyCon,
+                  mrender ml $ resolveRef (languageRecords reg) langTyCon,
+                  mrender sc $ T.pack . show
+                ]
+         in parens $ tyc <> ", " <> rendsubtag tag <> ", " <> rendRec
+    rendrecextlang = renderRecordModuleWith
+      "Extlang"
+      [ "import Text.LanguageTag.Internal.BCP47.Language"
+      ]
+      extlangRecords
+      $ \reg tag (ExtlangRecord tyc desc depr prefer prefix ssup ml sc) ->
+        let rendRec =
+              T.intercalate " " $
+                [ "ExtlangRecord",
+                  parens $ T.pack $ show desc,
+                  T.pack $ show depr,
+                  resolveRef (languageRecords reg) langTyCon prefer,
+                  resolveRef (languageRecords reg) langTyCon prefix,
+                  mrender ssup $ resolveRef (scriptRecords reg) scriptTyCon,
+                  mrender ml $ resolveRef (languageRecords reg) langTyCon,
+                  mrender sc $ T.pack . show
+                ]
+         in parens $ tyc <> ", " <> rendsubtag tag <> ", " <> rendRec
+    rendrecscript = renderRecordModuleWith
+      "Script"
+      []
+      scriptRecords
+      $ \reg tag (ScriptRecord tyc desc depr) ->
+        let rendRec =
+              T.intercalate " " $
+                [ "ScriptRecord",
+                  parens $ T.pack $ show desc,
+                  resolveDepr (scriptRecords reg) scriptTyCon depr
+                ]
+         in parens $ tyc <> ", " <> rendsubtag tag <> ", " <> rendRec
+    rendrecregion = renderRecordModuleWith
+      "Region"
+      []
+      regionRecords
+      $ \reg tag (RegionRecord tyc desc depr) ->
+        let rendRec =
+              T.intercalate " " $
+                [ "RegionRecord",
+                  parens $ T.pack $ show desc,
+                  resolveDepr (regionRecords reg) regionTyCon depr
+                ]
+         in parens $ tyc <> ", " <> rendsubtag tag <> ", " <> rendRec
+
+    showPrefs reg l = "[" <> T.intercalate "," (showTag reg <$> l) <> "]"
+    showTag reg tag = case parseBCP47 tag of
+      Right (NormalTag n) -> "NormalTag $ " <> printNormalTag reg tag n
+      _ -> error $ T.unpack $ "can't parse tag value " <> tag
+    printNormalTag reg tag (Normal pl e1 e2 e3 sc regn vars exts pus)
+      | not $ null exts && null pus && nullSubtag == e2 && nullSubtag == e3 =
+        error $ T.unpack $ "registry tag " <> tag <> " somehow has extensions or private use fields or more than one extended language"
+      | otherwise =
+        T.intercalate
+          " "
+          [ "Normal",
+            resolvePl pl,
+            mrender (fromMaybeSubtag e1) resolveExt,
+            mrender (fromMaybeSubtag sc) resolveScr,
+            mrender (fromMaybeSubtag regn) resolveReg,
+            "(S.fromList [" <> T.intercalate ", " (resolveVar <$> vars) <> "])",
+            "M.empty",
+            "[]"
+          ]
+      where
+        -- TODO: make these top level, use elsewhere (without the
+        -- renderSubtag stuff)
+        resolvePl = resolveRef (languageRecords reg) langTyCon . renderSubtag
+        resolveExt = resolveRef (extlangRecords reg) extlangTyCon . renderSubtag
+        resolveScr = resolveRef (scriptRecords reg) scriptTyCon . T.toTitle . renderSubtag
+        resolveReg = resolveRef (regionRecords reg) regionTyCon . T.toUpper . renderSubtag
+        resolveVar = resolveRef (variantRecords reg) variantTyCon . renderSubtag
+
+    variantImports =
+      tagImports
+        <> [ "import Text.LanguageTag.Internal.BCP47.Language",
+             "import Text.LanguageTag.Internal.BCP47.Script",
+             "import Text.LanguageTag.Internal.BCP47.Region"
+           ]
+
+    rendrecvariant = renderRecordModuleWith
+      "Variant"
+      variantImports
+      variantRecords
+      $ \reg tag (VariantRecord tyc desc depr prefs) ->
+        let rendRec =
+              T.intercalate " " $
+                [ "VariantRecord",
+                  parens $ T.pack $ show desc,
+                  resolveDepr (variantRecords reg) variantTyCon depr,
+                  showPrefs reg prefs
+                ]
+         in parens $ tyc <> ", " <> rendsubtag tag <> ", " <> rendRec
+
+    resolveDeprGrand _ NotDeprecated = "NotDeprecated"
+    resolveDeprGrand _ DeprecatedSimple = "DeprecatedSimple"
+    resolveDeprGrand reg (DeprecatedPreferred x) = case x of
+      "en-GB-oxendict" -> parens $ "DeprecatedPreferred $ NormalTag $ Normal En Nothing Nothing (Just GB) (S.singleton Oxendict) M.empty []"
+      _ ->
+        let l = resolveRef (languageRecords reg) langTyCon x
+         in parens $ "DeprecatedPreferred $ NormalTag $ Normal " <> l <> " Nothing Nothing Nothing S.empty M.empty []"
+
+    resolveDeprRedundant _ NotDeprecated = "NotDeprecated"
+    resolveDeprRedundant _ DeprecatedSimple = "DeprecatedSimple"
+    resolveDeprRedundant reg (DeprecatedPreferred x) = case x of
+      "cmn-Hans" -> parens $ "DeprecatedPreferred $ NormalTag $ Normal Cmn Nothing (Just Hans) Nothing S.empty M.empty []"
+      "cmn-Hant" -> parens $ "DeprecatedPreferred $ NormalTag $ Normal Cmn Nothing (Just Hant) Nothing S.empty M.empty []"
+      _ ->
+        let l = resolveRef (languageRecords reg) langTyCon x
+         in parens $ "DeprecatedPreferred $ NormalTag $ Normal " <> l <> " Nothing Nothing Nothing S.empty M.empty []"
+
+    tagImports =
+      [ "import qualified Data.Map.Strict as M",
+        "import qualified Data.Set as S"
+      ]
+
+    rendgrandfatheredtag = distinguish . fixing . T.filter (/= '-')
+      where
+        fixing x = T.cons (toUpper $ T.head x) $ T.tail x
+        distinguish x
+          | c == 'E' || c == 'I' || c == 'S' =
+            "Syn.IrregularGrandfathered Syn." <> x
+          | otherwise =
+            "Syn.RegularGrandfathered Syn." <> x
+          where
+            c = T.head x
+
+    prefixedImports =
+      tagImports
+        <> [ "import Text.LanguageTag.Internal.BCP47.Language",
+             "import Text.LanguageTag.Internal.BCP47.Region",
+             "import Text.LanguageTag.Internal.BCP47.Variant"
+           ]
+
+    rendrecgrandfathered = renderRangeRecordModuleWith
+      "Grandfathered"
+      prefixedImports
+      grandfatheredRecords
+      $ \reg tag (RangeRecord tyc desc depr) ->
+        let rendRec =
+              T.intercalate " " $
+                [ "RangeRecord",
+                  parens $ T.pack $ show desc,
+                  resolveDeprGrand reg depr
+                ]
+         in parens $ tyc <> ", " <> rendgrandfatheredtag tag <> ", " <> rendRec
+
+    showSynTag reg tag = case parseBCP47 tag of
+      Right (NormalTag n) -> "Syn.NormalTag $ " <> printSyn reg tag n
+      _ -> error $ T.unpack $ "can't parse tag value " <> tag
+    printSyn reg tag (Normal pl e1 e2 e3 sc regn vars exts pus)
+      | not $ null exts && null pus && nullSubtag == e2 && nullSubtag == e3 =
+        error $ T.unpack $ "registry tag " <> tag <> " somehow has extensions or private use fields or more than one extended language"
+      | otherwise =
+        T.intercalate
+          " "
+          [ "Syn.Normal",
+            resolvePl pl,
+            msrender e1 resolveExt,
+            "Syn.nullSubtag",
+            "Syn.nullSubtag",
+            msrender sc resolveScr,
+            msrender regn resolveReg,
+            "[" <> T.intercalate ", " (resolveVar <$> vars) <> "]",
+            "[]",
+            "[]"
+          ]
+      where
+        showSubtag x = "Syn.Subtag " <> T.pack (show $ unwrapSubtag x)
+        msrender x f = case fromMaybeSubtag x of
+          Nothing -> "Syn.nullSubtag"
+          Just y -> parens $ "Syn.justSubtag " <> f y
+        -- TODO: duplication
+        resolvePl x =
+          let y = resolveRef (languageRecords reg) langTyCon . renderSubtag $ x
+           in y `seq` (parens $ showSubtag x)
+        resolveExt x =
+          let y = resolveRef (extlangRecords reg) extlangTyCon . renderSubtag $ x
+           in y `seq` (parens $ showSubtag x)
+        resolveScr x =
+          let y = resolveRef (scriptRecords reg) scriptTyCon . T.toTitle . renderSubtag $ x
+           in y `seq` (parens $ showSubtag x)
+        resolveReg x =
+          let y = resolveRef (regionRecords reg) regionTyCon . T.toUpper . renderSubtag $ x
+           in y `seq` (parens $ showSubtag x)
+        resolveVar x =
+          let y = resolveRef (variantRecords reg) variantTyCon . renderSubtag $ x
+           in y `seq` (parens $ showSubtag x)
+
+    redundantImports =
+      tagImports
+        <> [ "import Text.LanguageTag.Internal.BCP47.Script",
+             "import Text.LanguageTag.Internal.BCP47.Language"
+           ]
+    -- TODO HERE: cannot use "showTag" here.
+    rendrecredundant = renderRangeRecordModuleWith "Redundant" redundantImports redundantRecords $
+      \reg tag (RangeRecord tyc desc depr) ->
+        let rendRec =
+              T.intercalate " " $
+                [ "RangeRecord",
+                  parens $ T.pack $ show desc,
+                  resolveDeprRedundant reg depr
+                ]
+         in parens $ tyc <> ", " <> showSynTag reg tag <> ", " <> rendRec
+
+{-
+
+other than these:
+
+grandfathered:
+ EnGbOed en-GB-oxendict.
+
+redundant:
+zh-cmn-Hans
+zh-cmn-Hant
+
+all of the deprecated etc.
+-}
 
 {- TODO HERE:
 
