@@ -117,6 +117,15 @@ import Text.LanguageTag.Internal.BCP47.Variant
 import Text.LanguageTag.Internal.BCP47.VariantRecords
 
 {-
+TODO:
+
+- the lookupGrandfathered and lookupRedundant functions should be
+  reworked - shouldn't have "subtag" in their name for a start, but
+  may also want to make them more efficient? (trie?)
+
+-}
+
+{-
 
 The rules:
 
