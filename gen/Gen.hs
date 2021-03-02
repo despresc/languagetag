@@ -870,49 +870,43 @@ renderModuleWith tyname tydescription docnote d sel rs =
 -- TODO: write resolveRef functions for each of the registry components
 
 renderSplitRegistry :: Registry -> IO ()
-renderSplitRegistry sr = do
-  T.writeFile "./src/Text/LanguageTag/Internal/BCP47/Language.hs" $
-    rendlang sr
-  T.writeFile "./src/Text/LanguageTag/Internal/BCP47/LanguageRecords.hs" $
-    rendreclang sr
-  T.writeFile "./src/Text/LanguageTag/Internal/BCP47/Extlang.hs" $
-    rendextlang sr
-  T.writeFile "./src/Text/LanguageTag/Internal/BCP47/ExtlangRecords.hs" $
-    rendrecextlang sr
-  T.writeFile "./src/Text/LanguageTag/Internal/BCP47/Script.hs" $
-    rendscript sr
-  T.writeFile "./src/Text/LanguageTag/Internal/BCP47/ScriptRecords.hs" $
-    rendrecscript sr
-  T.writeFile "./src/Text/LanguageTag/Internal/BCP47/Region.hs" $
-    rendregion sr
-  T.writeFile "./src/Text/LanguageTag/Internal/BCP47/RegionRecords.hs" $
-    rendrecregion sr
-  T.writeFile "./src/Text/LanguageTag/Internal/BCP47/Variant.hs" $
-    rendvariant sr
-  T.writeFile "./src/Text/LanguageTag/Internal/BCP47/VariantRecords.hs" $
-    rendrecvariant sr
-  T.writeFile "./src/Text/LanguageTag/Internal/BCP47/Grandfathered.hs" $
-    rendgrandfathered $ grandfatheredRecords sr
-  T.writeFile "./src/Text/LanguageTag/Internal/BCP47/GrandfatheredRecords.hs" $
-    rendrecgrandfathered sr
-  T.writeFile "./src/Text/LanguageTag/Internal/BCP47/Redundant.hs" $
-    rendredundant $ redundantRecords sr
-  T.writeFile "./src/Text/LanguageTag/Internal/BCP47/RedundantRecords.hs" $
-    rendrecredundant sr
-  T.writeFile "./src/Text/LanguageTag/Internal/BCP47/RegistryDate.hs" $
-    T.unlines
-      [ warning,
-        "",
-        "module Text.LanguageTag.Internal.BCP47.RegistryDate where",
-        "",
-        "import Data.Time.Calendar (Day(..))",
-        "",
-        "-- | The date of the BCP47 subtag registry that this library uses. The current value is: " <> T.pack (show (date sr)) <> ".",
-        "bcp47RegistryDate :: Day",
-        "bcp47RegistryDate = ModifiedJulianDay "
-          <> T.pack (show $ toModifiedJulianDay $ date sr)
-      ]
+renderSplitRegistry sr =
+  traverse_
+    (\(x, y) -> T.writeFile (intprefix <> x) $ y sr)
+    [ ("Language.hs", rendlang),
+      ("LanguageRecords.hs", rendreclang),
+      ("Extlang.hs", rendextlang),
+      ("ExtlangRecords.hs", rendrecextlang),
+      ("Script.hs", rendscript),
+      ("ScriptRecords.hs", rendrecscript),
+      ("Region.hs", rendregion),
+      ("RegionRecords.hs", rendrecregion),
+      ("Variant.hs", rendvariant),
+      ("VariantRecords.hs", rendrecvariant),
+      ("Grandfathered.hs", rendgrandfathered . grandfatheredRecords),
+      ("GrandfatheredRecords.hs", rendrecgrandfathered),
+      ("Redundant.hs", rendredundant . redundantRecords),
+      ("RedundantRecords.hs", rendrecredundant),
+      ("RegistryDate.hs", const regdatemodule)
+    ]
   where
+    intprefix = "./src/Text/LanguageTag/Internal/BCP47/"
+    regdatemodule =
+      T.unlines
+        [ warning,
+          "",
+          "module Text.LanguageTag.Internal.BCP47.RegistryDate where",
+          "",
+          "import Data.Time.Calendar (Day(..))",
+          "",
+          "-- | The date of the BCP47 subtag registry that this library uses. The current value is: "
+            <> T.pack (show (date sr))
+            <> ".",
+          "bcp47RegistryDate :: Day",
+          "bcp47RegistryDate = ModifiedJulianDay "
+            <> T.pack (show $ toModifiedJulianDay $ date sr)
+        ]
+
     rendlang = renderSubtagModuleWith
       "Language"
       "primary language"

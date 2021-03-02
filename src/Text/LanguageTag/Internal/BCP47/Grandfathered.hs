@@ -44,4 +44,3 @@ instance NFData Grandfathered where
 
 instance Hashable Grandfathered where
   hashWithSalt = hashUsing fromEnum
-

@@ -85,4 +85,3 @@ instance NFData Redundant where
 
 instance Hashable Redundant where
   hashWithSalt = hashUsing fromEnum
-
