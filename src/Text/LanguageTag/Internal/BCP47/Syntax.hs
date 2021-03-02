@@ -90,8 +90,6 @@ TODO: may want to define some constants for some of these magic
 numbers (the 15 and 63 selectors, the indices starting at 58, the
 shifts)
 
-TODO: nfdata instance for subtag et al?
-
 TODO: test that the contents are actually accurate
 
 TODO: consider splitting the subtag bits from the rest and putting

@@ -4,7 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Text.LanguageTag.Internal.BCP47.GrandfatheredRecords 
-  (lookupGrandfatheredDetails, lookupSubtagGrandfathered) where
+  (lookupGrandfatheredDetails, lookupTagGrandfathered) where
 
 import Prelude hiding (LT, GT)
 import Text.LanguageTag.Internal.BCP47.Grandfathered
@@ -54,7 +54,7 @@ lookupGrandfatheredDetails x = case HM.lookup x tab of
   where
     tab = HM.fromList $ (\(a, b, c) -> (a, (b, c))) <$> grandfatheredTable
 
-lookupSubtagGrandfathered :: Syn.LanguageTag -> Maybe Grandfathered
-lookupSubtagGrandfathered = flip HM.lookup tab
+lookupTagGrandfathered :: Syn.LanguageTag -> Maybe Grandfathered
+lookupTagGrandfathered = flip HM.lookup tab
   where
     tab = HM.fromList $ (\(a, b, _) -> (b, a)) <$> grandfatheredTable

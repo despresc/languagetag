@@ -59,9 +59,9 @@ module Text.LanguageTag.BCP47.Validate
     lookupSubtagVariant,
     RangeRecord (..),
     lookupGrandfatheredDetails,
-    lookupSubtagGrandfathered,
+    lookupTagGrandfathered,
     lookupRedundantDetails,
-    lookupSubtagRedundant,
+    lookupTagRedundant,
     Scope (..),
     Deprecation (..),
 
@@ -119,9 +119,8 @@ import Text.LanguageTag.Internal.BCP47.VariantRecords
 {-
 TODO:
 
-- the lookupGrandfathered and lookupRedundant functions should be
-  reworked - shouldn't have "subtag" in their name for a start, but
-  may also want to make them more efficient? (trie?)
+more efficient lookupTagRedundant and lookupTagGrandfathered? (trie
+for former? split by regular/irregular for the latter?)
 
 -}
 

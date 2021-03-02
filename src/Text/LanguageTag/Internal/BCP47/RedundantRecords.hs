@@ -4,7 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Text.LanguageTag.Internal.BCP47.RedundantRecords 
-  (lookupRedundantDetails, lookupSubtagRedundant) where
+  (lookupRedundantDetails, lookupTagRedundant) where
 
 import Prelude hiding (LT, GT)
 import Text.LanguageTag.Internal.BCP47.Redundant
@@ -94,7 +94,7 @@ lookupRedundantDetails x = case HM.lookup x tab of
   where
     tab = HM.fromList $ (\(a, b, c) -> (a, (b, c))) <$> redundantTable
 
-lookupSubtagRedundant :: Syn.LanguageTag -> Maybe Redundant
-lookupSubtagRedundant = flip HM.lookup tab
+lookupTagRedundant :: Syn.LanguageTag -> Maybe Redundant
+lookupTagRedundant = flip HM.lookup tab
   where
     tab = HM.fromList $ (\(a, b, _) -> (b, a)) <$> redundantTable

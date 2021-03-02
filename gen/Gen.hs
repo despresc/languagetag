@@ -75,8 +75,6 @@ main = do
   putStrLn "writing the internal modules"
   renderSplitRegistry $ splitRegistry r
 
---  writeLanguageModule r
-
 ----------------------------------------------------------------
 -- Parsing record jars and fetching the BCP47 registry
 ----------------------------------------------------------------
@@ -491,20 +489,9 @@ data RangeRecord = RangeRecord
     rangeDeprecation :: Deprecation Text
   }
 
--- TODO HERE: replace SplitRegistry with this Registry, and call the
--- other Registry something else. Then finish deleting the Registry
--- module, etc.
---
--- Also will want to create the Tag -> Record functions right now, I
--- think, before the representation of the tags is changed.
-
 -- | The full BCP47 subtag registry. Note that the registry file may
 -- also contain ranges of values, like @a..c@ for @a, b, c@. These are
 -- expanded here, so that only individual values remain.
-
--- TODO HERE: I think we need a raw version of the various records,
--- actually! At least if we have the tags in a big constructor -
--- otherwise we'll never be able to parse new subtags!
 data Registry = Registry
   { date :: Day,
     languageRecords :: Map Text LanguageRecord,
@@ -515,26 +502,6 @@ data Registry = Registry
     grandfatheredRecords :: Map Text RangeRecord,
     redundantRecords :: Map Text RangeRecord
   }
-
-{-
-data SplitRegistry = SplitRegistry
-  { date :: Day,
-    -- | optional script suppression, macrolanguage, scope
-    languages ::
-      Map Text ([Text], Deprecation, Maybe Text, Maybe Text, Maybe Scope),
-    -- | optional preferred value without a deprecation notice,
-    -- mandatory prefix, optional script suppression, optional
-    -- macrolanguage, optional scope
-    extlangs ::
-      Map Text ([Text], Deprecation, Maybe Text, Text, Maybe Text, Maybe Text, Maybe Scope),
-    scripts :: Map Text ([Text], Deprecation),
-    regions :: Map Text ([Text], Deprecation),
-    -- | Optional prefix values
-    variants :: Map Text ([Text], Deprecation, [Text]),
-    grandfathered :: Map Text ([Text], Deprecation),
-    redundant :: Map Text ([Text], Deprecation)
-  }
--}
 
 lookupSplit :: (Registry -> Map Text a) -> Registry -> Text -> Maybe a
 lookupSplit proj r t = M.lookup t $ proj r
@@ -864,7 +831,7 @@ renderRangeRecordModuleWith tyname imps proj rend reg =
         "  where",
         "    tab = HM.fromList $ (\\(a, b, c) -> (a, (b, c))) <$> " <> tablename
       ]
-    lookupname2 = "lookupSubtag" <> tyname
+    lookupname2 = "lookupTag" <> tyname
     lookup2 =
       [ lookupname2 <> " :: Syn.LanguageTag -> Maybe " <> tyname,
         lookupname2 <> " = flip HM.lookup tab",
@@ -1089,6 +1056,12 @@ renderSplitRegistry sr = do
       Nothing -> error $ T.unpack $ "reference to subtag " <> x <> ", which doesn't exist"
       Just r -> proj r
 
+    resolvePl reg = resolveRef (languageRecords reg) langTyCon
+    resolveExt reg = resolveRef (extlangRecords reg) extlangTyCon
+    resolveScr reg = resolveRef (scriptRecords reg) scriptTyCon . T.toTitle
+    resolveReg reg = resolveRef (regionRecords reg) regionTyCon . T.toUpper
+    resolveVar reg = resolveRef (variantRecords reg) variantTyCon
+
     resolveDepr _ _ NotDeprecated = "NotDeprecated"
     resolveDepr _ _ DeprecatedSimple = "DeprecatedSimple"
     resolveDepr m proj (DeprecatedPreferred y) =
@@ -1110,8 +1083,8 @@ renderSplitRegistry sr = do
                 [ "LanguageRecord",
                   parens $ T.pack $ show desc,
                   resolveDepr (languageRecords reg) langTyCon depr,
-                  mrender ssup $ resolveRef (scriptRecords reg) scriptTyCon,
-                  mrender ml $ resolveRef (languageRecords reg) langTyCon,
+                  mrender ssup $ resolveScr reg,
+                  mrender ml $ resolvePl reg,
                   mrender sc $ T.pack . show
                 ]
          in parens $ tyc <> ", " <> rendsubtag tag <> ", " <> rendRec
@@ -1126,10 +1099,10 @@ renderSplitRegistry sr = do
                 [ "ExtlangRecord",
                   parens $ T.pack $ show desc,
                   T.pack $ show depr,
-                  resolveRef (languageRecords reg) langTyCon prefer,
-                  resolveRef (languageRecords reg) langTyCon prefix,
-                  mrender ssup $ resolveRef (scriptRecords reg) scriptTyCon,
-                  mrender ml $ resolveRef (languageRecords reg) langTyCon,
+                  resolvePl reg prefer,
+                  resolvePl reg prefix,
+                  mrender ssup $ resolveScr reg,
+                  mrender ml $ resolvePl reg,
                   mrender sc $ T.pack . show
                 ]
          in parens $ tyc <> ", " <> rendsubtag tag <> ", " <> rendRec
@@ -1169,22 +1142,14 @@ renderSplitRegistry sr = do
         T.intercalate
           " "
           [ "Normal",
-            resolvePl pl,
-            mrender (fromMaybeSubtag e1) resolveExt,
-            mrender (fromMaybeSubtag sc) resolveScr,
-            mrender (fromMaybeSubtag regn) resolveReg,
-            "(S.fromList [" <> T.intercalate ", " (resolveVar <$> vars) <> "])",
+            resolvePl reg $ renderSubtag pl,
+            mrender (fromMaybeSubtag e1) (resolveExt reg . renderSubtag),
+            mrender (fromMaybeSubtag sc) (resolveScr reg . renderSubtag),
+            mrender (fromMaybeSubtag regn) (resolveReg reg . renderSubtag),
+            "(S.fromList [" <> T.intercalate ", " (resolveVar reg . renderSubtag <$> vars) <> "])",
             "M.empty",
             "[]"
           ]
-      where
-        -- TODO: make these top level, use elsewhere (without the
-        -- renderSubtag stuff)
-        resolvePl = resolveRef (languageRecords reg) langTyCon . renderSubtag
-        resolveExt = resolveRef (extlangRecords reg) extlangTyCon . renderSubtag
-        resolveScr = resolveRef (scriptRecords reg) scriptTyCon . T.toTitle . renderSubtag
-        resolveReg = resolveRef (regionRecords reg) regionTyCon . T.toUpper . renderSubtag
-        resolveVar = resolveRef (variantRecords reg) variantTyCon . renderSubtag
 
     variantImports =
       tagImports
@@ -1212,8 +1177,10 @@ renderSplitRegistry sr = do
     resolveDeprGrand reg (DeprecatedPreferred x) = case x of
       "en-GB-oxendict" -> parens $ "DeprecatedPreferred $ NormalTag $ Normal En Nothing Nothing (Just GB) (S.singleton Oxendict) M.empty []"
       _ ->
-        let l = resolveRef (languageRecords reg) langTyCon x
-         in parens $ "DeprecatedPreferred $ NormalTag $ Normal " <> l <> " Nothing Nothing Nothing S.empty M.empty []"
+        parens $
+          "DeprecatedPreferred $ NormalTag $ Normal "
+            <> resolvePl reg x
+            <> " Nothing Nothing Nothing S.empty M.empty []"
 
     resolveDeprRedundant _ NotDeprecated = "NotDeprecated"
     resolveDeprRedundant _ DeprecatedSimple = "DeprecatedSimple"
@@ -1221,8 +1188,10 @@ renderSplitRegistry sr = do
       "cmn-Hans" -> parens $ "DeprecatedPreferred $ NormalTag $ Normal Cmn Nothing (Just Hans) Nothing S.empty M.empty []"
       "cmn-Hant" -> parens $ "DeprecatedPreferred $ NormalTag $ Normal Cmn Nothing (Just Hant) Nothing S.empty M.empty []"
       _ ->
-        let l = resolveRef (languageRecords reg) langTyCon x
-         in parens $ "DeprecatedPreferred $ NormalTag $ Normal " <> l <> " Nothing Nothing Nothing S.empty M.empty []"
+        parens $
+          "DeprecatedPreferred $ NormalTag $ Normal "
+            <> resolvePl reg x
+            <> " Nothing Nothing Nothing S.empty M.empty []"
 
     tagImports =
       [ "import qualified Data.Map.Strict as M",
@@ -1270,13 +1239,13 @@ renderSplitRegistry sr = do
         T.intercalate
           " "
           [ "Syn.Normal",
-            resolvePl pl,
-            msrender e1 resolveExt,
+            resolvePl' pl,
+            msrender e1 resolveExt',
             "Syn.nullSubtag",
             "Syn.nullSubtag",
-            msrender sc resolveScr,
-            msrender regn resolveReg,
-            "[" <> T.intercalate ", " (resolveVar <$> vars) <> "]",
+            msrender sc resolveScr',
+            msrender regn resolveReg',
+            "[" <> T.intercalate ", " (resolveVar' <$> vars) <> "]",
             "[]",
             "[]"
           ]
@@ -1285,29 +1254,18 @@ renderSplitRegistry sr = do
         msrender x f = case fromMaybeSubtag x of
           Nothing -> "Syn.nullSubtag"
           Just y -> parens $ "Syn.justSubtag " <> f y
-        -- TODO: duplication
-        resolvePl x =
-          let y = resolveRef (languageRecords reg) langTyCon . renderSubtag $ x
-           in y `seq` (parens $ showSubtag x)
-        resolveExt x =
-          let y = resolveRef (extlangRecords reg) extlangTyCon . renderSubtag $ x
-           in y `seq` (parens $ showSubtag x)
-        resolveScr x =
-          let y = resolveRef (scriptRecords reg) scriptTyCon . T.toTitle . renderSubtag $ x
-           in y `seq` (parens $ showSubtag x)
-        resolveReg x =
-          let y = resolveRef (regionRecords reg) regionTyCon . T.toUpper . renderSubtag $ x
-           in y `seq` (parens $ showSubtag x)
-        resolveVar x =
-          let y = resolveRef (variantRecords reg) variantTyCon . renderSubtag $ x
-           in y `seq` (parens $ showSubtag x)
+        resolve' f x = (f reg $ renderSubtag x) `seq` (parens $ showSubtag x)
+        resolvePl' = resolve' resolvePl
+        resolveExt' = resolve' resolveExt
+        resolveScr' = resolve' resolveScr
+        resolveReg' = resolve' resolveReg
+        resolveVar' = resolve' resolveVar
 
     redundantImports =
       tagImports
         <> [ "import Text.LanguageTag.Internal.BCP47.Script",
              "import Text.LanguageTag.Internal.BCP47.Language"
            ]
-    -- TODO HERE: cannot use "showTag" here.
     rendrecredundant = renderRangeRecordModuleWith "Redundant" redundantImports redundantRecords $
       \reg tag (RangeRecord tyc desc depr) ->
         let rendRec =
@@ -1317,33 +1275,6 @@ renderSplitRegistry sr = do
                   resolveDeprRedundant reg depr
                 ]
          in parens $ tyc <> ", " <> showSynTag reg tag <> ", " <> rendRec
-
-{-
-
-other than these:
-
-grandfathered:
- EnGbOed en-GB-oxendict.
-
-redundant:
-zh-cmn-Hans
-zh-cmn-Hant
-
-all of the deprecated etc.
--}
-
-{- TODO HERE:
-
-Okay, so we're going to want to generate the to/fromSubtag code for
-all of the registered subtags. I think this can be done by
-
-- import the standalone subtag parser
-- parse all of the extensions in each section
-- write a parseTycon and render(?)Tycon function using the raw numbers
-  from previous step
-- might want to benchmark the hashset version.
-
--}
 
 ----------------------------------------------------------------
 -- Testing functions
