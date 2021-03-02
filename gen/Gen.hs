@@ -181,9 +181,6 @@ data TagRecord
 -- The registry with the date and the raw tag information.
 data RawRegistry = RawRegistry Day [TagRecord]
 
-lookupInRawRegistry :: Text -> RawRegistry -> Maybe TagRecord
-lookupInRawRegistry t (RawRegistry _ rs) = List.find (\(TagRecord x _ _ _) -> x == t) rs
-
 field :: FieldTagType -> Jar -> Text -> Either Err (NonEmpty (LineNum, Text))
 field t (ln, j) k = case HM.lookup k j of
   Just v -> pure v
@@ -503,9 +500,6 @@ data Registry = Registry
     redundantRecords :: Map Text RangeRecord
   }
 
-lookupSplit :: (Registry -> Map Text a) -> Registry -> Text -> Maybe a
-lookupSplit proj r t = M.lookup t $ proj r
-
 splitRegistry :: RawRegistry -> Registry
 splitRegistry (RawRegistry regdate rs) =
   Registry
@@ -575,58 +569,6 @@ escapeHaddockChars = T.concatMap go
       '$' -> "\\$"
       '#' -> "\\#"
       _ -> T.singleton c
-
--- | Render a subtag parser and renderer for anything other than the
--- redundant or grandfathered tags
-
--- I initially tried this with a case statement, but as it turns out
--- ghci does not react well to case statements that have over 8000
--- branches.
-renderParseRend :: Text -> [(Text, Text)] -> [Text]
-renderParseRend tyname cons =
-  [ parsename <> " :: Subtag -> Maybe " <> tyname,
-    parsename <> " = flip HM.lookup table . unwrapSubtag",
-    "  where",
-    "    table = HM.fromList"
-  ]
-    <> renderlist (renderlistitem <$> cons)
-    <> [ rendername <> " :: " <> tyname <> " -> Subtag",
-         rendername <> " x = case x of"
-       ]
-    <> (rendercase <$> cons)
-  where
-    parsename = "parse" <> tyname
-    renderlistitem (x, y) = case toSubtag x of
-      Just n -> "(" <> T.pack (show $ unwrapSubtag n) <> ", " <> y <> ")"
-      Nothing ->
-        error $
-          T.unpack $
-            "could not parse tag " <> x
-              <> " when generating parser for "
-              <> tyname
-    renderlist (x : xs) = "      [ " <> x : renderlistmid xs
-    renderlist [] = error $ T.unpack $ tyname <> " should have more than one entry"
-    renderlistmid [x] = ["      , " <> x <> "]"]
-    renderlistmid (x : xs) = "      , " <> x : renderlistmid xs
-    renderlistmid [] = error $ T.unpack $ tyname <> " should have more than two entries"
-
-    rendername = T.toLower tyname <> "ToSubtag"
-    rendercase (x, y) = case toSubtag x of
-      Just n -> "  " <> y <> " -> Subtag " <> T.pack (show $ unwrapSubtag n)
-      Nothing ->
-        error $
-          T.unpack $
-            "could not parse tag " <> x
-              <> " when generating parser for "
-              <> tyname
-
--- | The parser and renderer for grandfathered tags will be written manually.
-renderGrandParseRend :: Text -> [(Text, Text)] -> [Text]
-renderGrandParseRend _ _ = []
-
--- | The redundant tags do not require a separate parser.
-renderRedundantParseRend :: Text -> [(Text, Text)] -> [Text]
-renderRedundantParseRend _ _ = []
 
 -- | Render an internal subtag module
 renderSubtagModuleWith ::
@@ -851,7 +793,6 @@ renderModuleWith ::
   Text ->
   -- | the date of the registry that was used
   Day ->
-  (Text -> [(Text, Text)] -> [Text]) ->
   -- | projection returning the constructor name, description,
   -- deprecation and optional preferred value without deprecation (for
   -- extlang only, essentially)
@@ -859,7 +800,7 @@ renderModuleWith ::
   -- | the actual subtag type registry
   Map Text a ->
   Text
-renderModuleWith tyname tydescription docnote d renderpr sel rs =
+renderModuleWith tyname tydescription docnote d sel rs =
   T.unlines $
     [ warning,
       "",
@@ -882,8 +823,6 @@ renderModuleWith tyname tydescription docnote d renderpr sel rs =
       <> theNFData
       <> [""]
       <> theHashable
-      <> [""]
-      <> theParserRender
   where
     docnote'
       | T.null docnote = ""
@@ -919,7 +858,6 @@ renderModuleWith tyname tydescription docnote d renderpr sel rs =
       [ "instance Hashable " <> tyname <> " where",
         "  hashWithSalt = hashUsing fromEnum"
       ]
-    theParserRender = renderpr tyname $ (\(x, (a, _, _, _)) -> (x, a)) <$> rs'
 
 -- | Write the various internal subtag modules.
 
@@ -1018,7 +956,6 @@ renderSplitRegistry sr = do
         "grandfathered"
         ""
         (date sr)
-        renderGrandParseRend
         $ \(RangeRecord a x y) -> (a, x, y, Nothing)
     rendredundant =
       renderModuleWith
@@ -1026,7 +963,6 @@ renderSplitRegistry sr = do
         "redundant"
         ""
         (date sr)
-        renderRedundantParseRend
         $ \(RangeRecord a x y) -> (a, x, y, Nothing)
 
     rendsubtag x = case toSubtag x of
