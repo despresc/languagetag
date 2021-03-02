@@ -636,8 +636,6 @@ renderSubtagModuleWith ::
   Text ->
   -- | an additional note in the documentation
   Text ->
-  -- | module-specific imports
-  [Text] ->
   -- | Projection returning the appropriate map
   (Registry -> Map Text a) ->
   -- | projection returning the constructor name, description,
@@ -647,7 +645,7 @@ renderSubtagModuleWith ::
   -- | The registry itself
   Registry ->
   Text
-renderSubtagModuleWith tyname tydescription docnote imps proj sel reg =
+renderSubtagModuleWith tyname tydescription docnote proj sel reg =
   T.unlines $
     [ warning,
       "",
@@ -659,7 +657,6 @@ renderSubtagModuleWith tyname tydescription docnote imps proj sel reg =
       "import Control.DeepSeq (NFData(..))",
       "import Data.Hashable (Hashable(..), hashUsing)"
     ]
-      <> imps
       <> [ "",
            "-- | The BCP47 " <> tydescription <> " tags as of " <> T.pack (show $ date reg) <> "." <> docnote',
            "data " <> tyname
@@ -854,8 +851,6 @@ renderModuleWith ::
   Text ->
   -- | the date of the registry that was used
   Day ->
-  -- | module-specific imports
-  [Text] ->
   (Text -> [(Text, Text)] -> [Text]) ->
   -- | projection returning the constructor name, description,
   -- deprecation and optional preferred value without deprecation (for
@@ -864,7 +859,7 @@ renderModuleWith ::
   -- | the actual subtag type registry
   Map Text a ->
   Text
-renderModuleWith tyname tydescription docnote d imps renderpr sel rs =
+renderModuleWith tyname tydescription docnote d renderpr sel rs =
   T.unlines $
     [ warning,
       "",
@@ -876,7 +871,6 @@ renderModuleWith tyname tydescription docnote d imps renderpr sel rs =
       "import Control.DeepSeq (NFData(..))",
       "import Data.Hashable (Hashable(..), hashUsing)"
     ]
-      <> imps
       <> [ "",
            "-- | The BCP47 " <> tydescription <> " tags as of " <> T.pack (show d) <> "." <> docnote',
            "data " <> tyname
@@ -981,22 +975,16 @@ renderSplitRegistry sr = do
           <> T.pack (show $ toModifiedJulianDay $ date sr)
       ]
   where
-    -- TODO: do we even need imp anymore?
-    standardImp = []
-    grandfatheredImp = []
-    redundantImp = []
     rendlang = renderSubtagModuleWith
       "Language"
       "primary language"
       ""
-      standardImp
       languageRecords
       $ \(LanguageRecord a x y _ _ _) -> (a, x, y, Nothing)
     rendextlang = renderSubtagModuleWith
       "Extlang"
       "extended language"
       "These are prefixed with \"Ext\" because they may overlap with primary language subtags. Note that if extended language subtags have a preferred value, then it refers to a primary subtag."
-      standardImp
       extlangRecords
       $ \(ExtlangRecord a x y z _ _ _ _) ->
         ( a,
@@ -1009,7 +997,6 @@ renderSplitRegistry sr = do
         "Script"
         "script"
         ""
-        standardImp
         scriptRecords
         $ \(ScriptRecord a x y) -> (a, x, y, Nothing)
     rendregion =
@@ -1017,14 +1004,12 @@ renderSplitRegistry sr = do
         "Region"
         "region"
         ""
-        standardImp
         regionRecords
         $ \(RegionRecord a x y) -> (a, x, y, Nothing)
     rendvariant = renderSubtagModuleWith
       "Variant"
       "variant"
       ""
-      standardImp
       variantRecords
       $ \(VariantRecord a x y _) -> (a, x, y, Nothing)
     rendgrandfathered =
@@ -1033,7 +1018,6 @@ renderSplitRegistry sr = do
         "grandfathered"
         ""
         (date sr)
-        grandfatheredImp
         renderGrandParseRend
         $ \(RangeRecord a x y) -> (a, x, y, Nothing)
     rendredundant =
@@ -1042,7 +1026,6 @@ renderSplitRegistry sr = do
         "redundant"
         ""
         (date sr)
-        redundantImp
         renderRedundantParseRend
         $ \(RangeRecord a x y) -> (a, x, y, Nothing)
 
