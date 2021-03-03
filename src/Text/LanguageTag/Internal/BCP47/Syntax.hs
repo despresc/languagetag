@@ -477,6 +477,19 @@ renderLanguageTag :: LanguageTag -> Text
 renderLanguageTag = TL.toStrict . TB.toLazyText . renderLanguageTagBuilder
 {-# INLINE renderLanguageTag #-}
 
+-- TODO HERE: might want to export a LanguageTag -> Normal function or
+-- LanguageTag -> Maybe Normal function insteand of the entire
+-- LanguageTag constructor and the other sub-constructors.
+-- Also consider:
+--
+-- - replacing [Extension] et al. with Vector Extension
+--
+-- - making things a little lazier? (in parsing and such, though if we
+--   use vector then things will naturally be less lazy).
+--
+-- - getting rid of the Finish class and making parsing more
+--   straightforward?
+
 data Normal = Normal
   { primlang :: {-# UNPACK #-} !Subtag,
     extlang1 :: {-# UNPACK #-} !MaybeSubtag,

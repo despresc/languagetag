@@ -17,8 +17,11 @@
 -- <https://tools.ietf.org/html/bcp47>.
 module Text.LanguageTag.BCP47.Syntax
   ( -- * Parsing and rendering tags
-    LanguageTag(..),
-    Normal(..),
+    LanguageTag (..),
+    Normal (..),
+    Extension (..),
+    RegularGrandfathered (..),
+    IrregularGrandfathered (..),
     parseBCP47,
     renderLanguageTag,
     renderLanguageTagBuilder,
@@ -74,12 +77,10 @@ module Text.LanguageTag.BCP47.Syntax
     packSubtagMangled,
     unwrapSubtag,
     wrapSubtag,
-    unsafeWrapSubtag,
     unpackSubtag,
     subtagHead,
     indexSubtag,
     subtagLength,
-    unsafeIndexSubtag,
     MaybeSubtag,
     justSubtag,
     nullSubtag,
@@ -93,6 +94,10 @@ module Text.LanguageTag.BCP47.Syntax
     Err (..),
     Component (..),
     ErrType (..),
+
+    -- * Unsafe conversions
+    unsafeWrapSubtag,
+    unsafeIndexSubtag,
   )
 where
 

@@ -52,12 +52,6 @@ Tests of:
 
 - parseRawRecord, at least on select tags of different types
 
-- parseRegistry - easy test is that there must be as many registry tag
-  records as there are '%%' lines. another: strip out all the lines
-  that start with %% or whitespace, and strip the date, and strip any
-  fields we don't parse; the number of resulting lines must be equal
-  to a certain (sum . fmap weight) over the record list.
-
 Might also like to diff the parsed registry against the old one, for
 linting purposes (e.g. to verify that we haven't registered changes in
 (sub)tag information that should never be changed).
