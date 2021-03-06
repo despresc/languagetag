@@ -293,93 +293,10 @@ instance Hashable IrregularGrandfathered where
 class Finishing a where
   finish :: a -> LanguageTag
 
-instance
-  Finishing
-    ( MaybeSubtag ->
-      MaybeSubtag ->
-      MaybeSubtag ->
-      MaybeSubtag ->
-      MaybeSubtag ->
-      [Subtag] ->
-      [Extension] ->
-      [Subtag] ->
-      LanguageTag
-    )
-  where
+instance Finishing a => Finishing (MaybeSubtag -> a) where
   finish con = finish $ con nullSubtag
 
-instance
-  Finishing
-    ( MaybeSubtag ->
-      MaybeSubtag ->
-      MaybeSubtag ->
-      MaybeSubtag ->
-      [Subtag] ->
-      [Extension] ->
-      [Subtag] ->
-      LanguageTag
-    )
-  where
-  finish con = finish $ con nullSubtag
-  {-# INLINE finish #-}
-
-instance
-  Finishing
-    ( MaybeSubtag ->
-      MaybeSubtag ->
-      MaybeSubtag ->
-      [Subtag] ->
-      [Extension] ->
-      [Subtag] ->
-      LanguageTag
-    )
-  where
-  finish con = finish $ con nullSubtag
-  {-# INLINE finish #-}
-
-instance
-  Finishing
-    ( MaybeSubtag ->
-      MaybeSubtag ->
-      [Subtag] ->
-      [Extension] ->
-      [Subtag] ->
-      LanguageTag
-    )
-  where
-  finish con = finish $ con nullSubtag
-
-instance
-  Finishing
-    ( MaybeSubtag ->
-      [Subtag] ->
-      [Extension] ->
-      [Subtag] ->
-      LanguageTag
-    )
-  where
-  finish con = finish $ con nullSubtag
-
-instance
-  Finishing
-    ( [Subtag] ->
-      [Extension] ->
-      [Subtag] ->
-      LanguageTag
-    )
-  where
-  finish con = finish $ con []
-
-instance
-  Finishing
-    ( [Extension] ->
-      [Subtag] ->
-      LanguageTag
-    )
-  where
-  finish con = finish $ con []
-
-instance Finishing ([Subtag] -> LanguageTag) where
+instance Finishing a => Finishing ([b] -> a) where
   finish con = finish $ con []
 
 instance Finishing LanguageTag where
