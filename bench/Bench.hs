@@ -10,12 +10,6 @@ import Text.LanguageTag.BCP47.Validate
 import Text.LanguageTag.Internal.Subtag (Subtag (..))
 import Text.LanguageTag.Subtag (parseSubtag)
 
-instance NFData Err where
-  rnf x = seq x ()
-
-instance NFData LanguageTag where
-  rnf x = seq x ()
-
 main :: IO ()
 main =
   defaultMain

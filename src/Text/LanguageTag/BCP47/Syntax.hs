@@ -72,12 +72,13 @@ module Text.LanguageTag.BCP47.Syntax
   )
 where
 
+import Control.DeepSeq (NFData (..), rwhnf)
 import qualified Data.List.NonEmpty as NE
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Word (Word8)
 import Text.LanguageTag.Internal.BCP47.Syntax
-import Text.LanguageTag.Internal.Subtag (SubtagChar (..), Subtag(..))
+import Text.LanguageTag.Internal.Subtag (Subtag (..), SubtagChar (..))
 import Text.LanguageTag.Subtag
 
 {- TODO:
@@ -112,6 +113,9 @@ data Component
     CirregI
   deriving (Eq, Ord, Show, Read)
 
+instance NFData Component where
+  rnf = rwhnf
+
 -- | An error that may occur during parsing
 data Err = Err
   { -- | the start of the tag where the error occurred
@@ -122,6 +126,9 @@ data Err = Err
     errType :: !ErrType
   }
   deriving (Eq, Ord, Show, Read)
+
+instance NFData Err where
+  rnf = rwhnf
 
 -- TODO: remember that Err 0 Cprimary ErrNeededTag can only occur
 -- when the start is "x" or "i".
@@ -142,6 +149,9 @@ data ErrType
     -- tag
     ErrIrregINum
   deriving (Eq, Ord, Show, Read)
+
+instance NFData ErrType where
+  rnf = rwhnf
 
 ----------------------------------------------------------------
 -- Parsing
@@ -305,17 +315,17 @@ parseBCP47' !initchar !inp = tagPop initchar inp Cbeginning 0 >>= parsePrimary
     tryVariant !con st clast pos t
       | subtagLength st == 4 =
         if isDigit $ subtagHead st
-          then mfinish (subtagLength st) Cvariant pos t (con . strictCons st) tryVariant
+          then mfinish (subtagLength st) Cvariant pos t (con . (st :)) tryVariant
           else Left $ Err pos clast ErrBadTag
       | subtagLength st >= 5 =
-        mfinish (subtagLength st) Cvariant pos t (con . strictCons st) tryVariant
+        mfinish (subtagLength st) Cvariant pos t (con . (st :)) tryVariant
       | otherwise = trySingleton (con []) st clast pos t
 
     trySingleton con st clast pos t
       | subtagLength st /= 1 = Left $ Err pos clast ErrBadTag
       | subtagHead st == subtagCharx =
         parsePrivateUse (con []) pos t
-      | otherwise = parseExtension (\ne -> con . strictCons (Extension (subtagHead st) ne)) pos t
+      | otherwise = parseExtension (\ne -> con . (Extension (subtagHead st) ne :)) pos t
 
     parsePrivateUse con pos t = do
       let pos' = pos + 2
@@ -327,7 +337,7 @@ parseBCP47' !initchar !inp = tagPop initchar inp Cbeginning 0 >>= parsePrimary
         Nothing -> Left $ Err pos Cprivateuse ErrNeededTag
 
     parsePrivateUseTag con st _ pos t =
-      mfinish (subtagLength st) Cprivateuse pos t (con . strictCons st) parsePrivateUseTag
+      mfinish (subtagLength st) Cprivateuse pos t (con . (st :)) parsePrivateUseTag
 
     parseExtension con pos t = do
       let pos' = pos + 2
@@ -342,14 +352,14 @@ parseBCP47' !initchar !inp = tagPop initchar inp Cbeginning 0 >>= parsePrimary
                 Cextension
                 pos'
                 t''
-                (con . strictNE st)
+                (con . (st NE.:|))
                 parseExtensionTag
             else Left $ Err pos Cextension ErrNeededTag
         Nothing -> Left $ Err pos Cextension ErrNeededTag
 
     parseExtensionTag con st _ pos t
       | subtagLength st == 1 = trySingleton (con []) st Cextension pos t
-      | otherwise = mfinish (subtagLength st) Cextension pos t (con . strictCons st) parseExtensionTag
+      | otherwise = mfinish (subtagLength st) Cextension pos t (con . (st :)) parseExtensionTag
 
     parseIrregularI st c t
       | st /= subtagI = Left $ Err 0 Cbeginning ErrBadChar
@@ -383,7 +393,7 @@ parsePrivate initpos inp = do
   case ms of
     Just (c, t) -> do
       (st, t') <- tagPop c t Cprivateuse initpos
-      parsePrivateUseTag (strictNE st) (initpos + fromIntegral (subtagLength st) + 1) t'
+      parsePrivateUseTag (st NE.:|) (initpos + fromIntegral (subtagLength st) + 1) t'
     Nothing -> Left $ Err initpos Cprivateuse ErrNeededTag
   where
     parsePrivateUseTag con pos t = do
@@ -391,7 +401,7 @@ parsePrivate initpos inp = do
       case mc of
         Just (c, t') -> do
           (st, t'') <- tagPop c t' Cprivateuse pos
-          parsePrivateUseTag (con . strictCons st) (pos + fromIntegral (subtagLength st) + 1) t''
+          parsePrivateUseTag (con . (st :)) (pos + fromIntegral (subtagLength st) + 1) t''
         Nothing -> pure $ con []
 
 -- $valueconstruction

@@ -24,6 +24,7 @@ module Text.LanguageTag.Internal.Subtag
   )
 where
 
+import Control.DeepSeq (NFData)
 import qualified Data.Bits as Bit
 import qualified Data.ByteString.Internal as BI
 import Data.Hashable (Hashable (..))
@@ -53,7 +54,7 @@ import Data.Word (Word64, Word8)
 --
 -- TODO: add a test that toSubtag is actually an order homomorphism
 newtype Subtag = Subtag {unwrapSubtag :: Word64}
-  deriving (Eq, Ord, Hashable)
+  deriving (Eq, Ord, Hashable, NFData)
 
 -- | Return the length of a subtag, which will be between 1 and 8.
 subtagLength :: Subtag -> Word8

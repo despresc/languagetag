@@ -40,15 +40,13 @@ module Text.LanguageTag.Internal.BCP47.Syntax
     zhXiang,
     Extension (..),
     Finishing (..),
-    strictCons,
-    strictNE,
   )
 where
 
+import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Hashable (Hashable (..), hashUsing)
 import qualified Data.List as List
 import Data.List.NonEmpty (NonEmpty)
-import qualified Data.List.NonEmpty as NE
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
@@ -92,6 +90,12 @@ data LanguageTag
   | RegularGrandfathered !RegularGrandfathered
   | IrregularGrandfathered !IrregularGrandfathered
   deriving (Eq, Ord)
+
+instance NFData LanguageTag where
+  rnf (NormalTag x) = rnf x
+  rnf (PrivateTag x) = rnf x
+  rnf (RegularGrandfathered _) = ()
+  rnf (IrregularGrandfathered _) = ()
 
 -- TODO: test that this is half the inverse of parse
 instance Show LanguageTag where
@@ -212,11 +216,17 @@ instance Hashable Normal where
       `hashWithSalt` e
       `hashWithSalt` pv
 
+instance NFData Normal where
+  rnf (Normal _ _ _ _ _ _ x y z) = rnf x `seq` rnf y `seq` rnf z
+
 data Extension = Extension
   { extSingleton :: {-# UNPACK #-} !SubtagChar,
     extTags :: {-# UNPACK #-} !(NonEmpty Subtag)
   }
   deriving (Eq, Ord)
+
+instance NFData Extension where
+  rnf (Extension _ x) = rnf x
 
 instance Hashable Extension where
   hashWithSalt s (Extension c t) =
@@ -242,6 +252,9 @@ data RegularGrandfathered
   | -- | @zh-xiang@
     Zhxiang
   deriving (Eq, Ord, Enum)
+
+instance NFData RegularGrandfathered where
+  rnf = rwhnf
 
 instance Hashable RegularGrandfathered where
   hashWithSalt = hashUsing fromEnum
@@ -285,6 +298,9 @@ data IrregularGrandfathered
 
 instance Hashable IrregularGrandfathered where
   hashWithSalt = hashUsing fromEnum
+
+instance NFData IrregularGrandfathered where
+  rnf = rwhnf
 
 ----------------------------------------------------------------
 -- Internal convenience class
@@ -426,12 +442,12 @@ unsafeFullNormalTag l me me2 me3 ms mr vs es pus =
         extlang3 = mmangled me3,
         script = mmangled ms,
         region = mmangled mr,
-        variants = strictMap parseSubtagMangled vs,
-        extensions = strictMap toExtension es,
-        privateUse = strictMap parseSubtagMangled pus
+        variants = parseSubtagMangled <$> vs,
+        extensions = toExtension <$> es,
+        privateUse = parseSubtagMangled <$> pus
       }
   where
-    toExtension (c, ext) = Extension (packCharMangled c) (strictMapNE parseSubtagMangled ext)
+    toExtension (c, ext) = Extension (packCharMangled c) (parseSubtagMangled <$> ext)
     mmangled t
       | T.null t = nullSubtag
       | otherwise = justSubtag $ parseSubtagMangled t
@@ -443,26 +459,8 @@ unsafeFullNormalTag l me me2 me3 ms mr vs es pus =
 -- those private use subtags. This function uses 'parseSubtagMangled',
 -- and so the warnings for that function apply here as well.
 unsafePrivateTag :: NonEmpty Text -> LanguageTag
-unsafePrivateTag = PrivateTag . strictMapNE parseSubtagMangled
+unsafePrivateTag = PrivateTag . fmap parseSubtagMangled
 {-# INLINE unsafePrivateTag #-}
-
-----------------------------------------------------------------
--- Utilities
-----------------------------------------------------------------
-
-strictMap :: (a -> b) -> [a] -> [b]
-strictMap f = ($ []) . List.foldl' go id
-  where
-    go l a = l . strictCons (f a)
-
-strictMapNE :: (a -> b) -> NonEmpty a -> NonEmpty b
-strictMapNE f (x NE.:| xs) = strictNE (f x) $ strictMap f xs
-
-strictNE :: a -> [a] -> NE.NonEmpty a
-strictNE !x !y = x NE.:| y
-
-strictCons :: a -> [a] -> [a]
-strictCons !x !y = x : y
 
 ----------------------------------------------------------------
 -- File auto-generated below this line. Do not edit by hand!
