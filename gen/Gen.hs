@@ -2,7 +2,7 @@
 
 -- |
 -- Module      : Main
--- Description : Fetch code registries, generate code
+-- Description : Parse language code registries, generate code
 -- Copyright   : 2021 Christian Despres
 -- License     : BSD-2-Clause
 -- Maintainer  : Christian Despres
@@ -33,17 +33,10 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import Data.Time.Calendar (Day (..))
-import Text.LanguageTag.BCP47.Syntax
-  ( LanguageTag (..),
-    Normal (..),
-    fromMaybeSubtag,
-    nullSubtag,
-    parseBCP47,
-    renderSubtag,
-    toSubtag,
-    unwrapSubtag,
-  )
+import Text.LanguageTag.BCP47.Syntax (parseBCP47)
 import Text.LanguageTag.BCP47.Validate (Deprecation (..), Scope (..))
+import Text.LanguageTag.Internal.BCP47.Syntax (LanguageTag (..), Normal (..))
+import Text.LanguageTag.Subtag (Subtag (..), maybeSubtag, nullSubtag, parseSubtag, renderSubtag)
 
 {-
 TODO:
@@ -392,7 +385,7 @@ parseRegistryThrow inp = do
             <> " at line "
             <> show lineNum
   let withLine n t = "at line " <> show n <> "\n" <> t
-  let tagErr (ErrUnknownType n) = fail $ withLine n $ "unknown type"
+  let tagErr (ErrUnknownType n) = fail $ withLine n "unknown type"
       tagErr (ErrRecord rs) = fail $ List.intercalate "\n" $ fmap allErrs rs
         where
           allErrs (tt, k, l, t) =
@@ -666,7 +659,7 @@ renderRecordModuleWith tyname imps proj rend reg =
       "import Text.LanguageTag.Internal.BCP47." <> tyname,
       "import Text.LanguageTag.Internal.BCP47.Validate",
       "import Data.List.NonEmpty (NonEmpty(..))",
-      "import Text.LanguageTag.Internal.BCP47.Syntax (Subtag(..))",
+      "import Text.LanguageTag.Internal.Subtag (Subtag(..))",
       "import qualified Data.HashMap.Strict as HM"
     ]
       <> imps
@@ -953,7 +946,7 @@ renderSplitRegistry sr =
         (date sr)
         $ \(RangeRecord a x y) -> (a, x, y, Nothing)
 
-    rendsubtag x = case toSubtag x of
+    rendsubtag x = case parseSubtag x of
       Nothing -> error $ T.unpack $ "couldn't parse subtag: " <> x
       Just s -> T.pack $ "Subtag " <> show (unwrapSubtag s)
 
@@ -979,6 +972,8 @@ renderSplitRegistry sr =
     mrender Nothing _ = "Nothing"
     mrender (Just x) f = parens $ "Just " <> f x
 
+    mrender' x f = maybeSubtag "Nothing" (\s -> parens $ "Just " <> f s) x
+
     rendreclang = renderRecordModuleWith
       "Language"
       [ "import Text.LanguageTag.Internal.BCP47.Script"
@@ -986,7 +981,8 @@ renderSplitRegistry sr =
       languageRecords
       $ \reg tag (LanguageRecord tyc desc depr ssup ml sc) ->
         let rendRec =
-              T.intercalate " " $
+              T.intercalate
+                " "
                 [ "LanguageRecord",
                   parens $ T.pack $ show desc,
                   resolveDepr (languageRecords reg) langTyCon depr,
@@ -1002,7 +998,8 @@ renderSplitRegistry sr =
       extlangRecords
       $ \reg tag (ExtlangRecord tyc desc depr prefer prefix ssup ml sc) ->
         let rendRec =
-              T.intercalate " " $
+              T.intercalate
+                " "
                 [ "ExtlangRecord",
                   parens $ T.pack $ show desc,
                   T.pack $ show depr,
@@ -1019,7 +1016,8 @@ renderSplitRegistry sr =
       scriptRecords
       $ \reg tag (ScriptRecord tyc desc depr) ->
         let rendRec =
-              T.intercalate " " $
+              T.intercalate
+                " "
                 [ "ScriptRecord",
                   parens $ T.pack $ show desc,
                   resolveDepr (scriptRecords reg) scriptTyCon depr
@@ -1031,7 +1029,8 @@ renderSplitRegistry sr =
       regionRecords
       $ \reg tag (RegionRecord tyc desc depr) ->
         let rendRec =
-              T.intercalate " " $
+              T.intercalate
+                " "
                 [ "RegionRecord",
                   parens $ T.pack $ show desc,
                   resolveDepr (regionRecords reg) regionTyCon depr
@@ -1050,9 +1049,9 @@ renderSplitRegistry sr =
           " "
           [ "Normal",
             resolvePl reg $ renderSubtag pl,
-            mrender (fromMaybeSubtag e1) (resolveExt reg . renderSubtag),
-            mrender (fromMaybeSubtag sc) (resolveScr reg . renderSubtag),
-            mrender (fromMaybeSubtag regn) (resolveReg reg . renderSubtag),
+            mrender' e1 (resolveExt reg . renderSubtag),
+            mrender' sc (resolveScr reg . renderSubtag),
+            mrender' regn (resolveReg reg . renderSubtag),
             "(S.fromList [" <> T.intercalate ", " (resolveVar reg . renderSubtag <$> vars) <> "])",
             "M.empty",
             "[]"
@@ -1071,7 +1070,8 @@ renderSplitRegistry sr =
       variantRecords
       $ \reg tag (VariantRecord tyc desc depr prefs) ->
         let rendRec =
-              T.intercalate " " $
+              T.intercalate
+                " "
                 [ "VariantRecord",
                   parens $ T.pack $ show desc,
                   resolveDepr (variantRecords reg) variantTyCon depr,
@@ -1082,7 +1082,7 @@ renderSplitRegistry sr =
     resolveDeprGrand _ NotDeprecated = "NotDeprecated"
     resolveDeprGrand _ DeprecatedSimple = "DeprecatedSimple"
     resolveDeprGrand reg (DeprecatedPreferred x) = case x of
-      "en-GB-oxendict" -> parens $ "DeprecatedPreferred $ NormalTag $ Normal En Nothing Nothing (Just GB) (S.singleton Oxendict) M.empty []"
+      "en-GB-oxendict" -> parens "DeprecatedPreferred $ NormalTag $ Normal En Nothing Nothing (Just GB) (S.singleton Oxendict) M.empty []"
       _ ->
         parens $
           "DeprecatedPreferred $ NormalTag $ Normal "
@@ -1092,8 +1092,8 @@ renderSplitRegistry sr =
     resolveDeprRedundant _ NotDeprecated = "NotDeprecated"
     resolveDeprRedundant _ DeprecatedSimple = "DeprecatedSimple"
     resolveDeprRedundant reg (DeprecatedPreferred x) = case x of
-      "cmn-Hans" -> parens $ "DeprecatedPreferred $ NormalTag $ Normal Cmn Nothing (Just Hans) Nothing S.empty M.empty []"
-      "cmn-Hant" -> parens $ "DeprecatedPreferred $ NormalTag $ Normal Cmn Nothing (Just Hant) Nothing S.empty M.empty []"
+      "cmn-Hans" -> parens "DeprecatedPreferred $ NormalTag $ Normal Cmn Nothing (Just Hans) Nothing S.empty M.empty []"
+      "cmn-Hant" -> parens "DeprecatedPreferred $ NormalTag $ Normal Cmn Nothing (Just Hant) Nothing S.empty M.empty []"
       _ ->
         parens $
           "DeprecatedPreferred $ NormalTag $ Normal "
@@ -1129,7 +1129,8 @@ renderSplitRegistry sr =
       grandfatheredRecords
       $ \reg tag (RangeRecord tyc desc depr) ->
         let rendRec =
-              T.intercalate " " $
+              T.intercalate
+                " "
                 [ "RangeRecord",
                   parens $ T.pack $ show desc,
                   resolveDeprGrand reg depr
@@ -1148,8 +1149,8 @@ renderSplitRegistry sr =
           [ "Syn.Normal",
             resolvePl' pl,
             msrender e1 resolveExt',
-            "Syn.nullSubtag",
-            "Syn.nullSubtag",
+            "nullSubtag",
+            "nullSubtag",
             msrender sc resolveScr',
             msrender regn resolveReg',
             "[" <> T.intercalate ", " (resolveVar' <$> vars) <> "]",
@@ -1157,11 +1158,9 @@ renderSplitRegistry sr =
             "[]"
           ]
       where
-        showSubtag x = "Syn.Subtag " <> T.pack (show $ unwrapSubtag x)
-        msrender x f = case fromMaybeSubtag x of
-          Nothing -> "Syn.nullSubtag"
-          Just y -> parens $ "Syn.justSubtag " <> f y
-        resolve' f x = (f reg $ renderSubtag x) `seq` (parens $ showSubtag x)
+        showSubtag x = "Subtag " <> T.pack (show $ unwrapSubtag x)
+        msrender x f = maybeSubtag "nullSubtag" (\s -> parens $ "justSubtag " <> f s) x
+        resolve' f x = f reg (renderSubtag x) `seq` parens (showSubtag x)
         resolvePl' = resolve' resolvePl
         resolveExt' = resolve' resolveExt
         resolveScr' = resolve' resolveScr
@@ -1171,12 +1170,15 @@ renderSplitRegistry sr =
     redundantImports =
       tagImports
         <> [ "import Text.LanguageTag.Internal.BCP47.Script",
-             "import Text.LanguageTag.Internal.BCP47.Language"
+             "import Text.LanguageTag.Internal.BCP47.Language",
+             "import Text.LanguageTag.Internal.Subtag (Subtag(..))",
+             "import Text.LanguageTag.Subtag (nullSubtag, justSubtag)"
            ]
     rendrecredundant = renderRangeRecordModuleWith "Redundant" redundantImports redundantRecords $
       \reg tag (RangeRecord tyc desc depr) ->
         let rendRec =
-              T.intercalate " " $
+              T.intercalate
+                " "
                 [ "RangeRecord",
                   parens $ T.pack $ show desc,
                   resolveDeprRedundant reg depr

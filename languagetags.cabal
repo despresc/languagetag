@@ -36,13 +36,16 @@ library
     hashable,
     unordered-containers,
     deepseq,
-    time
+    time,
+    vector
   ghc-options: -Wall
   exposed-modules:
+    Text.LanguageTag.Subtag
     Text.LanguageTag.BCP47.Syntax
     Text.LanguageTag.BCP47.Validate
-  other-modules:
+    Text.LanguageTag.Internal.Subtag
     Text.LanguageTag.Internal.BCP47.Syntax
+  other-modules:
     Text.LanguageTag.Internal.BCP47.Language
     Text.LanguageTag.Internal.BCP47.LanguageRecords
     Text.LanguageTag.Internal.BCP47.Extlang

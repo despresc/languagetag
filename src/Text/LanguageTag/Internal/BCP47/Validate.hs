@@ -16,7 +16,7 @@ import Data.List.NonEmpty (NonEmpty)
 import Data.Map.Strict (Map)
 import Data.Set (Set)
 import Data.Text (Text)
-import Text.LanguageTag.BCP47.Syntax (Subtag, subtagLength)
+import Text.LanguageTag.Subtag (Subtag, subtagLength)
 import Text.LanguageTag.Internal.BCP47.Extlang
 import Text.LanguageTag.Internal.BCP47.Grandfathered
 import Text.LanguageTag.Internal.BCP47.Language
