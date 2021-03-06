@@ -31,7 +31,7 @@ import qualified Data.List as List
 import qualified Data.Text.Lazy.Builder as TB
 import qualified Data.Vector.Generic as VG
 import qualified Data.Vector.Generic.Mutable as VGM
-import Data.Vector.Unboxed (MVector, Unbox, Vector)
+import Data.Vector.Unboxed (MVector, Vector)
 import Data.Word (Word64, Word8)
 
 -- | A compact representation of a BCP47 subtag (a string of ASCII
@@ -53,7 +53,7 @@ import Data.Word (Word64, Word8)
 --
 -- TODO: add a test that toSubtag is actually an order homomorphism
 newtype Subtag = Subtag {unwrapSubtag :: Word64}
-  deriving (Eq, Ord, Hashable, Unbox)
+  deriving (Eq, Ord, Hashable)
 
 -- | Return the length of a subtag, which will be between 1 and 8.
 subtagLength :: Subtag -> Word8

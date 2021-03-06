@@ -39,6 +39,7 @@ module Text.LanguageTag.Internal.BCP47.Syntax
     zhMinNan,
     zhXiang,
     Extension (..),
+    Finishing (..),
     strictCons,
     strictNE,
   )
@@ -52,8 +53,6 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Builder as TB
-import Data.Vector.Unboxed (Vector)
-import qualified Data.Vector.Unboxed as V
 import Data.Word (Word8)
 import Text.LanguageTag.Subtag
 
@@ -131,12 +130,12 @@ renderLanguageTagBuilder (NormalTag (Normal pr e1 e2 e3 sc reg vars exts pu)) =
     e3' = maybeSubtag "" renderLowPref e3
     sc' = renderScript sc
     reg' = renderRegion reg
-    vars' = V.foldMap renderLowPref vars
+    vars' = foldMap renderLowPref vars
     exts' = foldMap renderExtension exts
     renderExtension (Extension s t) = "-" <> TB.singleton (unpackChar s) <> foldMap renderLowPref t
     pu'
-      | V.null pu = ""
-      | otherwise = "-" <> TB.singleton 'x' <> V.foldMap renderLowPref pu
+      | null pu = ""
+      | otherwise = "-" <> TB.singleton 'x' <> foldMap renderLowPref pu
 renderLanguageTagBuilder (PrivateTag l) = TB.singleton 'x' <> foldMap renderSubtagBuilder l
 renderLanguageTagBuilder (RegularGrandfathered t) = case t of
   Artlojban -> "art-lojban"
@@ -197,9 +196,9 @@ data Normal = Normal
     extlang3 :: {-# UNPACK #-} !MaybeSubtag,
     script :: {-# UNPACK #-} !MaybeSubtag,
     region :: {-# UNPACK #-} !MaybeSubtag,
-    variants :: {-# UNPACK #-} !(Vector Subtag),
+    variants :: ![Subtag],
     extensions :: ![Extension],
-    privateUse ::{-# UNPACK #-} !(Vector Subtag)
+    privateUse :: ![Subtag]
   }
   deriving (Eq, Ord)
 
@@ -209,19 +208,9 @@ instance Hashable Normal where
       `hashWithSalt` e3
       `hashWithSalt` sc
       `hashWithSalt` r
-      `hashVWithSalt` v
+      `hashWithSalt` v
       `hashWithSalt` e
-      `hashVWithSalt` pv
-
-infixl 0 `hashVWithSalt`
-
-hashVWithSalt :: (V.Unbox a, Hashable a) => Int -> Vector a -> Int
-hashVWithSalt = liftHashWithSalt hashWithSalt
-  where
-    liftHashWithSalt h salt arr = finalize (V.foldl' step (salt, 0 :: Int) arr)
-      where
-        finalize (!s, !l) = hashWithSalt s l
-        step (!s, !l) x = (h s x, l + 1)
+      `hashWithSalt` pv
 
 data Extension = Extension
   { extSingleton :: {-# UNPACK #-} !SubtagChar,
@@ -296,6 +285,105 @@ data IrregularGrandfathered
 
 instance Hashable IrregularGrandfathered where
   hashWithSalt = hashUsing fromEnum
+
+----------------------------------------------------------------
+-- Internal convenience class
+----------------------------------------------------------------
+
+class Finishing a where
+  finish :: a -> LanguageTag
+
+instance
+  Finishing
+    ( MaybeSubtag ->
+      MaybeSubtag ->
+      MaybeSubtag ->
+      MaybeSubtag ->
+      MaybeSubtag ->
+      [Subtag] ->
+      [Extension] ->
+      [Subtag] ->
+      LanguageTag
+    )
+  where
+  finish con = finish $ con nullSubtag
+
+instance
+  Finishing
+    ( MaybeSubtag ->
+      MaybeSubtag ->
+      MaybeSubtag ->
+      MaybeSubtag ->
+      [Subtag] ->
+      [Extension] ->
+      [Subtag] ->
+      LanguageTag
+    )
+  where
+  finish con = finish $ con nullSubtag
+  {-# INLINE finish #-}
+
+instance
+  Finishing
+    ( MaybeSubtag ->
+      MaybeSubtag ->
+      MaybeSubtag ->
+      [Subtag] ->
+      [Extension] ->
+      [Subtag] ->
+      LanguageTag
+    )
+  where
+  finish con = finish $ con nullSubtag
+  {-# INLINE finish #-}
+
+instance
+  Finishing
+    ( MaybeSubtag ->
+      MaybeSubtag ->
+      [Subtag] ->
+      [Extension] ->
+      [Subtag] ->
+      LanguageTag
+    )
+  where
+  finish con = finish $ con nullSubtag
+
+instance
+  Finishing
+    ( MaybeSubtag ->
+      [Subtag] ->
+      [Extension] ->
+      [Subtag] ->
+      LanguageTag
+    )
+  where
+  finish con = finish $ con nullSubtag
+
+instance
+  Finishing
+    ( [Subtag] ->
+      [Extension] ->
+      [Subtag] ->
+      LanguageTag
+    )
+  where
+  finish con = finish $ con []
+
+instance
+  Finishing
+    ( [Extension] ->
+      [Subtag] ->
+      LanguageTag
+    )
+  where
+  finish con = finish $ con []
+
+instance Finishing ([Subtag] -> LanguageTag) where
+  finish con = finish $ con []
+
+instance Finishing LanguageTag where
+  finish = id
 
 ----------------------------------------------------------------
 -- Value construction
@@ -421,9 +509,9 @@ unsafeFullNormalTag l me me2 me3 ms mr vs es pus =
         extlang3 = mmangled me3,
         script = mmangled ms,
         region = mmangled mr,
-        variants = V.fromList $ parseSubtagMangled <$> vs,
+        variants = strictMap parseSubtagMangled vs,
         extensions = strictMap toExtension es,
-        privateUse = V.fromList $ parseSubtagMangled <$> pus
+        privateUse = strictMap parseSubtagMangled pus
       }
   where
     toExtension (c, ext) = Extension (packCharMangled c) (strictMapNE parseSubtagMangled ext)

@@ -92,6 +92,5 @@ executable languagetags-gen
     unordered-containers,
     process,
     languagetags,
-    time,
-    vector
+    time
   ghc-options: -Wall
