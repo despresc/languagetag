@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -75,9 +76,11 @@ where
 import qualified Data.List.NonEmpty as NE
 import Data.Text (Text)
 import qualified Data.Text as T
+import Data.Vector.Unboxed (Vector)
+import qualified Data.Vector.Unboxed as V
 import Data.Word (Word8)
 import Text.LanguageTag.Internal.BCP47.Syntax
-import Text.LanguageTag.Internal.Subtag (SubtagChar (..), Subtag(..))
+import Text.LanguageTag.Internal.Subtag (Subtag (..), SubtagChar (..))
 import Text.LanguageTag.Subtag
 
 {- TODO:
@@ -295,20 +298,22 @@ parseBCP47' !initchar !inp = tagPop initchar inp Cbeginning 0 >>= parsePrimary
       | subtagLength st == 2 =
         if containsDigit st
           then Left $ Err pos clast ErrBadTag
-          else mfinish (subtagLength st) Cregion pos t (con $ justSubtag st) tryVariant
+          else mfinish (subtagLength st) Cregion pos t (con $ justSubtag st) tryVariants
       | subtagLength st == 3 =
         if containsLetter st
           then Left $ Err pos clast ErrBadTag
-          else mfinish (subtagLength st) Cregion pos t (con $ justSubtag st) tryVariant
-      | otherwise = tryVariant (con nullSubtag) st clast pos t
+          else mfinish (subtagLength st) Cregion pos t (con $ justSubtag st) tryVariants
+      | otherwise = tryVariants (con nullSubtag) st clast pos t
+
+    tryVariants !con = tryVariant (con . V.fromList)
 
     tryVariant !con st clast pos t
       | subtagLength st == 4 =
         if isDigit $ subtagHead st
-          then mfinish (subtagLength st) Cvariant pos t (con . strictCons st) tryVariant
+          then mfinish (subtagLength st) Cvariant pos t (con . (st :)) tryVariant
           else Left $ Err pos clast ErrBadTag
       | subtagLength st >= 5 =
-        mfinish (subtagLength st) Cvariant pos t (con . strictCons st) tryVariant
+        mfinish (subtagLength st) Cvariant pos t (con . (st :)) tryVariant
       | otherwise = trySingleton (con []) st clast pos t
 
     trySingleton con st clast pos t
@@ -323,11 +328,11 @@ parseBCP47' !initchar !inp = tagPop initchar inp Cbeginning 0 >>= parsePrimary
       case ms of
         Just (c, t') -> do
           (st, t'') <- tagPop c t' Cprivateuse pos'
-          parsePrivateUseTag con st Cprivateuse pos' t''
+          parsePrivateUseTag (con . V.fromList) st Cprivateuse pos' t''
         Nothing -> Left $ Err pos Cprivateuse ErrNeededTag
 
     parsePrivateUseTag con st _ pos t =
-      mfinish (subtagLength st) Cprivateuse pos t (con . strictCons st) parsePrivateUseTag
+      mfinish (subtagLength st) Cprivateuse pos t (con . (st :)) parsePrivateUseTag
 
     parseExtension con pos t = do
       let pos' = pos + 2
@@ -432,3 +437,115 @@ subtagCharx = SubtagChar 120
 
 subtagI :: Subtag
 subtagI = Subtag 15132094747964866577
+
+----------------------------------------------------------------
+-- Internal convenience class
+----------------------------------------------------------------
+
+class Finishing a where
+  finish :: a -> LanguageTag
+
+instance
+  Finishing
+    ( MaybeSubtag ->
+      MaybeSubtag ->
+      MaybeSubtag ->
+      MaybeSubtag ->
+      MaybeSubtag ->
+      Vector Subtag ->
+      [Extension] ->
+      Vector Subtag ->
+      LanguageTag
+    )
+  where
+  finish con = finish $ con nullSubtag
+
+instance
+  Finishing
+    ( MaybeSubtag ->
+      MaybeSubtag ->
+      MaybeSubtag ->
+      MaybeSubtag ->
+      Vector Subtag ->
+      [Extension] ->
+      Vector Subtag ->
+      LanguageTag
+    )
+  where
+  finish con = finish $ con nullSubtag
+  {-# INLINE finish #-}
+
+instance
+  Finishing
+    ( MaybeSubtag ->
+      MaybeSubtag ->
+      MaybeSubtag ->
+      Vector Subtag ->
+      [Extension] ->
+      Vector Subtag ->
+      LanguageTag
+    )
+  where
+  finish con = finish $ con nullSubtag
+  {-# INLINE finish #-}
+
+instance
+  Finishing
+    ( MaybeSubtag ->
+      MaybeSubtag ->
+      Vector Subtag ->
+      [Extension] ->
+      Vector Subtag ->
+      LanguageTag
+    )
+  where
+  finish con = finish $ con nullSubtag
+
+instance
+  Finishing
+    ( MaybeSubtag ->
+      Vector Subtag ->
+      [Extension] ->
+      Vector Subtag ->
+      LanguageTag
+    )
+  where
+  finish con = finish $ con nullSubtag
+
+instance
+  Finishing
+    ( [Subtag] ->
+      [Extension] ->
+      Vector Subtag ->
+      LanguageTag
+    )
+  where
+  finish con = finish $ con []
+
+instance
+  Finishing
+    ( Vector Subtag ->
+      [Extension] ->
+      Vector Subtag ->
+      LanguageTag
+    )
+  where
+  finish con = finish $ con V.empty
+
+instance
+  Finishing
+    ( [Extension] ->
+      Vector Subtag ->
+      LanguageTag
+    )
+  where
+  finish con = finish $ con []
+
+instance Finishing ([Subtag] -> LanguageTag) where
+  finish con = finish $ con []
+
+instance Finishing (Vector Subtag -> LanguageTag) where
+  finish con = finish $ con V.empty
+
+instance Finishing LanguageTag where
+  finish = id

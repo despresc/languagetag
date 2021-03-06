@@ -18,7 +18,7 @@ main = defaultMain
   [ bgroup "simple"
      [ bench "stuff" $ nf parseBCP47 "en-GB-xxxxxx-xxxxxx-xxxxxx"
      , bench "other" $ nf parseBCP47 "en-GB-xxxxxx-xxxxxx-xxxxxx-xxxxxx-xxxxxx"
-     , bench "blah"  $ nf parseBCP47 "foo-XX-xxxxxx-xxxxxx-xxxxxx-xxxxxx-xxxxxx"
+     , bench "blah"  $ nf parseBCP47 "foo-XX-xxxxxx-xxxxxx-xxxxxx-xxxxxx-xxxxxx-xxxxx-xxxxx"
      , bench "private" $ nf parseBCP47 "x-XX-xxxxxx-xxxxxx-xxxxxx-xxxxxx-xxxxxx"
      , bench "regalt" $ nf parseBCP47 "en-gb-1234-x-xxxxxx-foobar"
      , bench "regUp" $ nf parseBCP47 "en-gb-1234-x-XXXXXX-FOOBAR"

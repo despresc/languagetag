@@ -33,6 +33,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import Data.Time.Calendar (Day (..))
+import qualified Data.Vector.Unboxed as V
 import Text.LanguageTag.BCP47.Syntax (parseBCP47)
 import Text.LanguageTag.BCP47.Validate (Deprecation (..), Scope (..))
 import Text.LanguageTag.Internal.BCP47.Syntax (LanguageTag (..), Normal (..))
@@ -1042,7 +1043,7 @@ renderSplitRegistry sr =
       Right (NormalTag n) -> "NormalTag $ " <> printNormalTag reg tag n
       _ -> error $ T.unpack $ "can't parse tag value " <> tag
     printNormalTag reg tag (Normal pl e1 e2 e3 sc regn vars exts pus)
-      | not $ null exts && null pus && nullSubtag == e2 && nullSubtag == e3 =
+      | not $ null exts && V.null pus && nullSubtag == e2 && nullSubtag == e3 =
         error $ T.unpack $ "registry tag " <> tag <> " somehow has extensions or private use fields or more than one extended language"
       | otherwise =
         T.intercalate
@@ -1052,7 +1053,14 @@ renderSplitRegistry sr =
             mrender' e1 (resolveExt reg . renderSubtag),
             mrender' sc (resolveScr reg . renderSubtag),
             mrender' regn (resolveReg reg . renderSubtag),
-            "(S.fromList [" <> T.intercalate ", " (resolveVar reg . renderSubtag <$> vars) <> "])",
+            "(S.fromList ["
+              <> T.intercalate
+                ", "
+                ( resolveVar reg
+                    . renderSubtag
+                    <$> V.toList vars
+                )
+              <> "])",
             "M.empty",
             "[]"
           ]
@@ -1141,7 +1149,7 @@ renderSplitRegistry sr =
       Right (NormalTag n) -> "Syn.NormalTag $ " <> printSyn reg tag n
       _ -> error $ T.unpack $ "can't parse tag value " <> tag
     printSyn reg tag (Normal pl e1 e2 e3 sc regn vars exts pus)
-      | not $ null exts && null pus && nullSubtag == e2 && nullSubtag == e3 =
+      | not $ null exts && V.null pus && nullSubtag == e2 && nullSubtag == e3 =
         error $ T.unpack $ "registry tag " <> tag <> " somehow has extensions or private use fields or more than one extended language"
       | otherwise =
         T.intercalate
@@ -1153,9 +1161,9 @@ renderSplitRegistry sr =
             "nullSubtag",
             msrender sc resolveScr',
             msrender regn resolveReg',
-            "[" <> T.intercalate ", " (resolveVar' <$> vars) <> "]",
+            "(V.fromList [" <> T.intercalate ", " (resolveVar' <$> V.toList vars) <> "])",
             "[]",
-            "[]"
+            "mempty"
           ]
       where
         showSubtag x = "Subtag " <> T.pack (show $ unwrapSubtag x)
@@ -1171,8 +1179,9 @@ renderSplitRegistry sr =
       tagImports
         <> [ "import Text.LanguageTag.Internal.BCP47.Script",
              "import Text.LanguageTag.Internal.BCP47.Language",
+             "import Text.LanguageTag.Subtag (nullSubtag, justSubtag)",
              "import Text.LanguageTag.Internal.Subtag (Subtag(..))",
-             "import Text.LanguageTag.Subtag (nullSubtag, justSubtag)"
+             "import qualified Data.Vector.Unboxed as V"
            ]
     rendrecredundant = renderRangeRecordModuleWith "Redundant" redundantImports redundantRecords $
       \reg tag (RangeRecord tyc desc depr) ->
