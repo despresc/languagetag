@@ -156,6 +156,8 @@ unpackSubtag w = List.unfoldr go 0
       | otherwise =
         let c = unsafeIndexSubtag w idx
          in Just (c, idx + 1)
+{-# INLINE unpackSubtag #-}
 
 renderSubtagBuilder :: Subtag -> TB.Builder
 renderSubtagBuilder = TB.fromString . fmap unpackChar . unpackSubtag
+{-# INLINE renderSubtagBuilder #-}
