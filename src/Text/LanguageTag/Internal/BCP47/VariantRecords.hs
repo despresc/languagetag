@@ -4,7 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Text.LanguageTag.Internal.BCP47.VariantRecords 
-  (lookupVariantDetails, lookupSubtagVariant) where
+  (lookupVariantDetails, parseVariant) where
 
 import Prelude hiding (LT, GT)
 import Text.LanguageTag.Internal.BCP47.Variant
@@ -134,7 +134,7 @@ lookupVariantDetails x = case HM.lookup x tab of
   where
     tab = HM.fromList $ (\(a, b, c) -> (a, (b, c))) <$> variantTable
 
-lookupSubtagVariant :: Subtag -> Maybe Variant
-lookupSubtagVariant = flip HM.lookup tab
+parseVariant :: Subtag -> Maybe Variant
+parseVariant = flip HM.lookup tab
   where
     tab = HM.fromList $ (\(a, b, _) -> (b, a)) <$> variantTable

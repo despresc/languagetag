@@ -688,7 +688,7 @@ renderRecordModuleWith tyname imps proj rend reg =
         "  where",
         "    tab = HM.fromList $ (\\(a, b, c) -> (a, (b, c))) <$> " <> tablename
       ]
-    lookupname2 = "lookupSubtag" <> tyname
+    lookupname2 = "parse" <> tyname
     lookup2 =
       [ lookupname2 <> " :: Subtag -> Maybe " <> tyname,
         lookupname2 <> " = flip HM.lookup tab",

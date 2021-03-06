@@ -33,35 +33,27 @@ module Text.LanguageTag.BCP47.Validate
     fromExtensionChar,
 
     -- ** Valid tag parsers
-
-    {-    parseLanguage,
-        parseExtlang,
-        parseScript,
-        parseRegion,
-        parseVariant, -}
+    parseLanguage,
+    parseExtlang,
+    parseScript,
+    parseRegion,
+    parseVariant,
 
     -- * Registry records
     -- $therecords
     LanguageRecord (..),
     lookupLanguageDetails,
-    lookupSubtagLanguage,
     ExtlangRecord (..),
     lookupExtlangDetails,
-    lookupSubtagExtlang,
     ScriptRecord (..),
     lookupScriptDetails,
-    lookupSubtagScript,
     RegionRecord (..),
     lookupRegionDetails,
-    lookupSubtagRegion,
     VariantRecord (..),
     lookupVariantDetails,
-    lookupSubtagVariant,
     RangeRecord (..),
     lookupGrandfatheredDetails,
-    lookupTagGrandfathered,
     lookupRedundantDetails,
-    lookupTagRedundant,
     Scope (..),
     Deprecation (..),
 
@@ -98,7 +90,7 @@ import Data.List.NonEmpty (NonEmpty)
 import Data.Map.Strict (Map)
 import Data.Set (Set)
 import Data.Text (Text)
-import Text.LanguageTag.Subtag (Subtag, subtagLength)
+import qualified Text.LanguageTag.BCP47.Syntax as Syn
 import Text.LanguageTag.Internal.BCP47.Extlang
 import Text.LanguageTag.Internal.BCP47.ExtlangRecords
 import Text.LanguageTag.Internal.BCP47.Grandfathered
@@ -115,6 +107,7 @@ import Text.LanguageTag.Internal.BCP47.ScriptRecords
 import Text.LanguageTag.Internal.BCP47.Validate
 import Text.LanguageTag.Internal.BCP47.Variant
 import Text.LanguageTag.Internal.BCP47.VariantRecords
+import Text.LanguageTag.Subtag (Subtag, subtagLength)
 
 {-
 TODO:

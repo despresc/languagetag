@@ -4,7 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Text.LanguageTag.Internal.BCP47.ScriptRecords 
-  (lookupScriptDetails, lookupSubtagScript) where
+  (lookupScriptDetails, parseScript) where
 
 import Prelude hiding (LT, GT)
 import Text.LanguageTag.Internal.BCP47.Script
@@ -279,7 +279,7 @@ lookupScriptDetails x = case HM.lookup x tab of
   where
     tab = HM.fromList $ (\(a, b, c) -> (a, (b, c))) <$> scriptTable
 
-lookupSubtagScript :: Subtag -> Maybe Script
-lookupSubtagScript = flip HM.lookup tab
+parseScript :: Subtag -> Maybe Script
+parseScript = flip HM.lookup tab
   where
     tab = HM.fromList $ (\(a, b, _) -> (b, a)) <$> scriptTable

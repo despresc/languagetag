@@ -4,7 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Text.LanguageTag.Internal.BCP47.RegionRecords 
-  (lookupRegionDetails, lookupSubtagRegion) where
+  (lookupRegionDetails, parseRegion) where
 
 import Prelude hiding (LT, GT)
 import Text.LanguageTag.Internal.BCP47.Region
@@ -365,7 +365,7 @@ lookupRegionDetails x = case HM.lookup x tab of
   where
     tab = HM.fromList $ (\(a, b, c) -> (a, (b, c))) <$> regionTable
 
-lookupSubtagRegion :: Subtag -> Maybe Region
-lookupSubtagRegion = flip HM.lookup tab
+parseRegion :: Subtag -> Maybe Region
+parseRegion = flip HM.lookup tab
   where
     tab = HM.fromList $ (\(a, b, _) -> (b, a)) <$> regionTable

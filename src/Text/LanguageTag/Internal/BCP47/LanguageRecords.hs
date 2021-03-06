@@ -4,7 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Text.LanguageTag.Internal.BCP47.LanguageRecords 
-  (lookupLanguageDetails, lookupSubtagLanguage) where
+  (lookupLanguageDetails, parseLanguage) where
 
 import Prelude hiding (LT, GT)
 import Text.LanguageTag.Internal.BCP47.Language
@@ -8756,7 +8756,7 @@ lookupLanguageDetails x = case HM.lookup x tab of
   where
     tab = HM.fromList $ (\(a, b, c) -> (a, (b, c))) <$> languageTable
 
-lookupSubtagLanguage :: Subtag -> Maybe Language
-lookupSubtagLanguage = flip HM.lookup tab
+parseLanguage :: Subtag -> Maybe Language
+parseLanguage = flip HM.lookup tab
   where
     tab = HM.fromList $ (\(a, b, _) -> (b, a)) <$> languageTable
