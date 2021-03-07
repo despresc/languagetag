@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -442,3 +443,19 @@ subtagCharx = SubtagChar 120
 
 subtagI :: Subtag
 subtagI = Subtag 15132094747964866577
+
+----------------------------------------------------------------
+-- Internal convenience class
+----------------------------------------------------------------
+
+class Finishing a where
+  finish :: a -> LanguageTag
+
+instance Finishing a => Finishing (MaybeSubtag -> a) where
+  finish con = finish $ con nullSubtag
+
+instance Finishing a => Finishing ([b] -> a) where
+  finish con = finish $ con []
+
+instance Finishing LanguageTag where
+  finish = id

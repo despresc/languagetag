@@ -16,6 +16,7 @@ module Text.LanguageTag.Subtag
     renderSubtag,
     renderSubtagBuilder,
     subtagLength,
+    subtagLength',
     subtagHead,
     indexSubtag,
 

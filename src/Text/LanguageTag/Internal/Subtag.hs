@@ -11,6 +11,7 @@ module Text.LanguageTag.Internal.Subtag
     wrapSubtag,
     renderSubtagBuilder,
     subtagLength,
+    subtagLength',
 
     -- * Subtags that might not be present
     MaybeSubtag (..),
@@ -59,6 +60,12 @@ newtype Subtag = Subtag {unwrapSubtag :: Word64}
 -- | Return the length of a subtag, which will be between 1 and 8.
 subtagLength :: Subtag -> Word8
 subtagLength = fromIntegral . (Bit..&.) sel . unwrapSubtag
+  where
+    sel = 15
+
+-- | Return the length of a subtag, which will be between 1 and 8.
+subtagLength' :: Subtag -> Int
+subtagLength' = fromIntegral . (Bit..&.) sel . unwrapSubtag
   where
     sel = 15
 

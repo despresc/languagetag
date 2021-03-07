@@ -39,7 +39,6 @@ module Text.LanguageTag.Internal.BCP47.Syntax
     zhMinNan,
     zhXiang,
     Extension (..),
-    Finishing (..),
   )
 where
 
@@ -301,22 +300,6 @@ instance Hashable IrregularGrandfathered where
 
 instance NFData IrregularGrandfathered where
   rnf = rwhnf
-
-----------------------------------------------------------------
--- Internal convenience class
-----------------------------------------------------------------
-
-class Finishing a where
-  finish :: a -> LanguageTag
-
-instance Finishing a => Finishing (MaybeSubtag -> a) where
-  finish con = finish $ con nullSubtag
-
-instance Finishing a => Finishing ([b] -> a) where
-  finish con = finish $ con []
-
-instance Finishing LanguageTag where
-  finish = id
 
 ----------------------------------------------------------------
 -- Value construction
