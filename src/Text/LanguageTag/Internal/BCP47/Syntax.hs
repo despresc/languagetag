@@ -46,6 +46,7 @@ import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Hashable (Hashable (..), hashUsing)
 import qualified Data.List as List
 import Data.List.NonEmpty (NonEmpty)
+import qualified Data.List.NonEmpty as NE
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
@@ -85,14 +86,12 @@ renderScript = maybeSubtag "" $ \s -> TB.fromString $ '-' : List.unfoldr go (s, 
 -- 'renderLanguageTag' y@.
 data LanguageTag
   = NormalTag {-# UNPACK #-} !Normal
-  | PrivateTag !(NonEmpty Subtag)
   | RegularGrandfathered !RegularGrandfathered
   | IrregularGrandfathered !IrregularGrandfathered
   deriving (Eq, Ord)
 
 instance NFData LanguageTag where
   rnf (NormalTag x) = rnf x
-  rnf (PrivateTag x) = rnf x
   rnf (RegularGrandfathered _) = ()
   rnf (IrregularGrandfathered _) = ()
 
@@ -105,17 +104,13 @@ instance Hashable LanguageTag where
     s
       `hashWithSalt` (0 :: Int)
       `hashWithSalt` t
-  hashWithSalt s (PrivateTag t) =
+  hashWithSalt s (RegularGrandfathered t) =
     s
       `hashWithSalt` (1 :: Int)
       `hashWithSalt` t
-  hashWithSalt s (RegularGrandfathered t) =
-    s
-      `hashWithSalt` (2 :: Int)
-      `hashWithSalt` t
   hashWithSalt s (IrregularGrandfathered t) =
     s
-      `hashWithSalt` (3 :: Int)
+      `hashWithSalt` (2 :: Int)
       `hashWithSalt` t
 
 -- | Render a language tag to a lazy text builder
@@ -127,7 +122,7 @@ renderLanguageTagBuilder (NormalTag (Normal pr e1 e2 e3 sc reg vars exts pu)) =
     <> pu'
   where
     renderLowPref s = "-" <> renderSubtagBuilder s
-    pr' = renderSubtagBuilder pr
+    pr' = maybeSubtag "" renderSubtagBuilder pr
     e1' = maybeSubtag "" renderLowPref e1
     e2' = maybeSubtag "" renderLowPref e2
     e3' = maybeSubtag "" renderLowPref e3
@@ -139,7 +134,6 @@ renderLanguageTagBuilder (NormalTag (Normal pr e1 e2 e3 sc reg vars exts pu)) =
     pu'
       | null pu = ""
       | otherwise = "-" <> TB.singleton 'x' <> foldMap renderLowPref pu
-renderLanguageTagBuilder (PrivateTag l) = TB.singleton 'x' <> foldMap renderSubtagBuilder l
 renderLanguageTagBuilder (RegularGrandfathered t) = case t of
   Artlojban -> "art-lojban"
   Celgaulish -> "cel-gaulish"
@@ -192,8 +186,15 @@ renderLanguageTag = TL.toStrict . TB.toLazyText . renderLanguageTagBuilder
 -- one! Then we don't need to recreate the type in the Grandfathered
 -- module. Also consider defining and using the Ext type here.
 
+-- | Invariants:
+--
+-- * if 'primlang' is 'nullSubtag' then everything must be empty
+--   except for 'privateUse', which must be non-empty.
+--
+-- * if an @extlang@ component is not 'nullSubtag' then all the
+--   previous @extlang@ components must not be 'nullSubtag' either.
 data Normal = Normal
-  { primlang :: {-# UNPACK #-} !Subtag,
+  { primlang :: {-# UNPACK #-} !MaybeSubtag,
     extlang1 :: {-# UNPACK #-} !MaybeSubtag,
     extlang2 :: {-# UNPACK #-} !MaybeSubtag,
     extlang3 :: {-# UNPACK #-} !MaybeSubtag,
@@ -419,7 +420,7 @@ unsafeFullNormalTag ::
 unsafeFullNormalTag l me me2 me3 ms mr vs es pus =
   NormalTag $
     Normal
-      { primlang = parseSubtagMangled l,
+      { primlang = justSubtag $ parseSubtagMangled l,
         extlang1 = mmangled me,
         extlang2 = mmangled me2,
         extlang3 = mmangled me3,
@@ -442,7 +443,7 @@ unsafeFullNormalTag l me me2 me3 ms mr vs es pus =
 -- those private use subtags. This function uses 'parseSubtagMangled',
 -- and so the warnings for that function apply here as well.
 unsafePrivateTag :: NonEmpty Text -> LanguageTag
-unsafePrivateTag = PrivateTag . fmap parseSubtagMangled
+unsafePrivateTag = unsafeNormalTag "" "" "" "" [] [] . NE.toList
 {-# INLINE unsafePrivateTag #-}
 
 ----------------------------------------------------------------

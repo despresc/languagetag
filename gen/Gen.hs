@@ -1048,7 +1048,7 @@ renderSplitRegistry sr =
         T.intercalate
           " "
           [ "Normal",
-            resolvePl reg $ renderSubtag pl,
+            mrender' pl (resolvePl reg . renderSubtag),
             mrender' e1 (resolveExt reg . renderSubtag),
             mrender' sc (resolveScr reg . renderSubtag),
             mrender' regn (resolveReg reg . renderSubtag),
@@ -1147,7 +1147,7 @@ renderSplitRegistry sr =
         T.intercalate
           " "
           [ "Syn.Normal",
-            resolvePl' pl,
+            msrender pl resolvePl',
             msrender e1 resolveExt',
             "nullSubtag",
             "nullSubtag",

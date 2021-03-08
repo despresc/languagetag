@@ -127,7 +127,7 @@ wrapSubtag = undefined
 -- | A subtag that may not be present. Equivalent to @Maybe
 -- Subtag@. Use 'justSubtag' and 'nullSubtag' to construct these, and
 -- 'maybeSubtag' to eliminate them.
-newtype MaybeSubtag = MaybeSubtag Subtag
+newtype MaybeSubtag = MaybeSubtag { unMaybeSubtag :: Subtag }
   deriving (Eq, Ord, Hashable)
 
 instance Show MaybeSubtag where

@@ -230,14 +230,14 @@ parseBCP47 inp = case T.uncons inp of
 parseBCP47' :: Char -> Text -> Either Err LanguageTag
 parseBCP47' !initchar !inp = tagPop initchar inp Cbeginning 0 >>= parsePrimary
   where
-    initcon l e1 e2 e3 s r v e p = NormalTag $ Normal l e1 e2 e3 s r v e p
+    initcon l e1 e2 e3 s r v e p = NormalTag $ Normal (justSubtag l) e1 e2 e3 s r v e p
 
     -- TODO: could be optimized a bit
     parsePrimary (st, t)
       | containsDigit st = Left $ Err 0 Cbeginning ErrBadChar
       | subtagLength st == 1 =
         if subtagHead st == subtagCharx
-          then PrivateTag <$> parsePrivate 0 t
+          then NormalTag . Normal nullSubtag nullSubtag nullSubtag nullSubtag nullSubtag nullSubtag [] [] . NE.toList <$> parsePrivate 0 t
           else do
             msep <- tagSep Cprimary 0 t
             case msep of
