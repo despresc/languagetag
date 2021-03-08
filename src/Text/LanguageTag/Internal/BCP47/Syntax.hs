@@ -87,11 +87,13 @@ instance Hashable LanguageTag where
 
 -- | Render a language tag to a lazy text builder
 renderLanguageTagBuilder :: LanguageTag -> TB.Builder
-renderLanguageTagBuilder (NormalTag (Normal pr e1 e2 e3 sc reg vars exts pu)) =
-  pr' <> e1' <> e2' <> e3' <> sc' <> reg'
-    <> vars'
-    <> exts'
-    <> pu'
+renderLanguageTagBuilder (NormalTag (Normal pr e1 e2 e3 sc reg vars exts pu))
+  | pr == nullSubtag = TB.singleton 'x' <> foldMap renderLowPref pu
+  | otherwise =
+    pr' <> e1' <> e2' <> e3' <> sc' <> reg'
+      <> vars'
+      <> exts'
+      <> pu'
   where
     renderLowPref s = "-" <> renderSubtagBuilder s
     pr' = maybeSubtag "" renderSubtagBuilder pr
