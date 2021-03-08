@@ -11,6 +11,8 @@ module Text.LanguageTag.Internal.BCP47.Syntax
     unsafePrivateTag,
     Extension (..),
     ExtensionChar (..),
+    toExtensionChar,
+    fromExtensionChar,
     subtagCharToExtension,
   )
 where
@@ -248,8 +250,8 @@ toExtensionChar c
 fromExtensionChar :: ExtensionChar -> Char
 fromExtensionChar ec
   | ec <= Ext9 = toC 48 ec
-  | ec <= ExtW = toC 88 ec
-  | otherwise = toC 89 ec
+  | ec <= ExtW = toC 87 ec
+  | otherwise = toC 88 ec
   where
     toC n = toEnum . (+ n) . fromEnum
 
