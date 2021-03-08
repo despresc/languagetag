@@ -41,6 +41,7 @@ library
   ghc-options: -Wall
   exposed-modules:
     Text.LanguageTag.Subtag
+    Text.LanguageTag.BCP47.Grandfathered
     Text.LanguageTag.BCP47.Syntax
     Text.LanguageTag.BCP47.Validate
     Text.LanguageTag.Internal.Subtag
@@ -56,7 +57,6 @@ library
     Text.LanguageTag.Internal.BCP47.RegionRecords
     Text.LanguageTag.Internal.BCP47.Variant
     Text.LanguageTag.Internal.BCP47.VariantRecords
-    Text.LanguageTag.Internal.BCP47.Grandfathered
     Text.LanguageTag.Internal.BCP47.GrandfatheredRecords
     Text.LanguageTag.Internal.BCP47.Redundant
     Text.LanguageTag.Internal.BCP47.RedundantRecords

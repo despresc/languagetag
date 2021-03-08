@@ -16,7 +16,7 @@
 module Main where
 
 import Control.Monad (unless)
-import Data.Char (isDigit, isSpace, toUpper)
+import Data.Char (isDigit, isSpace)
 import Data.Either (partitionEithers)
 import Data.Foldable (toList, traverse_)
 import Data.HashMap.Strict (HashMap)
@@ -28,14 +28,14 @@ import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
-import Data.Maybe (mapMaybe)
+import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import Data.Time.Calendar (Day (..))
 import Text.LanguageTag.BCP47.Syntax (parseBCP47)
 import Text.LanguageTag.BCP47.Validate (Deprecation (..), Scope (..))
-import Text.LanguageTag.Internal.BCP47.Syntax (LanguageTag (..), Normal (..))
+import Text.LanguageTag.Internal.BCP47.Syntax (LanguageTag (NormalTag), Normal (..))
 import Text.LanguageTag.Subtag (Subtag (..), maybeSubtag, nullSubtag, parseSubtag, renderSubtag)
 
 {-
@@ -750,7 +750,7 @@ renderRangeRecordModuleWith tyname imps proj rend reg =
       error $ "renderRecordModuleWith: given a registry with one entry for" <> T.unpack tyname
     lookupname1 = "lookup" <> tyname <> "Details"
     lookup1 =
-      [ lookupname1 <> " :: " <> tyname <> " -> (Syn.LanguageTag, " <> "RangeRecord)",
+      [ lookupname1 <> " :: " <> tyname <> " -> (Syn.LanguageTag, RangeRecord)",
         "lookup" <> tyname <> "Details x = case HM.lookup x tab of",
         "  Nothing -> error $ \"internal invariant violated: subtag \" <> show x <> \" does not have an associated record\"",
         "  Just r -> r",
@@ -770,10 +770,77 @@ renderRangeRecordModuleWith tyname imps proj rend reg =
       ]
         <> tableEntries
 
+-- TODO: duplication, but sadly we need to treat the gradfathered
+-- records separately from the redundant records. They might both have
+-- to be separate, honestly. Also should look at where this is called
+-- to reduce the number of parameters this takes.
+renderGrandfatheredRecordModule ::
+  -- | the type name
+  Text ->
+  -- | additional imports
+  [Text] ->
+  -- | project the relevant map from the registry
+  (Registry -> Map Text a) ->
+  -- | render an entry in the record table
+  (Registry -> Text -> a -> Text) ->
+  -- | the registry itself
+  Registry ->
+  Text
+renderGrandfatheredRecordModule tyname imps proj rend reg =
+  T.unlines $
+    [ warning,
+      "",
+      "{-# LANGUAGE NoImplicitPrelude #-}",
+      "{-# LANGUAGE OverloadedStrings #-}",
+      "",
+      "module Text.LanguageTag.Internal.BCP47.GrandfatheredRecords",
+      "  (lookupGrandfatheredDetails) where",
+      "",
+      "import Prelude hiding (LT, GT)",
+      "import Text.LanguageTag.BCP47.Grandfathered",
+      "import Text.LanguageTag.Internal.BCP47.Validate",
+      "import Data.List.NonEmpty (NonEmpty(..))",
+      "import qualified Data.HashMap.Strict as HM"
+    ]
+      <> imps
+      <> [""]
+      <> theDataTable
+      <> [""]
+      <> lookup1
+  where
+    tablename = T.toLower tyname <> "Table"
+    rend' = uncurry $ rend reg
+    tableEntries = case M.toAscList $ proj reg of
+      (x : xs) -> "  [" <> rend' x : tableMid xs
+      [] -> error $ "renderRecordModuleWith: given an empty registry for" <> T.unpack tyname
+    tableMid [x] = ["  ," <> rend' x <> "]"]
+    tableMid (x : xs) = "  ," <> rend' x : tableMid xs
+    tableMid [] =
+      error $ "renderRecordModuleWith: given a registry with one entry for" <> T.unpack tyname
+    lookupname1 = "lookup" <> tyname <> "Details"
+    lookup1 =
+      [ lookupname1 <> " :: " <> tyname <> " -> RangeRecord",
+        "lookup" <> tyname <> "Details x = case HM.lookup x tab of",
+        "  Nothing -> error $ \"internal invariant violated: subtag \" <> show x <> \" does not have an associated record\"",
+        "  Just r -> r",
+        "  where",
+        "    tab = HM.fromList  " <> tablename
+      ]
+    theDataTable =
+      [ tablename <> " :: [(" <> tyname <> ", " <> "RangeRecord)]",
+        tablename <> " ="
+      ]
+        <> tableEntries
+
 -- | Render an internal subtag module.
+
+-- TODO: change this name (only used with redundant/grandfathered),
+-- also duplication.
 renderModuleWith ::
   -- | the desired type name
   Text ->
+  -- | an override of the module name
+  Maybe Text ->
   -- | a description of the type
   Text ->
   -- | an additional note in the documentation
@@ -787,13 +854,13 @@ renderModuleWith ::
   -- | the actual subtag type registry
   Map Text a ->
   Text
-renderModuleWith tyname tydescription docnote d sel rs =
+renderModuleWith tyname mmodulename tydescription docnote d sel rs =
   T.unlines $
     [ warning,
       "",
       "{-# LANGUAGE NoImplicitPrelude #-}",
       "",
-      "module Text.LanguageTag.Internal.BCP47." <> tyname <> " where",
+      "module " <> modulename <> " where",
       "",
       "import Prelude hiding (LT, GT)",
       "import Control.DeepSeq (NFData(..))",
@@ -811,6 +878,7 @@ renderModuleWith tyname tydescription docnote d sel rs =
       <> [""]
       <> theHashable
   where
+    modulename = fromMaybe ("Text.LanguageTag.Internal.BCP47." <> tyname) mmodulename
     docnote'
       | T.null docnote = ""
       | otherwise = " " <> docnote
@@ -857,7 +925,7 @@ renderModuleWith tyname tydescription docnote d sel rs =
 -- TODO: write resolveRef functions for each of the registry components
 
 renderSplitRegistry :: Registry -> IO ()
-renderSplitRegistry sr =
+renderSplitRegistry sr = do
   traverse_
     (\(x, y) -> T.writeFile (intprefix <> x) $ y sr)
     [ ("Language.hs", rendlang),
@@ -870,12 +938,13 @@ renderSplitRegistry sr =
       ("RegionRecords.hs", rendrecregion),
       ("Variant.hs", rendvariant),
       ("VariantRecords.hs", rendrecvariant),
-      ("Grandfathered.hs", rendgrandfathered . grandfatheredRecords),
       ("GrandfatheredRecords.hs", rendrecgrandfathered),
       ("Redundant.hs", rendredundant . redundantRecords),
       ("RedundantRecords.hs", rendrecredundant),
       ("RegistryDate.hs", const regdatemodule)
     ]
+  T.writeFile "./src/Text/LanguageTag/BCP47/Grandfathered.hs" $
+    rendgrandfathered $ grandfatheredRecords sr
   where
     intprefix = "./src/Text/LanguageTag/Internal/BCP47/"
     regdatemodule =
@@ -934,6 +1003,7 @@ renderSplitRegistry sr =
     rendgrandfathered =
       renderModuleWith
         "Grandfathered"
+        (Just "Text.LanguageTag.BCP47.Grandfathered")
         "grandfathered"
         ""
         (date sr)
@@ -941,6 +1011,7 @@ renderSplitRegistry sr =
     rendredundant =
       renderModuleWith
         "Redundant"
+        Nothing
         "redundant"
         ""
         (date sr)
@@ -1048,7 +1119,7 @@ renderSplitRegistry sr =
         T.intercalate
           " "
           [ "Normal",
-            mrender' pl (resolvePl reg . renderSubtag),
+            resolvePl reg $ renderSubtag $ maybeSubtag (error "no primary language subtag?") id pl,
             mrender' e1 (resolveExt reg . renderSubtag),
             mrender' sc (resolveScr reg . renderSubtag),
             mrender' regn (resolveReg reg . renderSubtag),
@@ -1105,17 +1176,6 @@ renderSplitRegistry sr =
         "import qualified Data.Set as S"
       ]
 
-    rendgrandfatheredtag = distinguish . fixing . T.filter (/= '-')
-      where
-        fixing x = T.cons (toUpper $ T.head x) $ T.tail x
-        distinguish x
-          | c == 'E' || c == 'I' || c == 'S' =
-            "Syn.IrregularGrandfathered Syn." <> x
-          | otherwise =
-            "Syn.RegularGrandfathered Syn." <> x
-          where
-            c = T.head x
-
     prefixedImports =
       tagImports
         <> [ "import Text.LanguageTag.Internal.BCP47.Language",
@@ -1123,11 +1183,11 @@ renderSplitRegistry sr =
              "import Text.LanguageTag.Internal.BCP47.Variant"
            ]
 
-    rendrecgrandfathered = renderRangeRecordModuleWith
+    rendrecgrandfathered = renderGrandfatheredRecordModule
       "Grandfathered"
       prefixedImports
       grandfatheredRecords
-      $ \reg tag (RangeRecord tyc desc depr) ->
+      $ \reg _ (RangeRecord tyc desc depr) ->
         let rendRec =
               T.intercalate
                 " "
@@ -1135,7 +1195,7 @@ renderSplitRegistry sr =
                   parens $ T.pack $ show desc,
                   resolveDeprGrand reg depr
                 ]
-         in parens $ tyc <> ", " <> rendgrandfatheredtag tag <> ", " <> rendRec
+         in parens $ tyc <> ", " <> rendRec
 
     showSynTag reg tag = case parseBCP47 tag of
       Right (NormalTag n) -> "Syn.NormalTag $ " <> printSyn reg tag n

@@ -28,9 +28,6 @@ module Text.LanguageTag.BCP47.Validate
     ExtensionSubtag,
     toExtensionSubtag,
     fromExtensionSubtag,
-    ExtensionChar (..),
-    toExtensionChar,
-    fromExtensionChar,
 
     -- ** Valid tag parsers
     parseLanguage,
@@ -93,7 +90,7 @@ import Data.Text (Text)
 import qualified Text.LanguageTag.BCP47.Syntax as Syn
 import Text.LanguageTag.Internal.BCP47.Extlang
 import Text.LanguageTag.Internal.BCP47.ExtlangRecords
-import Text.LanguageTag.Internal.BCP47.Grandfathered
+import Text.LanguageTag.BCP47.Grandfathered
 import Text.LanguageTag.Internal.BCP47.GrandfatheredRecords
 import Text.LanguageTag.Internal.BCP47.Language
 import Text.LanguageTag.Internal.BCP47.LanguageRecords

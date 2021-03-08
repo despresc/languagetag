@@ -14,38 +14,38 @@ import Text.LanguageTag.BCP47.Syntax
 
 -}
 
-irregularTags :: [(Text, LanguageTag)]
+irregularTags :: [(Text, Grandfathered)]
 irregularTags =
-  [ ("en-GB-oed", enGbOed),
-    ("i-ami", iAmi),
-    ("i-bnn", iBnn),
-    ("i-default", iDefault),
-    ("i-enochian", iEnochian),
-    ("i-hak", iHak),
-    ("i-klingon", iKlingon),
-    ("i-lux", iLux),
-    ("i-mingo", iMingo),
-    ("i-navajo", iNavajo),
-    ("i-pwn", iPwn),
-    ("i-tao", iTao),
-    ("i-tay", iTay),
-    ("i-tsu", iTsu),
-    ("sgn-BE-FR", sgnBeFr),
-    ("sgn-BE-NL", sgnBeNl),
-    ("sgn-CH-DE", sgnChDe)
+  [ ("en-GB-oed", EnGbOed),
+    ("i-ami", IAmi),
+    ("i-bnn", IBnn),
+    ("i-default", IDefault),
+    ("i-enochian", IEnochian),
+    ("i-hak", IHak),
+    ("i-klingon", IKlingon),
+    ("i-lux", ILux),
+    ("i-mingo", IMingo),
+    ("i-navajo", INavajo),
+    ("i-pwn", IPwn),
+    ("i-tao", ITao),
+    ("i-tay", ITay),
+    ("i-tsu", ITsu),
+    ("sgn-BE-FR", SgnBeFr),
+    ("sgn-BE-NL", SgnBeNl),
+    ("sgn-CH-DE", SgnChDe)
   ]
 
-regularTags :: [(Text, LanguageTag)]
+regularTags :: [(Text, Grandfathered)]
 regularTags =
-  [ ("art-lojban", artLojban),
-    ("cel-gaulish", celGaulish),
-    ("no-bok", noBok),
-    ("no-nyn", noNyn),
-    ("zh-guoyu", zhGuoyu),
-    ("zh-hakka", zhHakka),
-    ("zh-min", zhMin),
-    ("zh-min-nan", zhMinNan),
-    ("zh-xiang", zhXiang)
+  [ ("art-lojban", ArtLojban),
+    ("cel-gaulish", CelGaulish),
+    ("no-bok", NoBok),
+    ("no-nyn", NoNyn),
+    ("zh-guoyu", ZhGuoyu),
+    ("zh-hakka", ZhHakka),
+    ("zh-min", ZhMin),
+    ("zh-min-nan", ZhMinNan),
+    ("zh-xiang", ZhXiang)
   ]
 
 -- TODO: Tests to check:
@@ -67,10 +67,10 @@ main = hspec $
       describe "parses the irregular tag" $ do
         let test (l, t) =
               it (T.unpack l) $
-                parseBCP47 l `shouldBe` (Right t)
+                parseBCP47 l `shouldBe` (Right $ grandfatheredSyntax t)
         traverse_ test irregularTags
       describe "parses the regular tag" $ do
         let test (l, t) =
               it (T.unpack l) $
-                parseBCP47 l `shouldBe` (Right t)
+                parseBCP47 l `shouldBe` (Right $ grandfatheredSyntax t)
         traverse_ test regularTags

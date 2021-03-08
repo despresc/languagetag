@@ -33,38 +33,8 @@ module Text.LanguageTag.BCP47.Syntax
 
     -- ** Grandfathered tags
     -- $grandfathered
-
-    -- *** Irregular grandfathered tags
-    -- $irregular
-    enGbOed,
-    iAmi,
-    iBnn,
-    iDefault,
-    iEnochian,
-    iHak,
-    iKlingon,
-    iLux,
-    iMingo,
-    iNavajo,
-    iPwn,
-    iTao,
-    iTay,
-    iTsu,
-    sgnBeFr,
-    sgnBeNl,
-    sgnChDe,
-
-    -- *** Regular grandfathered tags
-    -- $regular
-    artLojban,
-    celGaulish,
-    noBok,
-    noNyn,
-    zhGuoyu,
-    zhHakka,
-    zhMin,
-    zhMinNan,
-    zhXiang,
+    grandfatheredSyntax,
+    module Text.LanguageTag.BCP47.Grandfathered,
 
     -- * Errors
     Err (..),
@@ -78,6 +48,7 @@ import qualified Data.List.NonEmpty as NE
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Word (Word8)
+import Text.LanguageTag.BCP47.Grandfathered
 import Text.LanguageTag.Internal.BCP47.Syntax
 import Text.LanguageTag.Internal.Subtag (Subtag (..), SubtagChar (..))
 import Text.LanguageTag.Subtag
@@ -217,13 +188,13 @@ parseBCP47 inp = case T.uncons inp of
       where
         testIrregs
           | T.toLower inp == "en-gb-oed" =
-            Right $ IrregularGrandfathered EnGBoed
+            Right $ Grandfathered EnGbOed
           | T.toLower inp == "sgn-be-fr" =
-            Right $ IrregularGrandfathered SgnBEFR
+            Right $ Grandfathered SgnBeFr
           | T.toLower inp == "sgn-be-nl" =
-            Right $ IrregularGrandfathered SgnBENL
+            Right $ Grandfathered SgnBeNl
           | T.toLower inp == "sgn-ch-de" =
-            Right $ IrregularGrandfathered SgnCHDE
+            Right $ Grandfathered SgnChDe
           | otherwise = Left e
 
 parseBCP47' :: Char -> Text -> Either Err LanguageTag
@@ -255,30 +226,30 @@ parseBCP47' !initchar !inp = tagPop initchar inp Cbeginning 0 >>= parsePrimary
     tryGrandPrimary st0 con st1 clast pos t =
       case (unwrapSubtag st0, unwrapSubtag st1) of
         (14108546179528654867, 15690354374758891542)
-          | T.null t -> pure $ RegularGrandfathered Artlojban
+          | T.null t -> pure $ Grandfathered ArtLojban
         (14382069488147234835, 14954113284221173783)
-          | T.null t -> pure $ RegularGrandfathered Celgaulish
+          | T.null t -> pure $ Grandfathered CelGaulish
         (15977645578003677202, 14249204503046782995)
-          | T.null t -> pure $ RegularGrandfathered Nobok
+          | T.null t -> pure $ Grandfathered NoBok
         (15977645578003677202, 15989872147304546323)
-          | T.null t -> pure $ RegularGrandfathered Nonyn
+          | T.null t -> pure $ Grandfathered NoNyn
         (17699146535566049298, 14976579405109788693)
-          | T.null t -> pure $ RegularGrandfathered Zhguoyu
+          | T.null t -> pure $ Grandfathered ZhGuoyu
         (17699146535566049298, 15098140437866610709)
-          | T.null t -> pure $ RegularGrandfathered Zhhakka
+          | T.null t -> pure $ Grandfathered ZhHakka
         (17699146535566049298, 15827742560719208467) -> do
           let pos' = pos + fromIntegral (subtagLength st1) + 1
           msep <- tagSep clast pos' t
           case msep of
-            Nothing -> pure $ RegularGrandfathered Zhmin
+            Nothing -> pure $ Grandfathered ZhMin
             Just (c, t') -> do
               (st2, t'') <- tagPop c t' Clext1 pos'
               case unwrapSubtag st2 of
                 15962850549540323347
-                  | T.null t'' -> pure $ RegularGrandfathered Zhminnan
+                  | T.null t'' -> pure $ Grandfathered ZhMinNan
                 _ -> tryLext2 (con $ justSubtag st1) st2 Clext1 pos' t''
         (17699146535566049298, 17412902894784479253)
-          | T.null t -> pure $ RegularGrandfathered Zhxiang
+          | T.null t -> pure $ Grandfathered ZhXiang
         _ -> tryLext1 con st1 clast pos t
 
     tryLext1 !con st clast pos t
@@ -325,7 +296,7 @@ parseBCP47' !initchar !inp = tagPop initchar inp Cbeginning 0 >>= parsePrimary
       | subtagLength st /= 1 = Left $ Err pos clast ErrBadTag
       | subtagHead st == subtagCharx =
         parsePrivateUse (con []) pos t
-      | otherwise = parseExtension (\ne -> con . (Extension (subtagHead st) ne :)) pos t
+      | otherwise = parseExtension (\ne -> con . (Extension (subtagCharToExtension $ subtagHead st) ne :)) pos t
 
     parsePrivateUse con pos t = do
       let pos' = pos + 2
@@ -370,19 +341,19 @@ parseBCP47' !initchar !inp = tagPop initchar inp Cbeginning 0 >>= parsePrimary
         Left e -> Left e
 
     recognizeIrregI n = case unwrapSubtag n of
-      14102819922971197459 -> Right $ IrregularGrandfathered Iami
-      14248104991419006995 -> Right $ IrregularGrandfathered Ibnn
-      14526138628724883479 -> Right $ IrregularGrandfathered Idefault
-      14680466211245977112 -> Right $ IrregularGrandfathered Ienochian
-      15098133032806121491 -> Right $ IrregularGrandfathered Ihak
-      15542853518732230679 -> Right $ IrregularGrandfathered Iklingon
-      15697226132455686163 -> Right $ IrregularGrandfathered Ilux
-      15827749698417983509 -> Right $ IrregularGrandfathered Imingo
-      15962927641447628822 -> Right $ IrregularGrandfathered Inavajo
-      16275850723642572819 -> Right $ IrregularGrandfathered Ipwn
-      16827550474088480787 -> Right $ IrregularGrandfathered Itao
-      16827638435018702867 -> Right $ IrregularGrandfathered Itay
-      16847869448969781267 -> Right $ IrregularGrandfathered Itsu
+      14102819922971197459 -> Right $ Grandfathered IAmi
+      14248104991419006995 -> Right $ Grandfathered IBnn
+      14526138628724883479 -> Right $ Grandfathered IDefault
+      14680466211245977112 -> Right $ Grandfathered IEnochian
+      15098133032806121491 -> Right $ Grandfathered IHak
+      15542853518732230679 -> Right $ Grandfathered IKlingon
+      15697226132455686163 -> Right $ Grandfathered ILux
+      15827749698417983509 -> Right $ Grandfathered IMingo
+      15962927641447628822 -> Right $ Grandfathered INavajo
+      16275850723642572819 -> Right $ Grandfathered IPwn
+      16827550474088480787 -> Right $ Grandfathered ITao
+      16827638435018702867 -> Right $ Grandfathered ITay
+      16847869448969781267 -> Right $ Grandfathered ITsu
       _ -> Left $ Err 2 CirregI ErrBadTag
 
 parsePrivate :: Int -> Text -> Either Err (NE.NonEmpty Subtag)
@@ -419,6 +390,11 @@ parsePrivate initpos inp = do
 -- into the current standard via the grammar of the tags itself. All
 -- of them are valid, but they are all deprecated except for
 -- 'iDefault' and 'iMingo'.
+
+-- | Embed a 'Grandfathered' language tag in the 'LanguageTag' type
+grandfatheredSyntax :: Grandfathered -> LanguageTag
+grandfatheredSyntax = Grandfathered
+{-# INLINE grandfatheredSyntax #-}
 
 -- $regular
 --

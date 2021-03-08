@@ -5,39 +5,13 @@ module Text.LanguageTag.Internal.BCP47.Syntax
   ( LanguageTag (..),
     renderLanguageTag,
     renderLanguageTagBuilder,
-    RegularGrandfathered (..),
-    IrregularGrandfathered (..),
     Normal (..),
     unsafeNormalTag,
     unsafeFullNormalTag,
     unsafePrivateTag,
-    enGbOed,
-    iAmi,
-    iBnn,
-    iDefault,
-    iEnochian,
-    iHak,
-    iKlingon,
-    iLux,
-    iMingo,
-    iNavajo,
-    iPwn,
-    iTao,
-    iTay,
-    iTsu,
-    sgnBeFr,
-    sgnBeNl,
-    sgnChDe,
-    artLojban,
-    celGaulish,
-    noBok,
-    noNyn,
-    zhGuoyu,
-    zhHakka,
-    zhMin,
-    zhMinNan,
-    zhXiang,
     Extension (..),
+    ExtensionChar (..),
+    subtagCharToExtension,
   )
 where
 
@@ -46,11 +20,14 @@ import Data.Hashable (Hashable (..), hashUsing)
 import qualified Data.List as List
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
+import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Builder as TB
 import Data.Word (Word8)
+import Text.LanguageTag.BCP47.Grandfathered
+import Text.LanguageTag.Internal.Subtag (SubtagChar (..))
 import Text.LanguageTag.Subtag
 
 renderRegion :: MaybeSubtag -> TB.Builder
@@ -85,14 +62,12 @@ renderScript = maybeSubtag "" $ \s -> TB.fromString $ '-' : List.unfoldr go (s, 
 -- 'renderLanguageTag' y@.
 data LanguageTag
   = NormalTag {-# UNPACK #-} !Normal
-  | RegularGrandfathered !RegularGrandfathered
-  | IrregularGrandfathered !IrregularGrandfathered
+  | Grandfathered !Grandfathered
   deriving (Eq, Ord)
 
 instance NFData LanguageTag where
   rnf (NormalTag x) = rnf x
-  rnf (RegularGrandfathered _) = ()
-  rnf (IrregularGrandfathered _) = ()
+  rnf (Grandfathered _) = ()
 
 -- TODO: test that this is half the inverse of parse
 instance Show LanguageTag where
@@ -103,13 +78,9 @@ instance Hashable LanguageTag where
     s
       `hashWithSalt` (0 :: Int)
       `hashWithSalt` t
-  hashWithSalt s (RegularGrandfathered t) =
+  hashWithSalt s (Grandfathered t) =
     s
       `hashWithSalt` (1 :: Int)
-      `hashWithSalt` t
-  hashWithSalt s (IrregularGrandfathered t) =
-    s
-      `hashWithSalt` (2 :: Int)
       `hashWithSalt` t
 
 -- | Render a language tag to a lazy text builder
@@ -129,38 +100,37 @@ renderLanguageTagBuilder (NormalTag (Normal pr e1 e2 e3 sc reg vars exts pu)) =
     reg' = renderRegion reg
     vars' = foldMap renderLowPref vars
     exts' = foldMap renderExtension exts
-    renderExtension (Extension s t) = "-" <> TB.singleton (unpackChar s) <> foldMap renderLowPref t
+    renderExtension (Extension s t) = "-" <> TB.singleton (fromExtensionChar s) <> foldMap renderLowPref t
     pu'
       | null pu = ""
       | otherwise = "-" <> TB.singleton 'x' <> foldMap renderLowPref pu
-renderLanguageTagBuilder (RegularGrandfathered t) = case t of
-  Artlojban -> "art-lojban"
-  Celgaulish -> "cel-gaulish"
-  Nobok -> "no-bok"
-  Nonyn -> "no-nyn"
-  Zhguoyu -> "zh-guoyu"
-  Zhhakka -> "zh-hakka"
-  Zhmin -> "zh-min"
-  Zhminnan -> "zh-min-nan"
-  Zhxiang -> "zh-xiang"
-renderLanguageTagBuilder (IrregularGrandfathered t) = case t of
-  EnGBoed -> "en-GB-oed"
-  Iami -> "i-ami"
-  Ibnn -> "i-bnn"
-  Idefault -> "i-default"
-  Ienochian -> "i-enochian"
-  Ihak -> "i-hak"
-  Iklingon -> "i-klingon"
-  Ilux -> "i-lux"
-  Imingo -> "i-mingo"
-  Inavajo -> "i-navajo"
-  Ipwn -> "i-pwn"
-  Itao -> "i-tao"
-  Itay -> "i-tay"
-  Itsu -> "i-tsu"
-  SgnBEFR -> "sgn-BE-FR"
-  SgnBENL -> "sgn-BE-NL"
-  SgnCHDE -> "sgn-CH-DE"
+renderLanguageTagBuilder (Grandfathered t) = case t of
+  ArtLojban -> "art-lojban"
+  CelGaulish -> "cel-gaulish"
+  EnGbOed -> "en-GB-oed"
+  IAmi -> "i-ami"
+  IBnn -> "i-bnn"
+  IDefault -> "i-default"
+  IEnochian -> "i-enochian"
+  IHak -> "i-hak"
+  IKlingon -> "i-klingon"
+  ILux -> "i-lux"
+  IMingo -> "i-mingo"
+  INavajo -> "i-navajo"
+  IPwn -> "i-pwn"
+  ITao -> "i-tao"
+  ITay -> "i-tay"
+  ITsu -> "i-tsu"
+  NoBok -> "no-bok"
+  NoNyn -> "no-nyn"
+  SgnBeFr -> "sgn-BE-FR"
+  SgnBeNl -> "sgn-BE-NL"
+  SgnChDe -> "sgn-CH-DE"
+  ZhGuoyu -> "zh-guoyu"
+  ZhHakka -> "zh-hakka"
+  ZhMin -> "zh-min"
+  ZhMinNan -> "zh-min-nan"
+  ZhXiang -> "zh-xiang"
 {-# INLINE renderLanguageTagBuilder #-}
 
 -- | Render a language tag to a strict text string
@@ -180,7 +150,6 @@ renderLanguageTag = TL.toStrict . TB.toLazyText . renderLanguageTagBuilder
 --
 -- - getting rid of the Finish class and making parsing more
 --   straightforward?
---
 -- Also should probably consolidate the two grandfathered types into
 -- one! Then we don't need to recreate the type in the Grandfathered
 -- module. Also consider defining and using the Ext type here.
@@ -218,8 +187,90 @@ instance Hashable Normal where
 instance NFData Normal where
   rnf (Normal _ _ _ _ _ _ x y z) = rnf x `seq` rnf y `seq` rnf z
 
+-- | The possible single character extensions; all the ASCII
+-- alphanumeric characters (case-insensitive) except the letter X.
+data ExtensionChar
+  = Ext0
+  | Ext1
+  | Ext2
+  | Ext3
+  | Ext4
+  | Ext5
+  | Ext6
+  | Ext7
+  | Ext8
+  | Ext9
+  | ExtA
+  | ExtB
+  | ExtC
+  | ExtD
+  | ExtE
+  | ExtF
+  | ExtG
+  | ExtH
+  | ExtI
+  | ExtJ
+  | ExtK
+  | ExtL
+  | ExtM
+  | ExtN
+  | ExtO
+  | ExtP
+  | ExtQ
+  | ExtR
+  | ExtS
+  | ExtT
+  | ExtU
+  | ExtV
+  | ExtW
+  | ExtY
+  | ExtZ
+  deriving (Eq, Ord, Show, Enum, Bounded)
+
+-- | Convert an ASCII alphanumeric character other than X to an 'ExtensionChar'
+toExtensionChar :: Char -> Maybe ExtensionChar
+toExtensionChar c
+  | c < '0' = Nothing
+  | c <= '9' = toC 48 c
+  | c < 'A' = Nothing
+  | c <= 'W' = toC 55 c
+  | c == 'X' = Nothing
+  | c <= 'Z' = toC 56 c
+  | c < 'a' = Nothing
+  | c <= 'w' = toC 87 c
+  | c == 'x' = Nothing
+  | c <= 'z' = toC 88 c
+  | otherwise = Nothing
+  where
+    toC n = Just . toEnum . subtract n . fromEnum
+
+-- | Convert an 'ExtensionChar' to a lower case 'Char'.
+fromExtensionChar :: ExtensionChar -> Char
+fromExtensionChar ec
+  | ec <= Ext9 = toC 48 ec
+  | ec <= ExtW = toC 88 ec
+  | otherwise = toC 89 ec
+  where
+    toC n = toEnum . (+ n) . fromEnum
+
+-- assumes that the subtag char is lower case or digit (currently
+-- a valid assumption)
+subtagCharToExtension :: SubtagChar -> ExtensionChar
+subtagCharToExtension (SubtagChar n)
+  | n < 58 = toC 48 n
+  | n < 119 = toC 87 n
+  | otherwise = toC 88 n
+  where
+    toC x = toEnum . subtract x . fromEnum
+
+instance Hashable ExtensionChar where
+  hashWithSalt = hashUsing fromEnum
+
+instance NFData ExtensionChar where
+  rnf = rwhnf
+
 data Extension = Extension
-  { extSingleton :: {-# UNPACK #-} !SubtagChar,
+  { extSingleton :: !ExtensionChar,
     extTags :: {-# UNPACK #-} !(NonEmpty Subtag)
   }
   deriving (Eq, Ord)
@@ -231,76 +282,6 @@ instance Hashable Extension where
   hashWithSalt s (Extension c t) =
     s `hashWithSalt` c `hashWithSalt` t
 
-data RegularGrandfathered
-  = -- | @art-lojban@
-    Artlojban
-  | -- | @cel-gaulish@
-    Celgaulish
-  | -- | @no-bok@
-    Nobok
-  | -- | @no-nyn@
-    Nonyn
-  | -- | @zh-guoyu@
-    Zhguoyu
-  | -- | @zh-hakka@
-    Zhhakka
-  | -- | @zh-min@
-    Zhmin
-  | -- | @zh-min-nan@
-    Zhminnan
-  | -- | @zh-xiang@
-    Zhxiang
-  deriving (Eq, Ord, Enum)
-
-instance NFData RegularGrandfathered where
-  rnf = rwhnf
-
-instance Hashable RegularGrandfathered where
-  hashWithSalt = hashUsing fromEnum
-
-data IrregularGrandfathered
-  = -- | @en-GB-oed@
-    EnGBoed
-  | -- | @i-ami@
-    Iami
-  | -- | @i-bnn@
-    Ibnn
-  | -- | @i-default@
-    Idefault
-  | -- | @i-enochian@
-    Ienochian
-  | -- | @i-hak@
-    Ihak
-  | -- | @i-klingon@
-    Iklingon
-  | -- | @i-lux@
-    Ilux
-  | -- | @i-mingo@
-    Imingo
-  | -- | @i-navajo@
-    Inavajo
-  | -- | @i-pwn@
-    Ipwn
-  | -- | @i-tao@
-    Itao
-  | -- | @i-tay@
-    Itay
-  | -- | @i-tsu@
-    Itsu
-  | -- | @sgn-BE-FR@
-    SgnBEFR
-  | -- | @sgn-BE-NL@
-    SgnBENL
-  | -- | @sgn-CH-DE@
-    SgnCHDE
-  deriving (Eq, Ord, Enum)
-
-instance Hashable IrregularGrandfathered where
-  hashWithSalt = hashUsing fromEnum
-
-instance NFData IrregularGrandfathered where
-  rnf = rwhnf
-
 ----------------------------------------------------------------
 -- Value construction
 ----------------------------------------------------------------
@@ -309,10 +290,10 @@ instance NFData IrregularGrandfathered where
 
 -- | Construct a normal tag from its components. This function uses
 -- 'parseSubtagMangled' and 'packCharMangled' to construct the subtags
--- from the given components, so the warnings that accompany that
--- function also apply here. This function will also not check if the
--- input is a grandfathered language tag, and will not check if the
--- subtags are appropriate for their sections. See
+-- from the given components, in effect, so the warnings that
+-- accompany those functions also apply here. This function will also
+-- not check if the input is a grandfathered language tag, and will
+-- not check if the subtags are appropriate for their sections. See
 -- <https://tools.ietf.org/html/bcp47#section-2.1> for the exact
 -- grammar. A summary of the rules to follow to ensure that the input
 -- is well-formed, with /letter/ meaning ASCII alphabetic character
@@ -430,7 +411,7 @@ unsafeFullNormalTag l me me2 me3 ms mr vs es pus =
         privateUse = parseSubtagMangled <$> pus
       }
   where
-    toExtension (c, ext) = Extension (packCharMangled c) (parseSubtagMangled <$> ext)
+    toExtension (c, ext) = Extension (fromMaybe ExtA $ toExtensionChar c) (parseSubtagMangled <$> ext)
     mmangled t
       | T.null t = nullSubtag
       | otherwise = justSubtag $ parseSubtagMangled t
@@ -444,128 +425,3 @@ unsafeFullNormalTag l me me2 me3 ms mr vs es pus =
 unsafePrivateTag :: NonEmpty Text -> LanguageTag
 unsafePrivateTag = unsafeNormalTag "" "" "" "" [] [] . NE.toList
 {-# INLINE unsafePrivateTag #-}
-
-----------------------------------------------------------------
--- File auto-generated below this line. Do not edit by hand!
-----------------------------------------------------------------
-
--- TODO: actually generate this (or the documentation, anyway)
--- automatically
-
--- | Tag @en-GB-oed@. English, Oxford English Dictionary
--- spelling. Deprecated. Preferred value: @en-GB-oxendict@.
-enGbOed :: LanguageTag
-enGbOed = IrregularGrandfathered EnGBoed
-
--- | Tag @i-ami@. Amis. Deprecated. Preferred value: @ami@.
-iAmi :: LanguageTag
-iAmi = IrregularGrandfathered Iami
-
--- | Tag @-ibnn@. Bunun. Deprecated. Preferred value: @bnn@.
-iBnn :: LanguageTag
-iBnn = IrregularGrandfathered Ibnn
-
--- | Tag @i-default@. Default Language.
-iDefault :: LanguageTag
-iDefault = IrregularGrandfathered Idefault
-
--- | Tag @i-enochian@. Enochian. Deprecated.
-iEnochian :: LanguageTag
-iEnochian = IrregularGrandfathered Ienochian
-
--- | Tag @i-hak@. Hakka. Deprecated. Preferred value: @hak@.
-iHak :: LanguageTag
-iHak = IrregularGrandfathered Ihak
-
--- | Tag @i-klingon@. Klingon. Deprecated. Preferred value: @tlh@.
-iKlingon :: LanguageTag
-iKlingon = IrregularGrandfathered Iklingon
-
--- | Tag @i-lux@. Luxembourgish. Deprecated. Preferred value: @lb@.
-iLux :: LanguageTag
-iLux = IrregularGrandfathered Ilux
-
--- | Tag @i-mingo@. Mingo.
-iMingo :: LanguageTag
-iMingo = IrregularGrandfathered Imingo
-
--- | Tag @i-navajo@. Navajo. Deprecated. Preferred value: @nv@.
-iNavajo :: LanguageTag
-iNavajo = IrregularGrandfathered Inavajo
-
--- | Tag @i-pwn@. Paiwan. Deprecated. Preferred value: @pwn@.
-iPwn :: LanguageTag
-iPwn = IrregularGrandfathered Ipwn
-
--- | Tag @i-tao@. Tao. Deprecated. Preferred value: @i-tao@.
-iTao :: LanguageTag
-iTao = IrregularGrandfathered Itao
-
--- | Tag @i-tay@. Tayal. Deprecated. Preferred value: @i-tay@.
-iTay :: LanguageTag
-iTay = IrregularGrandfathered Itay
-
--- | Tag @i-tsu@. Tsou. Deprecated. Preferred value: @i-tsu@.
-iTsu :: LanguageTag
-iTsu = IrregularGrandfathered Itsu
-
--- | Tag @sgn-BE-FR@. Belgian-French Sign
--- Language. Deprecated. Preferred value: @sfb@.
-sgnBeFr :: LanguageTag
-sgnBeFr = IrregularGrandfathered SgnBEFR
-
--- | Tag @sgn-BE-NL@. Belgian-Flemish Sign
--- Language. Deprecated. Preferred value: @vgt@.
-sgnBeNl :: LanguageTag
-sgnBeNl = IrregularGrandfathered SgnBENL
-
--- | Tag @sgn-CH-DE@. Swiss-German Sign
--- Language. Deprecated. Preferred value: @sgg@.
-sgnChDe :: LanguageTag
-sgnChDe = IrregularGrandfathered SgnCHDE
-
--- | Tag @art-lojban@. Lojban. Deprecated. Preferred value: @jbo@.
-artLojban :: LanguageTag
-artLojban = RegularGrandfathered Artlojban
-
--- | Tag @cel-gaulish@. Gaulish. Deprecated. See @xcg@ (Cisalpine
--- Gaulish), @xga@ (Galatian), @xtg@ (Transalpine Gaulish).
-celGaulish :: LanguageTag
-celGaulish = RegularGrandfathered Celgaulish
-
--- | Tag @no-bok@. Norwegian Bokmal. Deprecated. Preferred value:
--- @nb@.
-noBok :: LanguageTag
-noBok = RegularGrandfathered Nobok
-
--- | Tag @no-nyn@. Norwegian Nynorsk. Deprecated. Preferred value:
--- @nn@.
-noNyn :: LanguageTag
-noNyn = RegularGrandfathered Nonyn
-
--- | Tag @zh-guoyu@. Mandarin or Standard
--- Chinese. Deprecated. Preferred value: @cmn@.
-zhGuoyu :: LanguageTag
-zhGuoyu = RegularGrandfathered Zhguoyu
-
--- | Tag @zh-hakka@. Hakka. Deprecated. Preferred value: @hak@.
-zhHakka :: LanguageTag
-zhHakka = RegularGrandfathered Zhhakka
-
--- | Tag @zh-min@. Min, Fuzhou, Hokkien, Amoy, or
--- Taiwanese. Deprecated. See @cdo@ (Min Dong Chinese), @cpx@ (Pu-Xian
--- Chinese), @czo@ (Min Zhong Chinese), @mnp@ (Min Bei Chinese), @nan@
--- (Min Nan Chinese).
-zhMin :: LanguageTag
-zhMin = RegularGrandfathered Zhmin
-
--- | Tag @zh-min-nan@. Minnan, Hokkien, Amoy, Taiwanese, Southern Min,
--- Southern Fujian, Hoklo, Southern Fukien,
--- Ho-lo. Deprecated. Preferred value: @nan@.
-zhMinNan :: LanguageTag
-zhMinNan = RegularGrandfathered Zhminnan
-
--- | Tag @zh-xiang@. Xiang or Hunanese. Deprecated. Preferred value:
--- @hsn@.
-zhXiang :: LanguageTag
-zhXiang = RegularGrandfathered Zhxiang

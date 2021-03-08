@@ -181,9 +181,6 @@ onChar bad f g h c
 -- 'Word8', if it is valid for a tag. This function also converts all
 -- letters to lower case, and reports whether the character was a
 -- letter or digit.
-
--- TODO: instead have a packCharLow (lower-cases) and packChar
--- (preserves case).
 packCharDetail :: Char -> Maybe (SubtagChar, Bool)
 packCharDetail = onChar Nothing low high dig
   where
