@@ -42,7 +42,6 @@ library
   exposed-modules:
     Text.LanguageTag.Subtag
     Text.LanguageTag.BCP47.Syntax
-    Text.LanguageTag.BCP47.SyntaxAlt
     Text.LanguageTag.BCP47.Validate
     Text.LanguageTag.Internal.Subtag
     Text.LanguageTag.Internal.BCP47.Syntax

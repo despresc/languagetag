@@ -226,7 +226,6 @@ parseBCP47 inp = case T.uncons inp of
             Right $ IrregularGrandfathered SgnCHDE
           | otherwise = Left e
 
--- TODO: also test out the normal approach of 'split'ting the input beforehand
 parseBCP47' :: Char -> Text -> Either Err LanguageTag
 parseBCP47' !initchar !inp = tagPop initchar inp Cbeginning 0 >>= parsePrimary
   where
@@ -370,8 +369,6 @@ parseBCP47' !initchar !inp = tagPop initchar inp Cbeginning 0 >>= parsePrimary
           Nothing -> recognizeIrregI st'
         Left e -> Left e
 
-    -- TODO: might want to test to make sure these constants remain
-    -- accurate
     recognizeIrregI n = case unwrapSubtag n of
       14102819922971197459 -> Right $ IrregularGrandfathered Iami
       14248104991419006995 -> Right $ IrregularGrandfathered Ibnn
