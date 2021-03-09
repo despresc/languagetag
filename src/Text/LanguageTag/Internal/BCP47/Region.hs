@@ -10,37 +10,37 @@ import Data.Hashable (Hashable(..), hashUsing)
 
 -- | The BCP47 region tags as of 2021-02-23.
 data Region
-  = R001 -- ^ @001@. Description: World.
-  | R002 -- ^ @002@. Description: Africa.
-  | R003 -- ^ @003@. Description: North America.
-  | R005 -- ^ @005@. Description: South America.
-  | R009 -- ^ @009@. Description: Oceania.
-  | R011 -- ^ @011@. Description: Western Africa.
-  | R013 -- ^ @013@. Description: Central America.
-  | R014 -- ^ @014@. Description: Eastern Africa.
-  | R015 -- ^ @015@. Description: Northern Africa.
-  | R017 -- ^ @017@. Description: Middle Africa.
-  | R018 -- ^ @018@. Description: Southern Africa.
-  | R019 -- ^ @019@. Description: Americas.
-  | R021 -- ^ @021@. Description: Northern America.
-  | R029 -- ^ @029@. Description: Caribbean.
-  | R030 -- ^ @030@. Description: Eastern Asia.
-  | R034 -- ^ @034@. Description: Southern Asia.
-  | R035 -- ^ @035@. Description: South-Eastern Asia.
-  | R039 -- ^ @039@. Description: Southern Europe.
-  | R053 -- ^ @053@. Description: Australia and New Zealand.
-  | R054 -- ^ @054@. Description: Melanesia.
-  | R057 -- ^ @057@. Description: Micronesia.
-  | R061 -- ^ @061@. Description: Polynesia.
-  | R142 -- ^ @142@. Description: Asia.
-  | R143 -- ^ @143@. Description: Central Asia.
-  | R145 -- ^ @145@. Description: Western Asia.
-  | R150 -- ^ @150@. Description: Europe.
-  | R151 -- ^ @151@. Description: Eastern Europe.
-  | R154 -- ^ @154@. Description: Northern Europe.
-  | R155 -- ^ @155@. Description: Western Europe.
-  | R202 -- ^ @202@. Description: Sub-Saharan Africa.
-  | R419 -- ^ @419@. Description: Latin America and the Caribbean.
+  = Reg001 -- ^ @001@. Description: World.
+  | Reg002 -- ^ @002@. Description: Africa.
+  | Reg003 -- ^ @003@. Description: North America.
+  | Reg005 -- ^ @005@. Description: South America.
+  | Reg009 -- ^ @009@. Description: Oceania.
+  | Reg011 -- ^ @011@. Description: Western Africa.
+  | Reg013 -- ^ @013@. Description: Central America.
+  | Reg014 -- ^ @014@. Description: Eastern Africa.
+  | Reg015 -- ^ @015@. Description: Northern Africa.
+  | Reg017 -- ^ @017@. Description: Middle Africa.
+  | Reg018 -- ^ @018@. Description: Southern Africa.
+  | Reg019 -- ^ @019@. Description: Americas.
+  | Reg021 -- ^ @021@. Description: Northern America.
+  | Reg029 -- ^ @029@. Description: Caribbean.
+  | Reg030 -- ^ @030@. Description: Eastern Asia.
+  | Reg034 -- ^ @034@. Description: Southern Asia.
+  | Reg035 -- ^ @035@. Description: South-Eastern Asia.
+  | Reg039 -- ^ @039@. Description: Southern Europe.
+  | Reg053 -- ^ @053@. Description: Australia and New Zealand.
+  | Reg054 -- ^ @054@. Description: Melanesia.
+  | Reg057 -- ^ @057@. Description: Micronesia.
+  | Reg061 -- ^ @061@. Description: Polynesia.
+  | Reg142 -- ^ @142@. Description: Asia.
+  | Reg143 -- ^ @143@. Description: Central Asia.
+  | Reg145 -- ^ @145@. Description: Western Asia.
+  | Reg150 -- ^ @150@. Description: Europe.
+  | Reg151 -- ^ @151@. Description: Eastern Europe.
+  | Reg154 -- ^ @154@. Description: Northern Europe.
+  | Reg155 -- ^ @155@. Description: Western Europe.
+  | Reg202 -- ^ @202@. Description: Sub-Saharan Africa.
+  | Reg419 -- ^ @419@. Description: Latin America and the Caribbean.
   | AA -- ^ @AA@. Description: Private use.
   | AC -- ^ @AC@. Description: Ascension Island.
   | AD -- ^ @AD@. Description: Andorra.

@@ -10,12 +10,12 @@ import Data.Hashable (Hashable(..), hashUsing)
 
 -- | The BCP47 variant tags as of 2021-02-23.
 data Variant
-  = V1606nict -- ^ @1606nict@. Description: Late Middle French (to 1606).
-  | V1694acad -- ^ @1694acad@. Description: Early Modern French.
-  | V1901 -- ^ @1901@. Description: Traditional German orthography.
-  | V1959acad -- ^ @1959acad@. Description: \"Academic\" (\"governmental\") variant of Belarusian as codified in 1959.
-  | V1994 -- ^ @1994@. Description: Standardized Resian orthography.
-  | V1996 -- ^ @1996@. Description: German orthography of 1996.
+  = Var1606nict -- ^ @1606nict@. Description: Late Middle French (to 1606).
+  | Var1694acad -- ^ @1694acad@. Description: Early Modern French.
+  | Var1901 -- ^ @1901@. Description: Traditional German orthography.
+  | Var1959acad -- ^ @1959acad@. Description: \"Academic\" (\"governmental\") variant of Belarusian as codified in 1959.
+  | Var1994 -- ^ @1994@. Description: Standardized Resian orthography.
+  | Var1996 -- ^ @1996@. Description: German orthography of 1996.
   | Abl1943 -- ^ @abl1943@. Description: Orthographic formulation of 1943 - Official in Brazil (Formulário Ortográfico de 1943 - Oficial no Brasil).
   | Akuapem -- ^ @akuapem@. Description: Akuapem Twi.
   | Alalc97 -- ^ @alalc97@. Description: ALA-LC Romanization, 1997 edition.

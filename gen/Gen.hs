@@ -502,11 +502,11 @@ splitRegistry (RawRegistry regdate rs) =
   where
     go proj = M.fromList $ mapMaybe proj $ unpackRegistryRanges rs
     rendertycon contrans numpref typref =
-      (typref <>) . contrans . mconcat . renderTyPieces numpref . T.split (== '-')
-    renderTyPieces numpref (x : xs)
-      | isDigit (T.head x) = [numpref, T.toLower x] <> renderTyTail xs
-      | otherwise = [T.toTitle x] <> renderTyTail xs
-    renderTyPieces _ [] = error "Gen.renderTyPieces: empty tag encountered"
+      (typref <>) . mconcat . renderTyPieces contrans numpref . T.split (== '-')
+    renderTyPieces contrans numpref (x : xs)
+      | isDigit (T.head x) = [numpref, T.toLower x] <> fmap contrans (renderTyTail xs)
+      | otherwise = fmap contrans $ [T.toTitle x] <> renderTyTail xs
+    renderTyPieces _ _ [] = error "Gen.renderTyPieces: empty tag encountered"
     renderTyTail = fmap T.toTitle
 
     plang (TagRecord tg (Language x y z) descrs deprs) =
