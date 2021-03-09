@@ -683,8 +683,8 @@ renderRecordModuleWith tyname imps proj rend reg =
     lookup1 =
       [ lookupname1 <> " :: " <> tyname <> " -> (Subtag, " <> tyname <> "Record)",
         "lookup" <> tyname <> "Details x = case HM.lookup x tab of",
-        "  Nothing -> error $ \"internal invariant violated: subtag \" <> show x <> \" does not have an associated record\"",
         "  Just r -> r",
+        "  Nothing -> error $ \"internal invariant violated: subtag \" <> show x <> \" does not have an associated record\"",
         "  where",
         "    tab = HM.fromList $ (\\(a, b, c) -> (a, (b, c))) <$> " <> tablename
       ]
@@ -752,8 +752,8 @@ renderRangeRecordModuleWith tyname imps proj rend reg =
     lookup1 =
       [ lookupname1 <> " :: " <> tyname <> " -> (Syn.LanguageTag, RangeRecord)",
         "lookup" <> tyname <> "Details x = case HM.lookup x tab of",
-        "  Nothing -> error $ \"internal invariant violated: subtag \" <> show x <> \" does not have an associated record\"",
         "  Just r -> r",
+        "  Nothing -> error $ \"internal invariant violated: subtag \" <> show x <> \" does not have an associated record\"",
         "  where",
         "    tab = HM.fromList $ (\\(a, b, c) -> (a, (b, c))) <$> " <> tablename
       ]
@@ -821,8 +821,8 @@ renderGrandfatheredRecordModule tyname imps proj rend reg =
     lookup1 =
       [ lookupname1 <> " :: " <> tyname <> " -> RangeRecord",
         "lookup" <> tyname <> "Details x = case HM.lookup x tab of",
-        "  Nothing -> error $ \"internal invariant violated: subtag \" <> show x <> \" does not have an associated record\"",
         "  Just r -> r",
+        "  Nothing -> error $ \"internal invariant violated: subtag \" <> show x <> \" does not have an associated record\"",
         "  where",
         "    tab = HM.fromList  " <> tablename
       ]

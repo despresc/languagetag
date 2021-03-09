@@ -129,8 +129,8 @@ variantTable =
 
 lookupVariantDetails :: Variant -> (Subtag, VariantRecord)
 lookupVariantDetails x = case HM.lookup x tab of
-  Nothing -> error $ "internal invariant violated: subtag " <> show x <> " does not have an associated record"
   Just r -> r
+  Nothing -> error $ "internal invariant violated: subtag " <> show x <> " does not have an associated record"
   where
     tab = HM.fromList $ (\(a, b, c) -> (a, (b, c))) <$> variantTable
 
