@@ -46,7 +46,7 @@ import Text.LanguageTag.Subtag (Subtag, subtagLength)
 --   deprecated (but note that the 'Grandfathered' documentation may
 --   have more up-to-date information).
 --
--- Note that there is also third type of tag, the "redundant" tags,
+-- Note that there is also a fourth type of tag, the "redundant" tags,
 -- that are valid 'Normal' tags but for historical reasons are also
 -- registered in their entirety. These are represented as normal tags;
 -- the fact that they are so registered will only influence
