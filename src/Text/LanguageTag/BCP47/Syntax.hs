@@ -377,10 +377,7 @@ parsePrivate initpos inp = do
 --
 -- Other than the 'parseBCP47' function, tags can also be constructed
 -- using 'unsafeNormalTag' and 'unsafePrivateTag' if they are known to
--- be well-formed. Constants are also provided for all the
--- grandfathered tags in BCP47, but note that as of 2021-02-23 all of
--- them are deprecated except for 'iDefault' and 'iMingo', and of the
--- deprecated tags, only 'iEnochian' has no replacement tag.
+-- be well-formed, as well as 'grandfatheredSyntax'.
 
 -- $grandfathered
 --
@@ -388,8 +385,8 @@ parsePrivate initpos inp = do
 -- simply subtags. Of those tags, the ones that could not be
 -- represented via registered subtags were explicitly grandfathered
 -- into the current standard via the grammar of the tags itself. All
--- of them are valid, but they are all deprecated except for
--- 'iDefault' and 'iMingo'.
+-- of them are valid, but most are deprecated; see the documentation
+-- for 'Grandfathered' for up-to-date details.
 
 -- | Embed a 'Grandfathered' language tag in the 'LanguageTag' type
 grandfatheredSyntax :: Grandfathered -> LanguageTag

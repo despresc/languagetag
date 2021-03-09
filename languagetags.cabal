@@ -16,10 +16,10 @@ description:
   supports checking the syntactic well-formedness and semantic
   validity of [BCP47 language tags](https://tools.ietf.org/html/bcp47)
   as of its current 2009 version, as well as canonicalizing such
-  tags. The pertinent functions are generated automatically using data
+  tags. The validating functions are statically generated using data
   from the IANA Language Subtag Registry, available from
-  <https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry>. This
-  library uses the version of 2021-02-23.
+  <https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry>. See
+  the RegistryDate submodule for the exact registry version this library uses.
 
 extra-source-files:
   CHANGELOG.md

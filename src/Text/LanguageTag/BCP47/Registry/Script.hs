@@ -8,7 +8,7 @@ import Prelude hiding (LT, GT)
 import Control.DeepSeq (NFData(..))
 import Data.Hashable (Hashable(..), hashUsing)
 
--- | The BCP47 script tags as of 2021-02-23.
+-- | The BCP47 script tags as of 2021-03-05.
 data Script
   = Adlm -- ^ @Adlm@. Description: Adlam.
   | Afak -- ^ @Afak@. Description: Afaka.
@@ -247,10 +247,12 @@ data Script
   | Thai -- ^ @Thai@. Description: Thai.
   | Tibt -- ^ @Tibt@. Description: Tibetan.
   | Tirh -- ^ @Tirh@. Description: Tirhuta.
+  | Tnsa -- ^ @Tnsa@. Description: Tangsa.
   | Toto -- ^ @Toto@. Description: Toto.
   | Ugar -- ^ @Ugar@. Description: Ugaritic.
   | Vaii -- ^ @Vaii@. Description: Vai.
   | Visp -- ^ @Visp@. Description: Visible Speech.
+  | Vith -- ^ @Vith@. Description: Vithkuqi.
   | Wara -- ^ @Wara@. Description: Warang Citi; Varang Kshiti.
   | Wcho -- ^ @Wcho@. Description: Wancho.
   | Wole -- ^ @Wole@. Description: Woleai.

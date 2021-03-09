@@ -8,7 +8,7 @@ import Prelude hiding (LT, GT)
 import Control.DeepSeq (NFData(..))
 import Data.Hashable (Hashable(..), hashUsing)
 
--- | The BCP47 redundant tags as of 2021-02-23.
+-- | The BCP47 redundant tags as of 2021-03-05.
 data Redundant
   = AzArab -- ^ @az-Arab@. Description: Azerbaijani in Arabic script.
   | AzCyrl -- ^ @az-Cyrl@. Description: Azerbaijani in Cyrillic script.

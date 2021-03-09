@@ -41,10 +41,9 @@ import Text.LanguageTag.Subtag (Subtag, subtagLength)
 -- * 'Grandfathered' language tags are tags that were grandfathered in
 --   their entirety into the current standard. These tags might not be
 --   well-formed according to the normal tag grammar, and if they are,
---   then one or more of their subtags will be unregistered. As of
---   2021-02-23, all of these but 'IMingo' and 'IDefault' have been
---   deprecated (but note that the 'Grandfathered' documentation may
---   have more up-to-date information).
+--   then one or more of their subtags will be unregistered. Most of
+--   these are deprecated; see the 'Grandfathered' documentation for
+--   up-to-date details.
 --
 -- Note that there is also a fourth type of tag, the "redundant" tags,
 -- that are valid 'Normal' tags but for historical reasons are also
