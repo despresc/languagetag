@@ -14,7 +14,6 @@ module Text.LanguageTag.Subtag
     wrapSubtag,
     unwrapSubtag,
     renderSubtag,
-    renderSubtagBuilder,
     subtagLength,
     subtagLength',
     subtagHead,
@@ -32,6 +31,13 @@ module Text.LanguageTag.Subtag
     unpackChar,
     packCharMangled,
     unwrapChar,
+
+    -- * Additional rendering functions
+    renderSubtagUpper,
+    renderSubtagTitle,
+    renderSubtagBuilder,
+    renderSubtagBuilderUpper,
+    renderSubtagBuilderTitle,
 
     -- * Unsafe functions
     unsafeUnpackUpperLetter,
@@ -57,6 +63,13 @@ import Text.LanguageTag.Internal.Subtag
 
 renderSubtag :: Subtag -> Text
 renderSubtag = TL.toStrict . TB.toLazyText . renderSubtagBuilder
+
+-- FIXME: this and renderSubtagTitle could be more efficient if written by hand
+renderSubtagUpper :: Subtag -> Text
+renderSubtagUpper = TL.toStrict . TL.toUpper . TB.toLazyText . renderSubtagBuilderUpper
+
+renderSubtagTitle :: Subtag -> Text
+renderSubtagTitle = TL.toStrict . TL.toTitle . TB.toLazyText . renderSubtagBuilderTitle
 
 containsLetter :: Subtag -> Bool
 containsLetter (Subtag n) = n `Bit.testBit` 4

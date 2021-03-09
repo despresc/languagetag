@@ -10,6 +10,8 @@ module Text.LanguageTag.Internal.Subtag
     unpackSubtag,
     wrapSubtag,
     renderSubtagBuilder,
+    renderSubtagBuilderUpper,
+    renderSubtagBuilderTitle,
     subtagLength,
     subtagLength',
 
@@ -19,6 +21,7 @@ module Text.LanguageTag.Internal.Subtag
     -- * Subtag characters
     SubtagChar (..),
     unpackChar,
+    unpackCharUpper,
 
     -- * Unsafe functions
     unsafeIndexSubtag,
@@ -127,7 +130,7 @@ wrapSubtag = undefined
 -- | A subtag that may not be present. Equivalent to @Maybe
 -- Subtag@. Use 'justSubtag' and 'nullSubtag' to construct these, and
 -- 'maybeSubtag' to eliminate them.
-newtype MaybeSubtag = MaybeSubtag { unMaybeSubtag :: Subtag }
+newtype MaybeSubtag = MaybeSubtag {unMaybeSubtag :: Subtag}
   deriving (Eq, Ord, Hashable)
 
 instance Show MaybeSubtag where
@@ -143,6 +146,13 @@ newtype SubtagChar = SubtagChar {unSubtagChar :: Word8}
 -- | Unpack an ASCII alphanumeric character from a 'SubtagChar'
 unpackChar :: SubtagChar -> Char
 unpackChar (SubtagChar w) = BI.w2c w
+
+-- | Unpack an ASCII alphanumeric character from a 'SubtagChar' to an
+-- upper case 'Char'
+unpackCharUpper :: SubtagChar -> Char
+unpackCharUpper (SubtagChar w)
+  | w >= 97 = BI.w2c $ w - 32
+  | otherwise = BI.w2c w
 
 -- | Index a subtag without bounds checking. Note that
 -- @'unsafeIndexSubtag' 0@ is equivalent to 'subtagHead'.
@@ -169,3 +179,14 @@ unpackSubtag w = List.unfoldr go 0
 renderSubtagBuilder :: Subtag -> TB.Builder
 renderSubtagBuilder = TB.fromString . fmap unpackChar . unpackSubtag
 {-# INLINE renderSubtagBuilder #-}
+
+renderSubtagBuilderUpper :: Subtag -> TB.Builder
+renderSubtagBuilderUpper = TB.fromString . fmap unpackCharUpper . unpackSubtag
+{-# INLINE renderSubtagBuilderUpper #-}
+
+renderSubtagBuilderTitle :: Subtag -> TB.Builder
+renderSubtagBuilderTitle = TB.fromString . go . unpackSubtag
+  where
+    go (x : xs) = unpackCharUpper x : fmap unpackChar xs
+    go [] = error "internal invariant violated: empty subtag"
+{-# INLINE renderSubtagBuilderTitle #-}

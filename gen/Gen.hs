@@ -501,38 +501,38 @@ splitRegistry (RawRegistry regdate rs) =
     }
   where
     go proj = M.fromList $ mapMaybe proj $ unpackRegistryRanges rs
-    rendertycon contrans tyname typref =
-      contrans . (typref <>) . mconcat . renderTyPieces tyname . T.split (== '-')
-    renderTyPieces tyname (x : xs)
-      | isDigit (T.head x) = [T.singleton (T.head tyname), T.toLower x] <> renderTyTail xs
+    rendertycon contrans numpref typref =
+      contrans . (typref <>) . mconcat . renderTyPieces numpref . T.split (== '-')
+    renderTyPieces numpref (x : xs)
+      | isDigit (T.head x) = [numpref, T.toLower x] <> renderTyTail xs
       | otherwise = [T.toTitle x] <> renderTyTail xs
     renderTyPieces _ [] = error "Gen.renderTyPieces: empty tag encountered"
     renderTyTail = fmap T.toTitle
 
     plang (TagRecord tg (Language x y z) descrs deprs) =
-      Just (tg, LanguageRecord (rendertycon id "Language" "" tg) descrs deprs x y z)
+      Just (tg, LanguageRecord (rendertycon id "" "" tg) descrs deprs x y z)
     plang _ = Nothing
     pextlang (TagRecord tg (Extlang _ b c d e) descrs deprs) =
-      Just (tg, ExtlangRecord (rendertycon id "Extlang" "Ext" tg) descrs deprs' tg b c d e)
+      Just (tg, ExtlangRecord (rendertycon id "" "Ext" tg) descrs deprs' tg b c d e)
       where
         deprs' = case deprs of
           NotDeprecated -> False
           _ -> True
     pextlang _ = Nothing
     pscr (TagRecord tg Script descrs deprs) =
-      Just (tg, ScriptRecord (rendertycon id "Script" "" tg) descrs deprs)
+      Just (tg, ScriptRecord (rendertycon id "" "" tg) descrs deprs)
     pscr _ = Nothing
     preg (TagRecord tg Region descrs deprs) =
-      Just (tg, RegionRecord (rendertycon T.toUpper "Region" "" tg) descrs deprs)
+      Just (tg, RegionRecord (rendertycon T.toUpper "Reg" "" tg) descrs deprs)
     preg _ = Nothing
     pvar (TagRecord tg (Variant l) descrs deprs) =
-      Just (tg, VariantRecord (rendertycon id "Variant" "" tg) descrs deprs l)
+      Just (tg, VariantRecord (rendertycon id "Var" "" tg) descrs deprs l)
     pvar _ = Nothing
     pgra (TagRecord tg Grandfathered descrs deprs) =
-      Just (tg, RangeRecord (rendertycon id "Grandfathered" "" tg) descrs deprs)
+      Just (tg, RangeRecord (rendertycon id "" "" tg) descrs deprs)
     pgra _ = Nothing
     prdn (TagRecord tg Redundant descrs deprs) =
-      Just (tg, RangeRecord (rendertycon id "Redundant" "" tg) descrs deprs)
+      Just (tg, RangeRecord (rendertycon id "" "" tg) descrs deprs)
     prdn _ = Nothing
 
 ----------------------------------------------------------------
@@ -564,7 +564,11 @@ renderSubtagModuleWith ::
   -- | a description of the type
   Text ->
   -- | an additional note in the documentation
+  Maybe Text ->
+  -- | the function used for showing the constructor
   Text ->
+  -- | additional imports
+  [Text] ->
   -- | Projection returning the appropriate map
   (Registry -> Map Text a) ->
   -- | projection returning the constructor name, description,
@@ -574,33 +578,35 @@ renderSubtagModuleWith ::
   -- | The registry itself
   Registry ->
   Text
-renderSubtagModuleWith tyname tydescription docnote proj sel reg =
+renderSubtagModuleWith tyname tydescription mdocnote showfun imps proj sel reg =
   T.unlines $
     [ warning,
       "",
       "{-# LANGUAGE NoImplicitPrelude #-}",
+      "{-# LANGUAGE GeneralizedNewtypeDeriving #-}",
+      "{-# LANGUAGE PatternSynonyms #-}",
       "",
       "module Text.LanguageTag.Internal.BCP47." <> tyname <> " where",
       "",
       "import Prelude hiding (LT, GT)",
-      "import Control.DeepSeq (NFData(..))",
-      "import Data.Hashable (Hashable(..), hashUsing)"
+      "import Control.DeepSeq (NFData)",
+      "import Data.Hashable (Hashable)",
+      "import qualified Data.Text as T",
+      "import Text.LanguageTag.Internal.Subtag (Subtag(..))"
     ]
+      <> imps
       <> [ "",
-           "-- | The BCP47 " <> tydescription <> " tags as of " <> T.pack (show $ date reg) <> "." <> docnote',
-           "data " <> tyname
+           "-- | A valid BCP47 " <> tydescription <> " tag as of " <> T.pack (show $ date reg)
+             <> docnote',
+           "newtype " <> tyname <> " = " <> tyname <> " Subtag",
+           "  deriving (Eq, Ord, Hashable, NFData)"
          ]
-      <> theConstructors
       <> [""]
-      <> theInstances
+      <> theShow
       <> [""]
-      <> theNFData
-      <> [""]
-      <> theHashable
+      <> thePatterns
   where
-    docnote'
-      | T.null docnote = ""
-      | otherwise = " " <> docnote
+    docnote' = maybe "" (". " <>) mdocnote
     rs' = M.toAscList $ M.map sel $ proj reg
     renderDescrs descrs =
       "Description: " <> T.intercalate "; " (toList $ renderDescr <$> descrs) <> "."
@@ -610,27 +616,25 @@ renderSubtagModuleWith tyname tydescription docnote proj sel reg =
     renderDepr (DeprecatedPreferred t) = " Deprecated. Preferred value: " <> t <> "."
     renderPref Nothing = ""
     renderPref (Just x) = " Preferred value: " <> x <> "."
-    conBody (x, (a, y, z, mpref)) =
-      mconcat
-        [ a,
-          " -- ^ @",
-          escapeHaddockChars x,
-          "@. ",
-          escapeHaddockChars $ renderDescrs y,
-          escapeHaddockChars $ renderDepr z,
-          escapeHaddockChars $ renderPref mpref
-        ]
-    theConstructors = case rs' of
-      (x : xs) -> ("  = " <> conBody x) : fmap (\y -> "  | " <> conBody y) xs
-      [] -> error "given empty registry!"
-    theInstances = ["  deriving (Eq, Ord, Show, Enum, Bounded)"]
-    theNFData =
-      [ "instance NFData " <> tyname <> " where",
-        "  rnf a = seq a ()"
+    renderPatConstant a = case parseSubtag a of
+      Just x -> T.pack $ show $ unwrapSubtag x
+      Nothing -> error $ T.unpack $ "couldn't parse subtag " <> a <> " somehow"
+    patBody (x, (a, y, z, mpref)) =
+      [ mconcat
+          [ " -- | @",
+            escapeHaddockChars x,
+            "@. ",
+            escapeHaddockChars $ renderDescrs y,
+            escapeHaddockChars $ renderDepr z,
+            escapeHaddockChars $ renderPref mpref
+          ],
+        "pattern " <> a <> " :: " <> tyname,
+        "pattern " <> a <> " = " <> tyname <> " (Subtag " <> renderPatConstant x <> ")"
       ]
-    theHashable =
-      [ "instance Hashable " <> tyname <> " where",
-        "  hashWithSalt = hashUsing fromEnum"
+    thePatterns = List.intercalate [""] $ patBody <$> rs'
+    theShow =
+      [ "instance Show " <> tyname <> " where",
+        "  show (" <> tyname <> " t) = T.unpack $ " <> showfun <> " t"
       ]
 
 renderRecordModuleWith ::
@@ -966,13 +970,17 @@ renderSplitRegistry sr = do
     rendlang = renderSubtagModuleWith
       "Language"
       "primary language"
-      ""
+      Nothing
+      "renderSubtag"
+      ["import Text.LanguageTag.Subtag (renderSubtag)"]
       languageRecords
       $ \(LanguageRecord a x y _ _ _) -> (a, x, y, Nothing)
     rendextlang = renderSubtagModuleWith
       "Extlang"
       "extended language"
-      "These are prefixed with \"Ext\" because they may overlap with primary language subtags. Note that if extended language subtags have a preferred value, then it refers to a primary subtag."
+      (Just "The patterns for 'Extlang' subtags are prefixed with \"Ext\" because they may overlap with primary language subtags. Note that if extended language subtags have a preferred value in the documentation, then it refers to a primary subtag.")
+      "(T.pack \"Ext\" <>) $ renderSubtag "
+      ["import Text.LanguageTag.Subtag (renderSubtag)"]
       extlangRecords
       $ \(ExtlangRecord a x y z _ _ _ _) ->
         ( a,
@@ -984,20 +992,26 @@ renderSplitRegistry sr = do
       renderSubtagModuleWith
         "Script"
         "script"
-        ""
+        Nothing
+        "renderSubtag"
+        ["import Text.LanguageTag.Subtag (renderSubtag)"]
         scriptRecords
         $ \(ScriptRecord a x y) -> (a, x, y, Nothing)
     rendregion =
       renderSubtagModuleWith
         "Region"
         "region"
-        ""
+        Nothing
+        "renderSubtagUpper"
+        ["import Text.LanguageTag.Subtag (renderSubtagUpper)"]
         regionRecords
         $ \(RegionRecord a x y) -> (a, x, y, Nothing)
     rendvariant = renderSubtagModuleWith
       "Variant"
       "variant"
-      ""
+      Nothing
+      "renderSubtag"
+      ["import Text.LanguageTag.Subtag (renderSubtag)"]
       variantRecords
       $ \(VariantRecord a x y _) -> (a, x, y, Nothing)
     rendgrandfathered =
