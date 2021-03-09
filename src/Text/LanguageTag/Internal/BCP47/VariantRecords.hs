@@ -20,12 +20,12 @@ import Text.LanguageTag.Internal.BCP47.Region
 
 variantTable :: [(Variant, Subtag, VariantRecord)]
 variantTable =
-  [(Var1606nict, Subtag 0, VariantRecord ("Late Middle French (to 1606)" :| []) NotDeprecated [NormalTag $ Normal Frm Nothing Nothing Nothing (S.fromList []) M.empty []])
-  ,(Var1694acad, Subtag 0, VariantRecord ("Early Modern French" :| []) NotDeprecated [NormalTag $ Normal Fr Nothing Nothing Nothing (S.fromList []) M.empty []])
-  ,(Var1901, Subtag 7126246090126393380, VariantRecord ("Traditional German orthography" :| []) NotDeprecated [NormalTag $ Normal De Nothing Nothing Nothing (S.fromList []) M.empty []])
-  ,(Var1959acad, Subtag 0, VariantRecord ("\"Academic\" (\"governmental\") variant of Belarusian as\ncodified in 1959" :| []) NotDeprecated [NormalTag $ Normal Be Nothing Nothing Nothing (S.fromList []) M.empty []])
-  ,(Var1994, Subtag 7126325461122023460, VariantRecord ("Standardized Resian orthography" :| []) NotDeprecated [NormalTag $ Normal Sl Nothing Nothing Nothing (S.fromList [Rozaj]) M.empty [],NormalTag $ Normal Sl Nothing Nothing Nothing (S.fromList [Rozaj, Biske]) M.empty [],NormalTag $ Normal Sl Nothing Nothing Nothing (S.fromList [Rozaj, Njiva]) M.empty [],NormalTag $ Normal Sl Nothing Nothing Nothing (S.fromList [Rozaj, Osojs]) M.empty [],NormalTag $ Normal Sl Nothing Nothing Nothing (S.fromList [Rozaj, Solba]) M.empty []])
-  ,(Var1996, Subtag 7126325598560976932, VariantRecord ("German orthography of 1996" :| []) NotDeprecated [NormalTag $ Normal De Nothing Nothing Nothing (S.fromList []) M.empty []])
+  [(V1606nict, Subtag 0, VariantRecord ("Late Middle French (to 1606)" :| []) NotDeprecated [NormalTag $ Normal Frm Nothing Nothing Nothing (S.fromList []) M.empty []])
+  ,(V1694acad, Subtag 0, VariantRecord ("Early Modern French" :| []) NotDeprecated [NormalTag $ Normal Fr Nothing Nothing Nothing (S.fromList []) M.empty []])
+  ,(V1901, Subtag 7126246090126393380, VariantRecord ("Traditional German orthography" :| []) NotDeprecated [NormalTag $ Normal De Nothing Nothing Nothing (S.fromList []) M.empty []])
+  ,(V1959acad, Subtag 0, VariantRecord ("\"Academic\" (\"governmental\") variant of Belarusian as\ncodified in 1959" :| []) NotDeprecated [NormalTag $ Normal Be Nothing Nothing Nothing (S.fromList []) M.empty []])
+  ,(V1994, Subtag 7126325461122023460, VariantRecord ("Standardized Resian orthography" :| []) NotDeprecated [NormalTag $ Normal Sl Nothing Nothing Nothing (S.fromList [Rozaj]) M.empty [],NormalTag $ Normal Sl Nothing Nothing Nothing (S.fromList [Rozaj, Biske]) M.empty [],NormalTag $ Normal Sl Nothing Nothing Nothing (S.fromList [Rozaj, Njiva]) M.empty [],NormalTag $ Normal Sl Nothing Nothing Nothing (S.fromList [Rozaj, Osojs]) M.empty [],NormalTag $ Normal Sl Nothing Nothing Nothing (S.fromList [Rozaj, Solba]) M.empty []])
+  ,(V1996, Subtag 7126325598560976932, VariantRecord ("German orthography of 1996" :| []) NotDeprecated [NormalTag $ Normal De Nothing Nothing Nothing (S.fromList []) M.empty []])
   ,(Abl1943, Subtag 0, VariantRecord ("Orthographic formulation of 1943 - Official in Brazil\n(Formul\225rio Ortogr\225fico de 1943 - Oficial no Brasil)" :| []) NotDeprecated [NormalTag $ Normal Pt Nothing Nothing (Just BR) (S.fromList []) M.empty []])
   ,(Akuapem, Subtag 14100680402619760663, VariantRecord ("Akuapem Twi" :| []) NotDeprecated [NormalTag $ Normal Tw Nothing Nothing Nothing (S.fromList []) M.empty []])
   ,(Alalc97, Subtag 0, VariantRecord ("ALA-LC Romanization, 1997 edition" :| []) NotDeprecated [])
