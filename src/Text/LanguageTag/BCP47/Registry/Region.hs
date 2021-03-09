@@ -2,13 +2,13 @@
 
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Text.LanguageTag.Internal.BCP47.Region where
+module Text.LanguageTag.BCP47.Registry.Region where
 
 import Prelude hiding (LT, GT)
 import Control.DeepSeq (NFData(..))
 import Data.Hashable (Hashable(..), hashUsing)
 
--- | The BCP47 region tags as of 2021-02-23.
+-- | The BCP47 region tags as of 2021-02-23. The names of region constructors come from the corresponding subtag, except that region subtags beginning with a number are prefixed with @Reg@.
 data Region
   = Reg001 -- ^ @001@. Description: World.
   | Reg002 -- ^ @002@. Description: Africa.

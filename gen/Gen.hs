@@ -28,7 +28,7 @@ import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
-import Data.Maybe (fromMaybe, mapMaybe)
+import Data.Maybe (mapMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
@@ -51,6 +51,11 @@ linting purposes (e.g. to verify that we haven't registered changes in
 
 Should move this to a separate package (making this a monorepo).
 
+I think that the registry records could be vectors, actually, because
+the registered subtag enums and their corresponding subtags have the
+same ordering and we already produce a sorted list of records. So we
+could implement a binary search and only keep around the one copy of
+the registries. Might be more efficient.
 -}
 
 main :: IO ()
@@ -580,7 +585,7 @@ renderSubtagModuleWith tyname tydescription docnote proj sel reg =
       "",
       "{-# LANGUAGE NoImplicitPrelude #-}",
       "",
-      "module Text.LanguageTag.Internal.BCP47." <> tyname <> " where",
+      "module Text.LanguageTag.BCP47.Registry." <> tyname <> " where",
       "",
       "import Prelude hiding (LT, GT)",
       "import Control.DeepSeq (NFData(..))",
@@ -656,7 +661,7 @@ renderRecordModuleWith tyname imps proj rend reg =
       "  (" <> lookupname1 <> ", " <> lookupname2 <> ") where",
       "",
       "import Prelude hiding (LT, GT)",
-      "import Text.LanguageTag.Internal.BCP47." <> tyname,
+      "import Text.LanguageTag.BCP47.Registry." <> tyname,
       "import Text.LanguageTag.Internal.BCP47.Validate",
       "import Data.List.NonEmpty (NonEmpty(..))",
       "import Text.LanguageTag.Internal.Subtag (Subtag(..))",
@@ -725,7 +730,7 @@ renderRangeRecordModuleWith tyname imps proj rend reg =
       "  (" <> lookupname1 <> ", " <> lookupname2 <> ") where",
       "",
       "import Prelude hiding (LT, GT)",
-      "import Text.LanguageTag.Internal.BCP47." <> tyname,
+      "import Text.LanguageTag.BCP47.Registry." <> tyname,
       "import Text.LanguageTag.Internal.BCP47.Validate",
       "import Data.List.NonEmpty (NonEmpty(..))",
       "import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn",
@@ -797,7 +802,7 @@ renderGrandfatheredRecordModule tyname imps proj rend reg =
       "  (lookupGrandfatheredDetails) where",
       "",
       "import Prelude hiding (LT, GT)",
-      "import Text.LanguageTag.BCP47.Grandfathered",
+      "import Text.LanguageTag.BCP47.Registry.Grandfathered",
       "import Text.LanguageTag.Internal.BCP47.Validate",
       "import Data.List.NonEmpty (NonEmpty(..))",
       "import qualified Data.HashMap.Strict as HM"
@@ -839,8 +844,6 @@ renderGrandfatheredRecordModule tyname imps proj rend reg =
 renderModuleWith ::
   -- | the desired type name
   Text ->
-  -- | an override of the module name
-  Maybe Text ->
   -- | a description of the type
   Text ->
   -- | an additional note in the documentation
@@ -854,7 +857,7 @@ renderModuleWith ::
   -- | the actual subtag type registry
   Map Text a ->
   Text
-renderModuleWith tyname mmodulename tydescription docnote d sel rs =
+renderModuleWith tyname tydescription docnote d sel rs =
   T.unlines $
     [ warning,
       "",
@@ -878,7 +881,7 @@ renderModuleWith tyname mmodulename tydescription docnote d sel rs =
       <> [""]
       <> theHashable
   where
-    modulename = fromMaybe ("Text.LanguageTag.Internal.BCP47." <> tyname) mmodulename
+    modulename = "Text.LanguageTag.BCP47.Registry." <> tyname
     docnote'
       | T.null docnote = ""
       | otherwise = " " <> docnote
@@ -927,31 +930,35 @@ renderModuleWith tyname mmodulename tydescription docnote d sel rs =
 renderSplitRegistry :: Registry -> IO ()
 renderSplitRegistry sr = do
   traverse_
-    (\(x, y) -> T.writeFile (intprefix <> x) $ y sr)
+    (rendwrite regprefix)
     [ ("Language.hs", rendlang),
-      ("LanguageRecords.hs", rendreclang),
       ("Extlang.hs", rendextlang),
-      ("ExtlangRecords.hs", rendrecextlang),
       ("Script.hs", rendscript),
-      ("ScriptRecords.hs", rendrecscript),
       ("Region.hs", rendregion),
-      ("RegionRecords.hs", rendrecregion),
       ("Variant.hs", rendvariant),
+      ("Redundant.hs", rendredundant . redundantRecords),
+      ("RegistryDate.hs", const regdatemodule),
+      ("Grandfathered.hs", rendgrandfathered . grandfatheredRecords)
+    ]
+  traverse_
+    (rendwrite intprefix)
+    [ ("LanguageRecords.hs", rendreclang),
+      ("ExtlangRecords.hs", rendrecextlang),
+      ("ScriptRecords.hs", rendrecscript),
+      ("RegionRecords.hs", rendrecregion),
       ("VariantRecords.hs", rendrecvariant),
       ("GrandfatheredRecords.hs", rendrecgrandfathered),
-      ("Redundant.hs", rendredundant . redundantRecords),
-      ("RedundantRecords.hs", rendrecredundant),
-      ("RegistryDate.hs", const regdatemodule)
+      ("RedundantRecords.hs", rendrecredundant)
     ]
-  T.writeFile "./src/Text/LanguageTag/BCP47/Grandfathered.hs" $
-    rendgrandfathered $ grandfatheredRecords sr
   where
+    rendwrite p (x, y) = T.writeFile (p <> x) $ y sr
     intprefix = "./src/Text/LanguageTag/Internal/BCP47/"
+    regprefix = "./src/Text/LanguageTag/BCP47/Registry/"
     regdatemodule =
       T.unlines
         [ warning,
           "",
-          "module Text.LanguageTag.Internal.BCP47.RegistryDate where",
+          "module Text.LanguageTag.BCP47.Registry.RegistryDate where",
           "",
           "import Data.Time.Calendar (Day(..))",
           "",
@@ -991,19 +998,18 @@ renderSplitRegistry sr = do
       renderSubtagModuleWith
         "Region"
         "region"
-        ""
+        "The names of region constructors come from the corresponding subtag, except that region subtags beginning with a number are prefixed with @Reg@."
         regionRecords
         $ \(RegionRecord a x y) -> (a, x, y, Nothing)
     rendvariant = renderSubtagModuleWith
       "Variant"
       "variant"
-      ""
+      "The names of region constructors come from the corresponding subtag, except that they are in title case and variant subtags beginning with a number are prefixed with @Var@."
       variantRecords
       $ \(VariantRecord a x y _) -> (a, x, y, Nothing)
     rendgrandfathered =
       renderModuleWith
         "Grandfathered"
-        (Just "Text.LanguageTag.BCP47.Grandfathered")
         "grandfathered"
         ""
         (date sr)
@@ -1011,7 +1017,6 @@ renderSplitRegistry sr = do
     rendredundant =
       renderModuleWith
         "Redundant"
-        Nothing
         "redundant"
         ""
         (date sr)
@@ -1047,7 +1052,7 @@ renderSplitRegistry sr = do
 
     rendreclang = renderRecordModuleWith
       "Language"
-      [ "import Text.LanguageTag.Internal.BCP47.Script"
+      [ "import Text.LanguageTag.BCP47.Registry.Script"
       ]
       languageRecords
       $ \reg tag (LanguageRecord tyc desc depr ssup ml sc) ->
@@ -1064,7 +1069,7 @@ renderSplitRegistry sr = do
          in parens $ tyc <> ", " <> rendsubtag tag <> ", " <> rendRec
     rendrecextlang = renderRecordModuleWith
       "Extlang"
-      [ "import Text.LanguageTag.Internal.BCP47.Language"
+      [ "import Text.LanguageTag.BCP47.Registry.Language"
       ]
       extlangRecords
       $ \reg tag (ExtlangRecord tyc desc depr prefer prefix ssup ml sc) ->
@@ -1130,9 +1135,9 @@ renderSplitRegistry sr = do
 
     variantImports =
       tagImports
-        <> [ "import Text.LanguageTag.Internal.BCP47.Language",
-             "import Text.LanguageTag.Internal.BCP47.Script",
-             "import Text.LanguageTag.Internal.BCP47.Region"
+        <> [ "import Text.LanguageTag.BCP47.Registry.Language",
+             "import Text.LanguageTag.BCP47.Registry.Script",
+             "import Text.LanguageTag.BCP47.Registry.Region"
            ]
 
     rendrecvariant = renderRecordModuleWith
@@ -1178,9 +1183,9 @@ renderSplitRegistry sr = do
 
     prefixedImports =
       tagImports
-        <> [ "import Text.LanguageTag.Internal.BCP47.Language",
-             "import Text.LanguageTag.Internal.BCP47.Region",
-             "import Text.LanguageTag.Internal.BCP47.Variant"
+        <> [ "import Text.LanguageTag.BCP47.Registry.Language",
+             "import Text.LanguageTag.BCP47.Registry.Region",
+             "import Text.LanguageTag.BCP47.Registry.Variant"
            ]
 
     rendrecgrandfathered = renderGrandfatheredRecordModule
@@ -1229,8 +1234,8 @@ renderSplitRegistry sr = do
 
     redundantImports =
       tagImports
-        <> [ "import Text.LanguageTag.Internal.BCP47.Script",
-             "import Text.LanguageTag.Internal.BCP47.Language",
+        <> [ "import Text.LanguageTag.BCP47.Registry.Script",
+             "import Text.LanguageTag.BCP47.Registry.Language",
              "import Text.LanguageTag.Internal.Subtag (Subtag(..))",
              "import Text.LanguageTag.Subtag (nullSubtag, justSubtag)"
            ]

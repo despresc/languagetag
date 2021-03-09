@@ -7,15 +7,15 @@ module Text.LanguageTag.Internal.BCP47.RedundantRecords
   (lookupRedundantDetails, lookupTagRedundant) where
 
 import Prelude hiding (LT, GT)
-import Text.LanguageTag.Internal.BCP47.Redundant
+import Text.LanguageTag.BCP47.Registry.Redundant
 import Text.LanguageTag.Internal.BCP47.Validate
 import Data.List.NonEmpty (NonEmpty(..))
 import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
-import Text.LanguageTag.Internal.BCP47.Script
-import Text.LanguageTag.Internal.BCP47.Language
+import Text.LanguageTag.BCP47.Registry.Script
+import Text.LanguageTag.BCP47.Registry.Language
 import Text.LanguageTag.Internal.Subtag (Subtag(..))
 import Text.LanguageTag.Subtag (nullSubtag, justSubtag)
 

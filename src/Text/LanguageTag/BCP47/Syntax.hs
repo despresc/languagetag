@@ -34,7 +34,7 @@ module Text.LanguageTag.BCP47.Syntax
     -- ** Grandfathered tags
     -- $grandfathered
     grandfatheredSyntax,
-    module Text.LanguageTag.BCP47.Grandfathered,
+    module Text.LanguageTag.BCP47.Registry.Grandfathered,
 
     -- * Errors
     Err (..),
@@ -48,7 +48,7 @@ import qualified Data.List.NonEmpty as NE
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Word (Word8)
-import Text.LanguageTag.BCP47.Grandfathered
+import Text.LanguageTag.BCP47.Registry.Grandfathered
 import Text.LanguageTag.Internal.BCP47.Syntax
 import Text.LanguageTag.Internal.Subtag (Subtag (..), SubtagChar (..))
 import Text.LanguageTag.Subtag

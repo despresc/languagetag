@@ -40,28 +40,28 @@ library
     vector
   ghc-options: -Wall
   exposed-modules:
-    Text.LanguageTag.Subtag
-    Text.LanguageTag.BCP47.Grandfathered
+    Text.LanguageTag.BCP47.Registry.Extlang
+    Text.LanguageTag.BCP47.Registry.Grandfathered
+    Text.LanguageTag.BCP47.Registry.Language
+    Text.LanguageTag.BCP47.Registry.Redundant
+    Text.LanguageTag.BCP47.Registry.Region
+    Text.LanguageTag.BCP47.Registry.RegistryDate
+    Text.LanguageTag.BCP47.Registry.Script
+    Text.LanguageTag.BCP47.Registry.Variant
     Text.LanguageTag.BCP47.Syntax
     Text.LanguageTag.BCP47.Validate
-    Text.LanguageTag.Internal.Subtag
     Text.LanguageTag.Internal.BCP47.Syntax
+    Text.LanguageTag.Internal.Subtag
+    Text.LanguageTag.Subtag
   other-modules:
-    Text.LanguageTag.Internal.BCP47.Language
-    Text.LanguageTag.Internal.BCP47.LanguageRecords
-    Text.LanguageTag.Internal.BCP47.Extlang
     Text.LanguageTag.Internal.BCP47.ExtlangRecords
-    Text.LanguageTag.Internal.BCP47.Script
-    Text.LanguageTag.Internal.BCP47.ScriptRecords
-    Text.LanguageTag.Internal.BCP47.Region
-    Text.LanguageTag.Internal.BCP47.RegionRecords
-    Text.LanguageTag.Internal.BCP47.Variant
-    Text.LanguageTag.Internal.BCP47.VariantRecords
     Text.LanguageTag.Internal.BCP47.GrandfatheredRecords
-    Text.LanguageTag.Internal.BCP47.Redundant
+    Text.LanguageTag.Internal.BCP47.LanguageRecords
     Text.LanguageTag.Internal.BCP47.RedundantRecords
-    Text.LanguageTag.Internal.BCP47.RegistryDate
+    Text.LanguageTag.Internal.BCP47.RegionRecords
+    Text.LanguageTag.Internal.BCP47.ScriptRecords
     Text.LanguageTag.Internal.BCP47.Validate
+    Text.LanguageTag.Internal.BCP47.VariantRecords
 
 test-suite test
   type: exitcode-stdio-1.0

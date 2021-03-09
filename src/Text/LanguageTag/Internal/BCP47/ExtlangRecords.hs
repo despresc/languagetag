@@ -7,12 +7,12 @@ module Text.LanguageTag.Internal.BCP47.ExtlangRecords
   (lookupExtlangDetails, parseExtlang) where
 
 import Prelude hiding (LT, GT)
-import Text.LanguageTag.Internal.BCP47.Extlang
+import Text.LanguageTag.BCP47.Registry.Extlang
 import Text.LanguageTag.Internal.BCP47.Validate
 import Data.List.NonEmpty (NonEmpty(..))
 import Text.LanguageTag.Internal.Subtag (Subtag(..))
 import qualified Data.HashMap.Strict as HM
-import Text.LanguageTag.Internal.BCP47.Language
+import Text.LanguageTag.BCP47.Registry.Language
 
 extlangTable :: [(Extlang, Subtag, ExtlangRecord)]
 extlangTable =

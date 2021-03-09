@@ -7,7 +7,7 @@ module Text.LanguageTag.Internal.BCP47.RegionRecords
   (lookupRegionDetails, parseRegion) where
 
 import Prelude hiding (LT, GT)
-import Text.LanguageTag.Internal.BCP47.Region
+import Text.LanguageTag.BCP47.Registry.Region
 import Text.LanguageTag.Internal.BCP47.Validate
 import Data.List.NonEmpty (NonEmpty(..))
 import Text.LanguageTag.Internal.Subtag (Subtag(..))

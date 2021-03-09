@@ -2,13 +2,13 @@
 
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Text.LanguageTag.Internal.BCP47.Variant where
+module Text.LanguageTag.BCP47.Registry.Variant where
 
 import Prelude hiding (LT, GT)
 import Control.DeepSeq (NFData(..))
 import Data.Hashable (Hashable(..), hashUsing)
 
--- | The BCP47 variant tags as of 2021-02-23.
+-- | The BCP47 variant tags as of 2021-02-23. The names of region constructors come from the corresponding subtag, except that they are in title case and variant subtags beginning with a number are prefixed with @Var@.
 data Variant
   = Var1606nict -- ^ @1606nict@. Description: Late Middle French (to 1606).
   | Var1694acad -- ^ @1694acad@. Description: Early Modern French.

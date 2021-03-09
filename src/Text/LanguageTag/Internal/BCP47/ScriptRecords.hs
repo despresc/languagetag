@@ -7,7 +7,7 @@ module Text.LanguageTag.Internal.BCP47.ScriptRecords
   (lookupScriptDetails, parseScript) where
 
 import Prelude hiding (LT, GT)
-import Text.LanguageTag.Internal.BCP47.Script
+import Text.LanguageTag.BCP47.Registry.Script
 import Text.LanguageTag.Internal.BCP47.Validate
 import Data.List.NonEmpty (NonEmpty(..))
 import Text.LanguageTag.Internal.Subtag (Subtag(..))

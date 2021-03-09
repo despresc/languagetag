@@ -7,15 +7,15 @@ module Text.LanguageTag.Internal.BCP47.GrandfatheredRecords
   (lookupGrandfatheredDetails) where
 
 import Prelude hiding (LT, GT)
-import Text.LanguageTag.BCP47.Grandfathered
+import Text.LanguageTag.BCP47.Registry.Grandfathered
 import Text.LanguageTag.Internal.BCP47.Validate
 import Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
-import Text.LanguageTag.Internal.BCP47.Language
-import Text.LanguageTag.Internal.BCP47.Region
-import Text.LanguageTag.Internal.BCP47.Variant
+import Text.LanguageTag.BCP47.Registry.Language
+import Text.LanguageTag.BCP47.Registry.Region
+import Text.LanguageTag.BCP47.Registry.Variant
 
 grandfatheredTable :: [(Grandfathered, RangeRecord)]
 grandfatheredTable =

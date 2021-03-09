@@ -87,22 +87,22 @@ import Data.List.NonEmpty (NonEmpty)
 import Data.Map.Strict (Map)
 import Data.Set (Set)
 import Data.Text (Text)
+import Text.LanguageTag.BCP47.Registry.Extlang
+import Text.LanguageTag.BCP47.Registry.Grandfathered
+import Text.LanguageTag.BCP47.Registry.Language
+import Text.LanguageTag.BCP47.Registry.Redundant
+import Text.LanguageTag.BCP47.Registry.Region
+import Text.LanguageTag.BCP47.Registry.RegistryDate
+import Text.LanguageTag.BCP47.Registry.Script
+import Text.LanguageTag.BCP47.Registry.Variant
 import qualified Text.LanguageTag.BCP47.Syntax as Syn
-import Text.LanguageTag.Internal.BCP47.Extlang
 import Text.LanguageTag.Internal.BCP47.ExtlangRecords
-import Text.LanguageTag.BCP47.Grandfathered
 import Text.LanguageTag.Internal.BCP47.GrandfatheredRecords
-import Text.LanguageTag.Internal.BCP47.Language
 import Text.LanguageTag.Internal.BCP47.LanguageRecords
-import Text.LanguageTag.Internal.BCP47.Redundant
 import Text.LanguageTag.Internal.BCP47.RedundantRecords
-import Text.LanguageTag.Internal.BCP47.Region
 import Text.LanguageTag.Internal.BCP47.RegionRecords
-import Text.LanguageTag.Internal.BCP47.RegistryDate
-import Text.LanguageTag.Internal.BCP47.Script
 import Text.LanguageTag.Internal.BCP47.ScriptRecords
 import Text.LanguageTag.Internal.BCP47.Validate
-import Text.LanguageTag.Internal.BCP47.Variant
 import Text.LanguageTag.Internal.BCP47.VariantRecords
 import Text.LanguageTag.Subtag (Subtag, subtagLength)
 

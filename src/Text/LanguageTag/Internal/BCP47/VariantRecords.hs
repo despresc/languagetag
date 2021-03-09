@@ -7,16 +7,16 @@ module Text.LanguageTag.Internal.BCP47.VariantRecords
   (lookupVariantDetails, parseVariant) where
 
 import Prelude hiding (LT, GT)
-import Text.LanguageTag.Internal.BCP47.Variant
+import Text.LanguageTag.BCP47.Registry.Variant
 import Text.LanguageTag.Internal.BCP47.Validate
 import Data.List.NonEmpty (NonEmpty(..))
 import Text.LanguageTag.Internal.Subtag (Subtag(..))
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
-import Text.LanguageTag.Internal.BCP47.Language
-import Text.LanguageTag.Internal.BCP47.Script
-import Text.LanguageTag.Internal.BCP47.Region
+import Text.LanguageTag.BCP47.Registry.Language
+import Text.LanguageTag.BCP47.Registry.Script
+import Text.LanguageTag.BCP47.Registry.Region
 
 variantTable :: [(Variant, Subtag, VariantRecord)]
 variantTable =

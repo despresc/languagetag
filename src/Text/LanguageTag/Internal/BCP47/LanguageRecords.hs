@@ -7,12 +7,12 @@ module Text.LanguageTag.Internal.BCP47.LanguageRecords
   (lookupLanguageDetails, parseLanguage) where
 
 import Prelude hiding (LT, GT)
-import Text.LanguageTag.Internal.BCP47.Language
+import Text.LanguageTag.BCP47.Registry.Language
 import Text.LanguageTag.Internal.BCP47.Validate
 import Data.List.NonEmpty (NonEmpty(..))
 import Text.LanguageTag.Internal.Subtag (Subtag(..))
 import qualified Data.HashMap.Strict as HM
-import Text.LanguageTag.Internal.BCP47.Script
+import Text.LanguageTag.BCP47.Registry.Script
 
 languageTable :: [(Language, Subtag, LanguageRecord)]
 languageTable =
