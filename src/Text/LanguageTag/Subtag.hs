@@ -64,12 +64,11 @@ import Text.LanguageTag.Internal.Subtag
 renderSubtag :: Subtag -> Text
 renderSubtag = TL.toStrict . TB.toLazyText . renderSubtagBuilder
 
--- FIXME: this and renderSubtagTitle could be more efficient if written by hand
 renderSubtagUpper :: Subtag -> Text
-renderSubtagUpper = TL.toStrict . TL.toUpper . TB.toLazyText . renderSubtagBuilderUpper
+renderSubtagUpper = TL.toStrict . TB.toLazyText . renderSubtagBuilderUpper
 
 renderSubtagTitle :: Subtag -> Text
-renderSubtagTitle = TL.toStrict . TL.toTitle . TB.toLazyText . renderSubtagBuilderTitle
+renderSubtagTitle = TL.toStrict . TB.toLazyText . renderSubtagBuilderTitle
 
 containsLetter :: Subtag -> Bool
 containsLetter (Subtag n) = n `Bit.testBit` 4
@@ -99,8 +98,6 @@ readSubtag len = Subtag . fst . List.foldl' go (len, 57)
   where
     go :: (Word64, Int) -> SubtagChar -> (Word64, Int)
     go (!acc, !idx) (SubtagChar !n) = (acc + Bit.shiftL (fromIntegral n) idx, idx - 7)
-
--- TODO: call this parseSubtagDetail? and toSubtag -> parseSubtag?
 
 -- | Attempt to parse a text string as a subtag. This also returns
 -- whether or not we saw a letter or a digit, respectively.
@@ -232,7 +229,7 @@ data SeenChar
 recordSeen :: SeenChar -> Subtag -> Subtag
 recordSeen OnlyLetter (Subtag n) = Subtag $ n `Bit.setBit` 4
 recordSeen OnlyDigit (Subtag n) = Subtag $ n `Bit.setBit` 5
-recordSeen Both (Subtag n) = Subtag $ n Bit..&. 48
+recordSeen Both (Subtag n) = Subtag $ n Bit..|. 48
 
 -- False for letter, True for digit
 reportChar :: Bool -> SeenChar -> SeenChar
