@@ -2,10 +2,10 @@
 
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Text.LanguageTag.BCP47.Registry.Extlang where
+module Text.LanguageTag.Internal.BCP47.Validate.Extlang where
 
 import Prelude hiding (LT, GT)
-import Control.DeepSeq (NFData(..))
+import Control.DeepSeq (NFData(..), rwhnf)
 import Data.Hashable (Hashable(..), hashUsing)
 
 -- | The BCP47 extended language tags as of 2021-03-05. These are prefixed with "Ext" because they may overlap with primary language subtags. Note that if extended language subtags have a preferred value, then it refers to a primary subtag.
@@ -255,11 +255,10 @@ data Extlang
   | ExtZmi -- ^ @zmi@. Description: Negeri Sembilan Malay. Preferred value: zmi.
   | ExtZsl -- ^ @zsl@. Description: Zambian Sign Language. Preferred value: zsl.
   | ExtZsm -- ^ @zsm@. Description: Standard Malay. Preferred value: zsm.
-
-  deriving (Eq, Ord, Show, Enum, Bounded)
+  deriving (Eq, Ord, Enum, Bounded)
 
 instance NFData Extlang where
-  rnf a = seq a ()
+  rnf = rwhnf
 
 instance Hashable Extlang where
   hashWithSalt = hashUsing fromEnum

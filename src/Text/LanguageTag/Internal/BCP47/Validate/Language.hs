@@ -2,10 +2,10 @@
 
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Text.LanguageTag.BCP47.Registry.Language where
+module Text.LanguageTag.Internal.BCP47.Validate.Language where
 
 import Prelude hiding (LT, GT)
-import Control.DeepSeq (NFData(..))
+import Control.DeepSeq (NFData(..), rwhnf)
 import Data.Hashable (Hashable(..), hashUsing)
 
 -- | The BCP47 primary language tags as of 2021-03-05.
@@ -8742,11 +8742,10 @@ data Language
   | Zyp -- ^ @zyp@. Description: Zyphe Chin.
   | Zza -- ^ @zza@. Description: Zaza; Dimili; Dimli (macrolanguage); Kirdki; Kirmanjki (macrolanguage); Zazaki.
   | Zzj -- ^ @zzj@. Description: Zuojiang Zhuang.
-
-  deriving (Eq, Ord, Show, Enum, Bounded)
+  deriving (Eq, Ord, Enum, Bounded)
 
 instance NFData Language where
-  rnf a = seq a ()
+  rnf = rwhnf
 
 instance Hashable Language where
   hashWithSalt = hashUsing fromEnum

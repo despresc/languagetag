@@ -3,19 +3,19 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Text.LanguageTag.Internal.BCP47.GrandfatheredRecords
+module Text.LanguageTag.Internal.BCP47.Validate.GrandfatheredRecords
   (lookupGrandfatheredDetails) where
 
 import Prelude hiding (LT, GT)
-import Text.LanguageTag.BCP47.Registry.Grandfathered
-import Text.LanguageTag.Internal.BCP47.Validate
+import Text.LanguageTag.Internal.BCP47.Validate.Grandfathered
+import Text.LanguageTag.Internal.BCP47.Validate.RecordTypes
 import Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
-import Text.LanguageTag.BCP47.Registry.Language
-import Text.LanguageTag.BCP47.Registry.Region
-import Text.LanguageTag.BCP47.Registry.Variant
+import Text.LanguageTag.Internal.BCP47.Validate.Language
+import Text.LanguageTag.Internal.BCP47.Validate.Region
+import Text.LanguageTag.Internal.BCP47.Validate.Variant
 
 grandfatheredTable :: [(Grandfathered, RangeRecord)]
 grandfatheredTable =

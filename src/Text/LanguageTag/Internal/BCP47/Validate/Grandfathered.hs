@@ -2,10 +2,10 @@
 
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Text.LanguageTag.BCP47.Registry.Grandfathered where
+module Text.LanguageTag.Internal.BCP47.Validate.Grandfathered where
 
 import Prelude hiding (LT, GT)
-import Control.DeepSeq (NFData(..))
+import Control.DeepSeq (NFData(..), rwhnf)
 import Data.Hashable (Hashable(..), hashUsing)
 
 -- | The BCP47 grandfathered tags as of 2021-03-05.
@@ -36,11 +36,10 @@ data Grandfathered
   | ZhMin -- ^ @zh-min@. Description: Min, Fuzhou, Hokkien, Amoy, or Taiwanese. Deprecated.
   | ZhMinNan -- ^ @zh-min-nan@. Description: Minnan, Hokkien, Amoy, Taiwanese, Southern Min, Southern Fujian, Hoklo, Southern Fukien, Ho-lo. Deprecated. Preferred value: nan.
   | ZhXiang -- ^ @zh-xiang@. Description: Xiang or Hunanese. Deprecated. Preferred value: hsn.
-
   deriving (Eq, Ord, Show, Enum, Bounded)
 
 instance NFData Grandfathered where
-  rnf a = seq a ()
+  rnf = rwhnf
 
 instance Hashable Grandfathered where
   hashWithSalt = hashUsing fromEnum

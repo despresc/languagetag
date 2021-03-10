@@ -8,20 +8,23 @@
 -- Copyright   : 2021 Christian Despres
 -- License     : BSD-2-Clause
 -- Maintainer  : Christian Despres
-module Text.LanguageTag.Internal.BCP47.Validate where
+module Text.LanguageTag.Internal.BCP47.Validate.RecordTypes where
 
 import Control.DeepSeq (NFData (..))
+import Data.Bits (shiftR)
 import Data.Hashable (Hashable)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map.Strict (Map)
 import Data.Set (Set)
 import Data.Text (Text)
-import Text.LanguageTag.BCP47.Registry.Extlang
-import Text.LanguageTag.BCP47.Registry.Grandfathered
-import Text.LanguageTag.BCP47.Registry.Language
-import Text.LanguageTag.BCP47.Registry.Region
-import Text.LanguageTag.BCP47.Registry.Script
-import Text.LanguageTag.BCP47.Registry.Variant
+import Data.Vector (Vector)
+import qualified Data.Vector as V
+import Text.LanguageTag.Internal.BCP47.Validate.Extlang
+import Text.LanguageTag.Internal.BCP47.Validate.Grandfathered
+import Text.LanguageTag.Internal.BCP47.Validate.Language
+import Text.LanguageTag.Internal.BCP47.Validate.Region
+import Text.LanguageTag.Internal.BCP47.Validate.Script
+import Text.LanguageTag.Internal.BCP47.Validate.Variant
 import Text.LanguageTag.Internal.BCP47.Syntax (ExtensionChar (..))
 import Text.LanguageTag.Subtag (Subtag, subtagLength)
 
@@ -55,7 +58,6 @@ data BCP47Tag
   = NormalTag Normal
   | PrivateUse (NonEmpty Subtag)
   | GrandfatheredTag Grandfathered
-  deriving (Show) -- FIXME: temporary show instance
 
 {-
 
@@ -118,7 +120,6 @@ data Normal = Normal
     extensions :: Map ExtensionChar (NonEmpty ExtensionSubtag),
     privateuse :: [Subtag]
   }
-  deriving (Show) -- FIXME: temporary show instance
 
 -- | An extension subtag is a 'Subtag' that is at least two characters
 -- long
@@ -150,7 +151,7 @@ data LanguageRecord = LanguageRecord
     langMacrolanguage :: Maybe Language,
     langScope :: Maybe Scope
   }
-  deriving (Show)
+
 
 -- | An extended language subtag record. In these records, a preferred
 -- value always appears and is always equal to the subtag, so the
@@ -165,7 +166,6 @@ data ExtlangRecord = ExtlangRecord
     extlangMacrolanguage :: Maybe Language,
     extlangScope :: Maybe Scope
   }
-  deriving (Show)
 
 -- | A variant subtag record
 data VariantRecord = VariantRecord
@@ -173,14 +173,12 @@ data VariantRecord = VariantRecord
     variantDeprecation :: Deprecation Variant,
     variantPrefixes :: [BCP47Tag]
   }
-  deriving (Show)
 
 -- | A script subtag record
 data ScriptRecord = ScriptRecord
   { scriptDescription :: NonEmpty Text,
     scriptDeprecation :: Deprecation Script
   }
-  deriving (Show)
 
 -- | A region subtag record. Note that for deprecated region records,
 --  the associated preferred value may not represent the same meaning
@@ -189,7 +187,6 @@ data RegionRecord = RegionRecord
   { regionDescription :: NonEmpty Text,
     regionDeprecation :: Deprecation Region
   }
-  deriving (Show)
 
 -- | A grandfathered or redundant subtag record. These records are
 -- distinguished from the others in that they define entire tags, and
@@ -200,7 +197,6 @@ data RangeRecord = RangeRecord
   { rangeDescription :: NonEmpty Text,
     rangeDeprecation :: Deprecation BCP47Tag
   }
-  deriving (Show)
 
 -- | The scope of a language or extended language
 data Scope
@@ -216,3 +212,55 @@ data Deprecation a
   | DeprecatedSimple
   | DeprecatedPreferred a
   deriving (Show)
+
+{- TODO HERE: experiment with the vector approach, using the following:
+
+could even have an unboxed vector for index searching (or some kind of
+bytearray from primitive?), then an associated vector for details? but
+that's for later.
+
+Actually, this can be simplified if we keep our Enum representation!
+only ever need to search on the subtag portion of the vector, since
+(toEnum thing) will always give us thing's index in the vector!
+
+Might be more convenient, then, to have only the Vector/(Hash)Map in
+the record modules (perhaps splitting up the components manually?) and
+define all of the lookup stuff in the main Validate module.
+
+-}
+
+-- | Search for an element in a vector with the given key using the
+-- given projection function and return its index. The vector must be
+-- sorted with respect to the projection and must be non-empty.
+binSearchIndexOn :: Ord b => (a -> b) -> b -> Vector a -> Maybe Int
+binSearchIndexOn proj b v = go 0 (V.length v)
+  where
+    -- n.b. we are searching for indices between low and high,
+    -- inclusive of low and exclusive of high, and since low < high at
+    -- the start, then low <= idx < high for the entire run.
+    go low high
+      | idx == low = if b == proj a then Just idx else Nothing
+      | otherwise = case compare b (proj a) of
+        Prelude.LT -> go low idx
+        EQ -> Just idx
+        Prelude.GT -> go idx high
+      where
+        idx = (low + high) `shiftR` 1
+        a = V.unsafeIndex v idx
+{-# INLINE binSearchIndexOn #-}
+
+-- | Search for an element in a vector with the given key using the
+-- given projection function and return its index. The vector must be
+-- sorted with respect to the projection and must contain an element
+-- with the given key.
+binSearchIndexOnPresent :: Ord b => (a -> b) -> b -> Vector a -> Maybe Int
+binSearchIndexOnPresent proj b v = go 0 (V.length v)
+  where
+    go low high = case compare b (proj a) of
+      Prelude.LT -> go low idx
+      EQ -> Just idx
+      Prelude.GT -> go idx high
+      where
+        idx = (low + high) `shiftR` 1
+        a = V.unsafeIndex v idx
+{-# INLINE binSearchIndexOnPresent #-}

@@ -2,10 +2,10 @@
 
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Text.LanguageTag.BCP47.Registry.Redundant where
+module Text.LanguageTag.Internal.BCP47.Validate.Redundant where
 
 import Prelude hiding (LT, GT)
-import Control.DeepSeq (NFData(..))
+import Control.DeepSeq (NFData(..), rwhnf)
 import Data.Hashable (Hashable(..), hashUsing)
 
 -- | The BCP47 redundant tags as of 2021-03-05.
@@ -77,11 +77,10 @@ data Redundant
   | ZhGan -- ^ @zh-gan@. Description: Kan or Gan. Deprecated. Preferred value: gan.
   | ZhWuu -- ^ @zh-wuu@. Description: Shanghaiese or Wu. Deprecated. Preferred value: wuu.
   | ZhYue -- ^ @zh-yue@. Description: Cantonese. Deprecated. Preferred value: yue.
-
   deriving (Eq, Ord, Show, Enum, Bounded)
 
 instance NFData Redundant where
-  rnf a = seq a ()
+  rnf = rwhnf
 
 instance Hashable Redundant where
   hashWithSalt = hashUsing fromEnum

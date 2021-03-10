@@ -1,0 +1,48 @@
+-- |
+-- Module      : Text.LanguageTag.Internal.BCP47.Validate.DataConShow
+-- Description : Showing the data constructors associated to subtags
+-- Copyright   : 2021 Christian Despres
+-- License     : BSD-2-Clause
+-- Maintainer  : Christian Despres
+--
+-- Deriving a 'Show' instance for a data type with over eight thousand
+-- constructors takes a very long time, as it turns out. Writing the
+-- registered subtag types' show instances manually using these
+-- functions avoids this problem, and the functions can also be used
+-- to render the constructors in the first place.
+module Text.LanguageTag.Internal.BCP47.Validate.DataConShow where
+
+import Data.Char (isDigit)
+import qualified Data.Text.Lazy as TL
+import qualified Data.Text.Lazy.Builder as TB
+import Text.LanguageTag.Subtag
+
+-- | Show a subtag in the style of a language data constructor
+languageConShow :: Subtag -> String
+languageConShow = TL.unpack . TB.toLazyText . renderSubtagBuilderTitle
+
+-- | Show a subtag in the style of an extlang data constructor
+extlangConShow :: Subtag -> String
+extlangConShow = ("Ext" <>) . TL.unpack . TB.toLazyText . renderSubtagBuilderTitle
+
+-- | Show a subtag in the style of a script data constructor
+scriptConShow :: Subtag -> String
+scriptConShow = TL.unpack . TB.toLazyText . renderSubtagBuilderTitle
+
+-- | Show a subtag in the style of a region data constructor
+regionConShow :: Subtag -> String
+regionConShow = go . TL.unpack . TB.toLazyText . renderSubtagBuilderUpper
+  where
+    go t@(x : _)
+      | isDigit x = "Reg" <> t
+      | otherwise = t
+    go [] = []
+
+-- | Show a subtag in the style of an extlang data constructor
+variantConShow :: Subtag -> String
+variantConShow = go . TL.unpack . TB.toLazyText . renderSubtagBuilderTitle
+  where
+    go t@(x : _)
+      | isDigit x = "Var" <> t
+      | otherwise = t
+    go [] = []

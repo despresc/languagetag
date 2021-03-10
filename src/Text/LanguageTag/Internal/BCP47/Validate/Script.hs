@@ -2,10 +2,10 @@
 
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Text.LanguageTag.BCP47.Registry.Script where
+module Text.LanguageTag.Internal.BCP47.Validate.Script where
 
 import Prelude hiding (LT, GT)
-import Control.DeepSeq (NFData(..))
+import Control.DeepSeq (NFData(..), rwhnf)
 import Data.Hashable (Hashable(..), hashUsing)
 
 -- | The BCP47 script tags as of 2021-03-05.
@@ -268,11 +268,10 @@ data Script
   | Zxxx -- ^ @Zxxx@. Description: Code for unwritten documents.
   | Zyyy -- ^ @Zyyy@. Description: Code for undetermined script.
   | Zzzz -- ^ @Zzzz@. Description: Code for uncoded script.
-
-  deriving (Eq, Ord, Show, Enum, Bounded)
+  deriving (Eq, Ord, Enum, Bounded)
 
 instance NFData Script where
-  rnf a = seq a ()
+  rnf = rwhnf
 
 instance Hashable Script where
   hashWithSalt = hashUsing fromEnum

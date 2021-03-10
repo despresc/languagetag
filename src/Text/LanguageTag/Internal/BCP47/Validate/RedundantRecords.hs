@@ -3,19 +3,19 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Text.LanguageTag.Internal.BCP47.RedundantRecords 
+module Text.LanguageTag.Internal.BCP47.Validate.RedundantRecords
   (lookupRedundantDetails, lookupTagRedundant) where
 
 import Prelude hiding (LT, GT)
-import Text.LanguageTag.BCP47.Registry.Redundant
-import Text.LanguageTag.Internal.BCP47.Validate
+import Text.LanguageTag.Internal.BCP47.Validate.Redundant
+import Text.LanguageTag.Internal.BCP47.Validate.RecordTypes
 import Data.List.NonEmpty (NonEmpty(..))
 import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
-import Text.LanguageTag.BCP47.Registry.Script
-import Text.LanguageTag.BCP47.Registry.Language
+import Text.LanguageTag.Internal.BCP47.Validate.Script
+import Text.LanguageTag.Internal.BCP47.Validate.Language
 import Text.LanguageTag.Internal.Subtag (Subtag(..))
 import Text.LanguageTag.Subtag (nullSubtag, justSubtag)
 

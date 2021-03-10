@@ -2,10 +2,10 @@
 
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Text.LanguageTag.BCP47.Registry.Region where
+module Text.LanguageTag.Internal.BCP47.Validate.Region where
 
 import Prelude hiding (LT, GT)
-import Control.DeepSeq (NFData(..))
+import Control.DeepSeq (NFData(..), rwhnf)
 import Data.Hashable (Hashable(..), hashUsing)
 
 -- | The BCP47 region tags as of 2021-03-05. The names of region constructors come from the corresponding subtag, except that region subtags beginning with a number are prefixed with @Reg@.
@@ -352,11 +352,10 @@ data Region
   | ZR -- ^ @ZR@. Description: Zaire. Deprecated. Preferred value: CD.
   | ZW -- ^ @ZW@. Description: Zimbabwe.
   | ZZ -- ^ @ZZ@. Description: Private use.
-
-  deriving (Eq, Ord, Show, Enum, Bounded)
+  deriving (Eq, Ord, Enum, Bounded)
 
 instance NFData Region where
-  rnf a = seq a ()
+  rnf = rwhnf
 
 instance Hashable Region where
   hashWithSalt = hashUsing fromEnum

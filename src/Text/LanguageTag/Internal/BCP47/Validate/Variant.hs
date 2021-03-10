@@ -2,10 +2,10 @@
 
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Text.LanguageTag.BCP47.Registry.Variant where
+module Text.LanguageTag.Internal.BCP47.Validate.Variant where
 
 import Prelude hiding (LT, GT)
-import Control.DeepSeq (NFData(..))
+import Control.DeepSeq (NFData(..), rwhnf)
 import Data.Hashable (Hashable(..), hashUsing)
 
 -- | The BCP47 variant tags as of 2021-03-05. The names of region constructors come from the corresponding subtag, except that they are in title case and variant subtags beginning with a number are prefixed with @Var@.
@@ -116,11 +116,10 @@ data Variant
   | Vivaraup -- ^ @vivaraup@. Description: Vivaro-Alpine.
   | Wadegile -- ^ @wadegile@. Description: Wade-Giles romanization.
   | Xsistemo -- ^ @xsistemo@. Description: Standard X-system orthographic fallback for spelling Esperanto.
-
-  deriving (Eq, Ord, Show, Enum, Bounded)
+  deriving (Eq, Ord, Enum, Bounded)
 
 instance NFData Variant where
-  rnf a = seq a ()
+  rnf = rwhnf
 
 instance Hashable Variant where
   hashWithSalt = hashUsing fromEnum

@@ -28,7 +28,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Builder as TB
 import Data.Word (Word8)
-import Text.LanguageTag.BCP47.Registry.Grandfathered
+import Text.LanguageTag.Internal.BCP47.Validate.Grandfathered
 import Text.LanguageTag.Internal.Subtag (SubtagChar (..))
 import Text.LanguageTag.Subtag
 
