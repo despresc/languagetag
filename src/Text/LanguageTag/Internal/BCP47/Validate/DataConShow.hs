@@ -5,11 +5,15 @@
 -- License     : BSD-2-Clause
 -- Maintainer  : Christian Despres
 --
--- Deriving a 'Show' instance for a data type with over eight thousand
--- constructors takes a very long time, as it turns out. Writing the
--- registered subtag types' show instances manually using these
--- functions avoids this problem, and the functions can also be used
--- to render the constructors in the first place.
+-- Warning: this is an internal module and may change or disappear
+-- without regard to the PVP.
+--
+-- This module exists because, as it turns out, deriving a 'Show'
+-- instance for a data type with over eight thousand constructors
+-- takes a very long time. Writing the registered subtag types' show
+-- instances manually using the functions in this module avoids this
+-- problem, and the functions can also be used to render the
+-- constructors in the first place.
 module Text.LanguageTag.Internal.BCP47.Validate.DataConShow where
 
 import Data.Char (isDigit)

@@ -4,7 +4,7 @@
 
 -- |
 -- Module      : Text.LanguageTag.BCP47.Validate.Language
--- Description : BCP47 language subtags
+-- Description : Language subtags
 -- Copyright   : 2021 Christian Despres
 -- License     : BSD-2-Clause
 -- Maintainer  : Christian Despres

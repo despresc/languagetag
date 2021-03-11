@@ -129,7 +129,7 @@ variantDetails = V.fromList
   ,(Subtag 17259806277701625112, VariantRecord ("Wade-Giles romanization" :| []) NotDeprecated [NormalTag $ Normal Zh Nothing (Just Latn) Nothing (S.fromList []) M.empty []])
   ,(Subtag 17424232613601013528, VariantRecord ("Standard X-system orthographic fallback for spelling\nEsperanto" :| []) NotDeprecated [NormalTag $ Normal Eo Nothing Nothing Nothing (S.fromList []) M.empty []])]
 
--- | Look up the subtag and record details associated to the given 'Variant'
+-- | Look up the subtag and record details associated to the given 'Variant' subtag
 lookupVariantDetails :: Variant -> (Subtag, VariantRecord)
 lookupVariantDetails = V.unsafeIndex variantDetails . fromEnum
 

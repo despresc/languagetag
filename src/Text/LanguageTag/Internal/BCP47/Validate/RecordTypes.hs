@@ -4,10 +4,13 @@
 
 -- |
 -- Module      : Text.LanguageTag.Internal.BCP47.Validate
--- Description : Internal Validate types
+-- Description : Subtag record types
 -- Copyright   : 2021 Christian Despres
 -- License     : BSD-2-Clause
 -- Maintainer  : Christian Despres
+--
+-- Warning: this is an internal module and may change or disappear
+-- without regard to the PVP.
 module Text.LanguageTag.Internal.BCP47.Validate.RecordTypes where
 
 import Control.DeepSeq (NFData (..))
@@ -19,13 +22,13 @@ import Data.Set (Set)
 import Data.Text (Text)
 import Data.Vector (Vector)
 import qualified Data.Vector as V
+import Text.LanguageTag.Internal.BCP47.Syntax (ExtensionChar (..))
 import Text.LanguageTag.Internal.BCP47.Validate.Extlang
 import Text.LanguageTag.Internal.BCP47.Validate.Grandfathered
 import Text.LanguageTag.Internal.BCP47.Validate.Language
 import Text.LanguageTag.Internal.BCP47.Validate.Region
 import Text.LanguageTag.Internal.BCP47.Validate.Script
 import Text.LanguageTag.Internal.BCP47.Validate.Variant
-import Text.LanguageTag.Internal.BCP47.Syntax (ExtensionChar (..))
 import Text.LanguageTag.Subtag (Subtag, subtagLength)
 
 -- | A valid (not merely well-formed) BCP47 language tag. These fall
@@ -151,7 +154,6 @@ data LanguageRecord = LanguageRecord
     langMacrolanguage :: Maybe Language,
     langScope :: Maybe Scope
   }
-
 
 -- | An extended language subtag record. In these records, a preferred
 -- value always appears and is always equal to the subtag, so the

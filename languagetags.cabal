@@ -19,7 +19,7 @@ description:
   tags. The validating functions are statically generated using data
   from the IANA Language Subtag Registry, available from
   <https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry>. See
-  the RegistryDate submodule for the exact registry version this library uses.
+  the Validate submodule for the exact registry version this library uses.
 
 extra-source-files:
   CHANGELOG.md

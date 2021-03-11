@@ -1,6 +1,19 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+-- |
+-- Module      : Text.LanguageTag.Internal.BCP47.Syntax
+-- Description : Internal language tag types and functions
+-- Copyright   : 2021 Christian Despres
+-- License     : BSD-2-Clause
+-- Maintainer  : Christian Despres
+--
+-- Warning: this is an internal module and may change or disappear
+-- without regard to the PVP. The data constructors exported from this
+-- module are also unsafe to use: the values they take are expected by
+-- the rest of the library to satisfy particular invariants that the
+-- type does not enforce. Other components of the library may
+-- misbehave if ill-formed values are given to them.
 module Text.LanguageTag.Internal.BCP47.Syntax
   ( LanguageTag (..),
     renderLanguageTag,
@@ -13,7 +26,7 @@ module Text.LanguageTag.Internal.BCP47.Syntax
     ExtensionChar (..),
     toExtensionChar,
     fromExtensionChar,
-    subtagCharToExtension,
+    unsafeSubtagCharToExtension,
   )
 where
 
@@ -257,10 +270,14 @@ fromExtensionChar ec
   where
     toC n = toEnum . (+ n) . fromEnum
 
+
+-- | Convert a 'SubtagChar' to an 'ExtensionChar'. Note that the given
+-- subtag character must not be @x@.
+
 -- assumes that the subtag char is lower case or digit (currently
 -- a valid assumption)
-subtagCharToExtension :: SubtagChar -> ExtensionChar
-subtagCharToExtension (SubtagChar n)
+unsafeSubtagCharToExtension :: SubtagChar -> ExtensionChar
+unsafeSubtagCharToExtension (SubtagChar n)
   | n < 58 = toC 48 n
   | n < 119 = toC 87 n
   | otherwise = toC 88 n
@@ -273,9 +290,10 @@ instance Hashable ExtensionChar where
 instance NFData ExtensionChar where
   rnf = rwhnf
 
+-- | An extension section in a language tag
 data Extension = Extension
   { extSingleton :: !ExtensionChar,
-    extTags :: {-# UNPACK #-} !(NonEmpty Subtag)
+    extTags :: !(NonEmpty Subtag)
   }
   deriving (Eq, Ord)
 
@@ -379,7 +397,7 @@ unsafeNormalTag l me = unsafeFullNormalTag l me "" ""
 -- extended language will always absent in valid tags, and the only
 -- valid tag with a second extended language is the regular
 -- grandfathered (and deprecated) tag @zh-min-nan@, which should be
--- constructed with 'zhMinNan'. The warnings for 'unsafeNormalTag'
+-- constructed with 'ZhMinNan'. The warnings for 'unsafeNormalTag'
 -- also apply to this function.
 unsafeFullNormalTag ::
   -- | primary language

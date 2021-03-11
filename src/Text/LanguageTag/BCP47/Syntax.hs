@@ -7,7 +7,7 @@
 
 -- |
 -- Module      : Text.LanguageTag.BCP47.Syntax
--- Description : BCP47 language tag parser
+-- Description : Language tag types and parser
 -- Copyright   : 2021 Christian Despres
 -- License     : BSD-2-Clause
 -- Maintainer  : Christian Despres
@@ -296,7 +296,19 @@ parseBCP47' !initchar !inp = tagPop initchar inp Cbeginning 0 >>= parsePrimary
       | subtagLength st /= 1 = Left $ Err pos clast ErrBadTag
       | subtagHead st == subtagCharx =
         parsePrivateUse (con []) pos t
-      | otherwise = parseExtension (\ne -> con . (Extension (subtagCharToExtension $ subtagHead st) ne :)) pos t
+      | otherwise =
+        parseExtension
+          ( \ne ->
+              con
+                . ( Extension
+                      ( unsafeSubtagCharToExtension $ subtagHead st
+                      )
+                      ne
+                      :
+                  )
+          )
+          pos
+          t
 
     parsePrivateUse con pos t = do
       let pos' = pos + 2

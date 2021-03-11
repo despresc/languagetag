@@ -7,17 +7,16 @@
 
 -- |
 -- Module      : Text.LanguageTag.BCP47.Validate
--- Description : BCP47 language tag parser
+-- Description : Language tag validation
 -- Copyright   : 2021 Christian Despres
 -- License     : BSD-2-Clause
 -- Maintainer  : Christian Despres
 --
 -- This module provides the 'validateBCP47' function to validate a
 -- syntactically well-formed 'LanguageTag', transforming it into a
--- 'BCP47Tag' value. This module also re-exports the (very large)
--- module "Text.LanguageTag.BCP47.RegisteredSubtags", which contains
--- the data types representing all of the subtags in the IANA
--- registry, the current version of which is available at
+-- 'BCP47Tag' value. This module also re-exports the modules
+-- containing the data types that represent all of the subtags in the
+-- IANA registry, the current version of which is available at
 -- <https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry>. See
 -- 'bcp47RegistryDate' for the version of the registry that this
 -- library uses.
@@ -67,13 +66,6 @@ module Text.LanguageTag.BCP47.Validate
   )
 where
 
-import Control.DeepSeq (NFData (..))
-import Data.Hashable (Hashable (..), hashUsing)
-import Data.List.NonEmpty (NonEmpty)
-import Data.Map.Strict (Map)
-import Data.Set (Set)
-import Data.Text (Text)
-import qualified Text.LanguageTag.BCP47.Syntax as Syn
 import Text.LanguageTag.BCP47.Validate.Extlang
 import Text.LanguageTag.BCP47.Validate.Grandfathered
 import Text.LanguageTag.BCP47.Validate.Language
@@ -90,15 +82,6 @@ import Text.LanguageTag.Internal.BCP47.Validate.RegionRecords
 import Text.LanguageTag.Internal.BCP47.Validate.RegistryDate
 import Text.LanguageTag.Internal.BCP47.Validate.ScriptRecords
 import Text.LanguageTag.Internal.BCP47.Validate.VariantRecords
-import Text.LanguageTag.Subtag (Subtag, subtagLength)
-
-{-
-TODO:
-
-more efficient lookupTagRedundant and lookupTagGrandfathered? (trie
-for former? split by regular/irregular for the latter?)
-
--}
 
 {-
 

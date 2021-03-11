@@ -37,7 +37,14 @@ import Text.LanguageTag.BCP47.Syntax (parseBCP47)
 import Text.LanguageTag.BCP47.Validate (Deprecation (..), Scope (..))
 import Text.LanguageTag.Internal.BCP47.Syntax (LanguageTag (NormalTag), Normal (..))
 import Text.LanguageTag.Internal.BCP47.Validate.DataConShow
-import Text.LanguageTag.Subtag (Subtag (..), maybeSubtag, nullSubtag, parseSubtag, renderSubtag)
+import Text.LanguageTag.Subtag
+  ( Subtag,
+    maybeSubtag,
+    nullSubtag,
+    parseSubtag,
+    renderSubtag,
+    unwrapSubtag,
+  )
 
 {-
 TODO:
@@ -695,7 +702,7 @@ renderRecordModuleWith tyname imps proj rend reg =
 
     lookupname1 = "lookup" <> tyname <> "Details"
     lookup1 =
-      [ "-- | Look up the subtag and record details associated to the given '" <> tyname <> "'",
+      [ "-- | Look up the subtag and record details associated to the given '" <> tyname <> "' subtag",
         lookupname1 <> " :: " <> tyname <> " -> (Subtag, " <> tyname <> "Record)",
         lookupname1 <> " = V.unsafeIndex " <> detailTableName <> " . fromEnum"
       ]
@@ -770,7 +777,8 @@ renderRangeRecordModuleWith tyname imps proj rend reg =
       error $ "renderRecordModuleWith: given a registry with one entry for" <> T.unpack tyname
     lookupname1 = "lookup" <> tyname <> "Details"
     lookup1 =
-      [ lookupname1 <> " :: " <> tyname <> " -> (Syn.LanguageTag, RangeRecord)",
+      [ "-- | Look up the tag and record details associated to the given '" <> tyname <> "' tag",
+        lookupname1 <> " :: " <> tyname <> " -> (Syn.LanguageTag, RangeRecord)",
         "lookup" <> tyname <> "Details = V.unsafeIndex " <> detailTableName <> " . fromEnum"
       ]
     lookupname2 = "lookup" <> tyname <> "Tag"

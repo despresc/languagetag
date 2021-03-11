@@ -360,7 +360,7 @@ regionDetails = V.fromList
   ,(Subtag 17716035034168688658, RegionRecord ("Zimbabwe" :| []) NotDeprecated)
   ,(Subtag 17719412733889216530, RegionRecord ("Private use" :| []) NotDeprecated)]
 
--- | Look up the subtag and record details associated to the given 'Region'
+-- | Look up the subtag and record details associated to the given 'Region' subtag
 lookupRegionDetails :: Region -> (Subtag, RegionRecord)
 lookupRegionDetails = V.unsafeIndex regionDetails . fromEnum
 

@@ -90,6 +90,7 @@ redundantDetails = V.fromList
   ,(Syn.NormalTag $ Syn.Normal (justSubtag (Subtag 17699146535566049298)) (justSubtag (Subtag 17282466813011034131)) nullSubtag nullSubtag nullSubtag nullSubtag [] [] [], RangeRecord ("Shanghaiese or Wu" :| []) (DeprecatedPreferred $ NormalTag $ Normal Wuu Nothing Nothing Nothing S.empty M.empty []))
   ,(Syn.NormalTag $ Syn.Normal (justSubtag (Subtag 17699146535566049298)) (justSubtag (Subtag 17570556451674390547)) nullSubtag nullSubtag nullSubtag nullSubtag [] [] [], RangeRecord ("Cantonese" :| []) (DeprecatedPreferred $ NormalTag $ Normal Yue Nothing Nothing Nothing S.empty M.empty []))]
 
+-- | Look up the tag and record details associated to the given 'Redundant' tag
 lookupRedundantDetails :: Redundant -> (Syn.LanguageTag, RangeRecord)
 lookupRedundantDetails = V.unsafeIndex redundantDetails . fromEnum
 

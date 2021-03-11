@@ -264,7 +264,7 @@ extlangDetails = V.fromList
   ,(Subtag 17712481412587716627, ExtlangRecord ("Zambian Sign Language" :| []) False Zsl Sgn Nothing Nothing Nothing)
   ,(Subtag 17712490208680738835, ExtlangRecord ("Standard Malay" :| []) False Zsm Ms Nothing (Just Ms) Nothing)]
 
--- | Look up the subtag and record details associated to the given 'Extlang'
+-- | Look up the subtag and record details associated to the given 'Extlang' subtag
 lookupExtlangDetails :: Extlang -> (Subtag, ExtlangRecord)
 lookupExtlangDetails = V.unsafeIndex extlangDetails . fromEnum
 

@@ -1,5 +1,15 @@
 {-# LANGUAGE BangPatterns #-}
 
+-- |
+-- Module      : Text.LanguageTag.Subtag
+-- Description : Generic lanuage subtags
+-- Copyright   : 2021 Christian Despres
+-- License     : BSD-2-Clause
+-- Maintainer  : Christian Despres
+--
+-- The 'Subtag' and related types in this module provide a compact and
+-- uniform representation for language tag components that are common
+-- to many different standards.
 module Text.LanguageTag.Subtag
   ( -- * Subtags
     Subtag,
@@ -11,8 +21,8 @@ module Text.LanguageTag.Subtag
     containsOnlyDigits,
     parseSubtagMangled,
     unpackSubtag,
-    wrapSubtag,
     unwrapSubtag,
+    wrapSubtag,
     renderSubtag,
     subtagLength,
     subtagLength',
@@ -61,24 +71,35 @@ import Text.LanguageTag.Internal.Subtag
 -- Subtags
 ----------------------------------------------------------------
 
+-- | Render a 'Subtag' in lower case to a strict text value
 renderSubtag :: Subtag -> Text
 renderSubtag = TL.toStrict . TB.toLazyText . renderSubtagBuilder
 
+-- | Render a 'Subtag' in upper case to a strict text value
 renderSubtagUpper :: Subtag -> Text
 renderSubtagUpper = TL.toStrict . TB.toLazyText . renderSubtagBuilderUpper
 
+-- | Render a 'Subtag' in title case to a strict text value
 renderSubtagTitle :: Subtag -> Text
 renderSubtagTitle = TL.toStrict . TB.toLazyText . renderSubtagBuilderTitle
 
+-- | 'containsLetter' is 'True' exactly when the given 'Subtag'
+-- contains a letter (an ASCII alphabetic character)
 containsLetter :: Subtag -> Bool
 containsLetter (Subtag n) = n `Bit.testBit` 4
 
+-- | 'containsOnlyLetters' is 'True' exactly when the given 'Subtag'
+-- contains only letters (ASCII alphabetic characters)
 containsOnlyLetters :: Subtag -> Bool
 containsOnlyLetters = not . containsDigit
 
+-- | 'containsLetter' is 'True' exactly when the given 'Subtag'
+-- contains a digit (an ASCII numeral)
 containsDigit :: Subtag -> Bool
 containsDigit (Subtag n) = n `Bit.testBit` 5
 
+-- | 'containsLetter' is 'True' exactly when the given 'Subtag'
+-- contains only digits (ASCII numerals)
 containsOnlyDigits :: Subtag -> Bool
 containsOnlyDigits = not . containsLetter
 
@@ -87,11 +108,6 @@ indexSubtag :: Subtag -> Word8 -> Maybe SubtagChar
 indexSubtag t idx
   | subtagLength t >= idx = Nothing
   | otherwise = Just $ unsafeIndexSubtag t idx
-
--- | Return the head of the 'Subtag'. Subtags are always non-empty, so
--- this function is total.
-subtagHead :: Subtag -> SubtagChar
-subtagHead = (`unsafeIndexSubtag` 0)
 
 readSubtag :: Word64 -> [SubtagChar] -> Subtag
 readSubtag len = Subtag . fst . List.foldl' go (len, 57)
@@ -118,6 +134,10 @@ parseSubtag inp
       Just (w, sc') -> (b, l . (w :), reportChar sc' sc)
       Nothing -> (True, l, sc)
 
+-- | Given the initial character of a subtag and the remainder of a
+-- 'Text' stream, attempt to parse the rest of the subtag, failing if
+-- an invalid character is encountered and returning the resulting
+-- 'Subtag' and the remainder of the stream.
 popSubtag :: Char -> Text -> Maybe (Subtag, Text)
 popSubtag initchar inp = case packCharDetail initchar of
   Just (c, sc) -> go 1 (c :) (toSeenChar sc) inp

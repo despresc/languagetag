@@ -4,11 +4,26 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
 
+-- |
+-- Module      : Text.LanguageTag.Internal.Subtag
+-- Description : Subtag types and functions
+-- Copyright   : 2021 Christian Despres
+-- License     : BSD-2-Clause
+-- Maintainer  : Christian Despres
+--
+-- Warning: this is an internal module and may change or disappear
+-- without regard to the PVP. The data constructors exported from this
+-- module are also unsafe to use: the values they take are expected by
+-- the rest of the library to satisfy particular invariants that the
+-- type does not enforce. Other components of the library may
+-- misbehave if ill-formed values are given to them.
 module Text.LanguageTag.Internal.Subtag
   ( -- * Subtags
     Subtag (..),
     unpackSubtag,
+    unwrapSubtag,
     wrapSubtag,
+    subtagHead,
     renderSubtagBuilder,
     renderSubtagBuilderUpper,
     renderSubtagBuilderTitle,
@@ -46,16 +61,15 @@ import Data.Word (Word64, Word8)
 -- Subtags
 ----------------------------------------------------------------
 
--- | A compact representation of a BCP47 subtag (a string of ASCII
--- letters and digits of length between one and eight). The 'Ord'
--- instance is identical to that of 'Text', in that for two subtags
--- @x@ and @y@, we have @x < y@ if and only if @'renderLanguageTag' x
--- < 'renderLanguageTag' y@.
+-- | A 'Subtag' is a compact representation of a case-insensitive
+-- string of ASCII alphanumeric characters of length between one and
+-- eight. The 'Ord' instance is identical to that of 'Data.Text.Text',
+-- in that for two subtags @x@ and @y@, we have @x < y@ if and only if
+-- @'Text.LanguageTag.BCP47.Syntax.renderLanguageTag' x <
+-- 'Text.LanguageTag.BCP47.Syntax.renderLanguageTag' y@.
 --
 -- These tags are always stored and printed entirely in lower case
--- when on their own; in the context of a full tag, they may be
--- printed in upper or title case depending on their position and
--- length.
+-- when on their own.
 
 -- The three lowest bits encode the length of the tag. The next two
 -- bits record whether or not the tag contains a letter or digit. The
@@ -64,8 +78,13 @@ import Data.Word (Word64, Word8)
 -- fact, not that this is useful to us at the moment).
 --
 -- TODO: add a test that toSubtag is actually an order homomorphism
-newtype Subtag = Subtag {unwrapSubtag :: Word64}
+newtype Subtag = Subtag Word64
   deriving (Eq, Ord, Hashable, NFData)
+
+-- | Return the internal representation of a 'Subtag'
+unwrapSubtag :: Subtag -> Word64
+unwrapSubtag (Subtag n) = n
+{-# INLINE unwrapSubtag #-}
 
 -- | Return the length of a subtag, which will be between 1 and 8.
 subtagLength :: Subtag -> Word8
@@ -197,6 +216,11 @@ unsafeIndexSubtag (Subtag n) idx =
   where
     sel = 127
 
+-- | Return the head of the 'Subtag'. Subtags are always non-empty, so
+-- this function is total.
+subtagHead :: Subtag -> SubtagChar
+subtagHead = (`unsafeIndexSubtag` 0)
+
 -- | Unpack a 'Subtag' into its constituent 'SubtagChar' elements.
 unpackSubtag :: Subtag -> [SubtagChar]
 unpackSubtag w = List.unfoldr go 0
@@ -209,14 +233,17 @@ unpackSubtag w = List.unfoldr go 0
          in Just (c, idx + 1)
 {-# INLINE unpackSubtag #-}
 
+-- | Render a subtag in lower case to a lazy text builder
 renderSubtagBuilder :: Subtag -> TB.Builder
 renderSubtagBuilder = TB.fromString . fmap unpackChar . unpackSubtag
 {-# INLINE renderSubtagBuilder #-}
 
+-- | Render a subtag in upper case to a lazy text builder
 renderSubtagBuilderUpper :: Subtag -> TB.Builder
 renderSubtagBuilderUpper = TB.fromString . fmap unpackCharUpper . unpackSubtag
 {-# INLINE renderSubtagBuilderUpper #-}
 
+-- | Render a subtag in title case to a lazy text builder
 renderSubtagBuilderTitle :: Subtag -> TB.Builder
 renderSubtagBuilderTitle = TB.fromString . go . unpackSubtag
   where

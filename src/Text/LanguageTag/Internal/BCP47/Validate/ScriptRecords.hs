@@ -276,7 +276,7 @@ scriptDetails = V.fromList
   ,(Subtag 17719359476294746132, ScriptRecord ("Code for undetermined script" :| []) NotDeprecated)
   ,(Subtag 17720494241014087700, ScriptRecord ("Code for uncoded script" :| []) NotDeprecated)]
 
--- | Look up the subtag and record details associated to the given 'Script'
+-- | Look up the subtag and record details associated to the given 'Script' subtag
 lookupScriptDetails :: Script -> (Subtag, ScriptRecord)
 lookupScriptDetails = V.unsafeIndex scriptDetails . fromEnum
 

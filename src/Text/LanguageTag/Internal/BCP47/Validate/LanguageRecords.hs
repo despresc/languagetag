@@ -8751,7 +8751,7 @@ languageDetails = V.fromList
   ,(Subtag 17720265954912370707, LanguageRecord ("Zaza" :| ["Dimili","Dimli (macrolanguage)","Kirdki","Kirmanjki (macrolanguage)","Zazaki"]) NotDeprecated Nothing Nothing (Just Macrolanguage))
   ,(Subtag 17720345119749570579, LanguageRecord ("Zuojiang Zhuang" :| []) NotDeprecated Nothing (Just Za) Nothing)]
 
--- | Look up the subtag and record details associated to the given 'Language'
+-- | Look up the subtag and record details associated to the given 'Language' subtag
 lookupLanguageDetails :: Language -> (Subtag, LanguageRecord)
 lookupLanguageDetails = V.unsafeIndex languageDetails . fromEnum
 
