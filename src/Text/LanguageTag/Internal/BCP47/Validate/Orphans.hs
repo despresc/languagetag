@@ -1,5 +1,5 @@
-{-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 -- |
 -- Module      : Text.LanguageTag.Internal.BCP47.Validate.Orphans
@@ -11,11 +11,9 @@
 -- This module contains all of the orphan 'Show' instances for the
 -- different registered subtag types. Also see
 -- "Text.LanguageTag.Internal.BCP47.Validate.DataConShow".
-
 module Text.LanguageTag.Internal.BCP47.Validate.Orphans where
 
 import Text.LanguageTag.Internal.BCP47.Validate.DataConShow
-import Text.LanguageTag.Internal.BCP47.Validate.RecordTypes
 import Text.LanguageTag.Internal.BCP47.Validate.Extlang
 import Text.LanguageTag.Internal.BCP47.Validate.ExtlangRecords
 import Text.LanguageTag.Internal.BCP47.Validate.Language
@@ -24,6 +22,7 @@ import Text.LanguageTag.Internal.BCP47.Validate.Region
 import Text.LanguageTag.Internal.BCP47.Validate.RegionRecords
 import Text.LanguageTag.Internal.BCP47.Validate.Script
 import Text.LanguageTag.Internal.BCP47.Validate.ScriptRecords
+import Text.LanguageTag.Internal.BCP47.Validate.Types
 import Text.LanguageTag.Internal.BCP47.Validate.Variant
 import Text.LanguageTag.Internal.BCP47.Validate.VariantRecords
 
@@ -43,12 +42,18 @@ instance Show Variant where
   show = variantConShow . variantToSubtag
 
 deriving instance Show LanguageRecord
+
 deriving instance Show ExtlangRecord
+
 deriving instance Show ScriptRecord
+
 deriving instance Show RegionRecord
+
 deriving instance Show VariantRecord
+
 deriving instance Show RangeRecord
 
 -- FIXME: temporary show instances
 deriving instance Show Normal
+
 deriving instance Show BCP47Tag

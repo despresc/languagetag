@@ -28,12 +28,17 @@ module Text.LanguageTag.BCP47.Validate
     toExtensionSubtag,
     fromExtensionSubtag,
 
-    -- ** Valid tag parsers
-    parseLanguage,
-    parseExtlang,
-    parseScript,
-    parseRegion,
-    parseVariant,
+    -- ** Tag validation and conversion
+    validateLanguage,
+    languageToSubtag,
+    validateExtlang,
+    extlangToSubtag,
+    validateScript,
+    scriptToSubtag,
+    validateRegion,
+    regionToSubtag,
+    validateVariant,
+    variantToSubtag,
 
     -- * The registered subtags
     -- $thetags
@@ -76,11 +81,11 @@ import Text.LanguageTag.BCP47.Validate.Variant
 import Text.LanguageTag.Internal.BCP47.Validate.ExtlangRecords
 import Text.LanguageTag.Internal.BCP47.Validate.GrandfatheredRecords
 import Text.LanguageTag.Internal.BCP47.Validate.LanguageRecords
-import Text.LanguageTag.Internal.BCP47.Validate.RecordTypes
 import Text.LanguageTag.Internal.BCP47.Validate.RedundantRecords
 import Text.LanguageTag.Internal.BCP47.Validate.RegionRecords
 import Text.LanguageTag.Internal.BCP47.Validate.RegistryDate
 import Text.LanguageTag.Internal.BCP47.Validate.ScriptRecords
+import Text.LanguageTag.Internal.BCP47.Validate.Types
 import Text.LanguageTag.Internal.BCP47.Validate.VariantRecords
 
 {-

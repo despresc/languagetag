@@ -8,7 +8,7 @@ module Text.LanguageTag.Internal.BCP47.Validate.RedundantRecords
 
 import Prelude hiding (LT, GT)
 import Text.LanguageTag.Internal.BCP47.Validate.Redundant
-import Text.LanguageTag.Internal.BCP47.Validate.RecordTypes
+import Text.LanguageTag.Internal.BCP47.Validate.Types
 import Data.List.NonEmpty (NonEmpty(..))
 import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn
 import Data.Vector (Vector)

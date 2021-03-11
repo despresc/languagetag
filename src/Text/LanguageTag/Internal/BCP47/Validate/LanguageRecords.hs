@@ -4,11 +4,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Text.LanguageTag.Internal.BCP47.Validate.LanguageRecords
-  (lookupLanguageDetails, parseLanguage, languageToSubtag, lookupLanguageRecord) where
+  (lookupLanguageDetails, validateLanguage, languageToSubtag, lookupLanguageRecord) where
 
 import Prelude hiding (LT, GT)
 import Text.LanguageTag.Internal.BCP47.Validate.Language
-import Text.LanguageTag.Internal.BCP47.Validate.RecordTypes
+import Text.LanguageTag.Internal.BCP47.Validate.Types
 import Data.List.NonEmpty (NonEmpty(..))
 import Data.Vector (Vector)
 import qualified Data.Vector as V
@@ -8756,8 +8756,8 @@ lookupLanguageDetails :: Language -> (Subtag, LanguageRecord)
 lookupLanguageDetails = V.unsafeIndex languageDetails . fromEnum
 
 -- | Validate the given 'Subtag' against the language records in the registry
-parseLanguage :: Subtag -> Maybe Language
-parseLanguage = fmap toEnum . flip (binSearchIndexOn fst) languageDetails
+validateLanguage :: Subtag -> Maybe Language
+validateLanguage = fmap toEnum . flip (binSearchIndexOn fst) languageDetails
 
 -- | Look up the 'Subtag' associated to the given 'Language'
 languageToSubtag :: Language -> Subtag

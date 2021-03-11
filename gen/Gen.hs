@@ -671,7 +671,7 @@ renderRecordModuleWith tyname imps proj rend reg =
       "",
       "import Prelude hiding (LT, GT)",
       "import Text.LanguageTag.Internal.BCP47.Validate." <> tyname,
-      "import Text.LanguageTag.Internal.BCP47.Validate.RecordTypes",
+      "import Text.LanguageTag.Internal.BCP47.Validate.Types",
       "import Data.List.NonEmpty (NonEmpty(..))",
       "import Data.Vector (Vector)",
       "import qualified Data.Vector as V",
@@ -706,7 +706,7 @@ renderRecordModuleWith tyname imps proj rend reg =
         lookupname1 <> " :: " <> tyname <> " -> (Subtag, " <> tyname <> "Record)",
         lookupname1 <> " = V.unsafeIndex " <> detailTableName <> " . fromEnum"
       ]
-    lookupname2 = "parse" <> tyname
+    lookupname2 = "validate" <> tyname
     lookup2 =
       [ "-- | Validate the given 'Subtag' against the " <> T.toLower tyname <> " records in the registry",
         lookupname2 <> " :: Subtag -> Maybe " <> tyname,
@@ -750,7 +750,7 @@ renderRangeRecordModuleWith tyname imps proj rend reg =
       "",
       "import Prelude hiding (LT, GT)",
       "import Text.LanguageTag.Internal.BCP47.Validate." <> tyname,
-      "import Text.LanguageTag.Internal.BCP47.Validate.RecordTypes",
+      "import Text.LanguageTag.Internal.BCP47.Validate.Types",
       "import Data.List.NonEmpty (NonEmpty(..))",
       "import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn",
       "import Data.Vector (Vector)",
@@ -825,7 +825,7 @@ renderGrandfatheredRecordModule tyname imps proj rend reg =
       "",
       "import Prelude hiding (LT, GT)",
       "import Text.LanguageTag.Internal.BCP47.Validate.Grandfathered",
-      "import Text.LanguageTag.Internal.BCP47.Validate.RecordTypes",
+      "import Text.LanguageTag.Internal.BCP47.Validate.Types",
       "import Data.List.NonEmpty (NonEmpty(..))",
       "import Data.Vector (Vector)",
       "import qualified Data.Vector as V"

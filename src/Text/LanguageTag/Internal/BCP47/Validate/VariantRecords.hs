@@ -4,11 +4,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Text.LanguageTag.Internal.BCP47.Validate.VariantRecords
-  (lookupVariantDetails, parseVariant, variantToSubtag, lookupVariantRecord) where
+  (lookupVariantDetails, validateVariant, variantToSubtag, lookupVariantRecord) where
 
 import Prelude hiding (LT, GT)
 import Text.LanguageTag.Internal.BCP47.Validate.Variant
-import Text.LanguageTag.Internal.BCP47.Validate.RecordTypes
+import Text.LanguageTag.Internal.BCP47.Validate.Types
 import Data.List.NonEmpty (NonEmpty(..))
 import Data.Vector (Vector)
 import qualified Data.Vector as V
@@ -134,8 +134,8 @@ lookupVariantDetails :: Variant -> (Subtag, VariantRecord)
 lookupVariantDetails = V.unsafeIndex variantDetails . fromEnum
 
 -- | Validate the given 'Subtag' against the variant records in the registry
-parseVariant :: Subtag -> Maybe Variant
-parseVariant = fmap toEnum . flip (binSearchIndexOn fst) variantDetails
+validateVariant :: Subtag -> Maybe Variant
+validateVariant = fmap toEnum . flip (binSearchIndexOn fst) variantDetails
 
 -- | Look up the 'Subtag' associated to the given 'Variant'
 variantToSubtag :: Variant -> Subtag

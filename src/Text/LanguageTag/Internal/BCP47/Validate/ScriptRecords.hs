@@ -4,11 +4,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Text.LanguageTag.Internal.BCP47.Validate.ScriptRecords
-  (lookupScriptDetails, parseScript, scriptToSubtag, lookupScriptRecord) where
+  (lookupScriptDetails, validateScript, scriptToSubtag, lookupScriptRecord) where
 
 import Prelude hiding (LT, GT)
 import Text.LanguageTag.Internal.BCP47.Validate.Script
-import Text.LanguageTag.Internal.BCP47.Validate.RecordTypes
+import Text.LanguageTag.Internal.BCP47.Validate.Types
 import Data.List.NonEmpty (NonEmpty(..))
 import Data.Vector (Vector)
 import qualified Data.Vector as V
@@ -281,8 +281,8 @@ lookupScriptDetails :: Script -> (Subtag, ScriptRecord)
 lookupScriptDetails = V.unsafeIndex scriptDetails . fromEnum
 
 -- | Validate the given 'Subtag' against the script records in the registry
-parseScript :: Subtag -> Maybe Script
-parseScript = fmap toEnum . flip (binSearchIndexOn fst) scriptDetails
+validateScript :: Subtag -> Maybe Script
+validateScript = fmap toEnum . flip (binSearchIndexOn fst) scriptDetails
 
 -- | Look up the 'Subtag' associated to the given 'Script'
 scriptToSubtag :: Script -> Subtag

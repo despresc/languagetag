@@ -4,11 +4,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Text.LanguageTag.Internal.BCP47.Validate.ExtlangRecords
-  (lookupExtlangDetails, parseExtlang, extlangToSubtag, lookupExtlangRecord) where
+  (lookupExtlangDetails, validateExtlang, extlangToSubtag, lookupExtlangRecord) where
 
 import Prelude hiding (LT, GT)
 import Text.LanguageTag.Internal.BCP47.Validate.Extlang
-import Text.LanguageTag.Internal.BCP47.Validate.RecordTypes
+import Text.LanguageTag.Internal.BCP47.Validate.Types
 import Data.List.NonEmpty (NonEmpty(..))
 import Data.Vector (Vector)
 import qualified Data.Vector as V
@@ -269,8 +269,8 @@ lookupExtlangDetails :: Extlang -> (Subtag, ExtlangRecord)
 lookupExtlangDetails = V.unsafeIndex extlangDetails . fromEnum
 
 -- | Validate the given 'Subtag' against the extlang records in the registry
-parseExtlang :: Subtag -> Maybe Extlang
-parseExtlang = fmap toEnum . flip (binSearchIndexOn fst) extlangDetails
+validateExtlang :: Subtag -> Maybe Extlang
+validateExtlang = fmap toEnum . flip (binSearchIndexOn fst) extlangDetails
 
 -- | Look up the 'Subtag' associated to the given 'Extlang'
 extlangToSubtag :: Extlang -> Subtag

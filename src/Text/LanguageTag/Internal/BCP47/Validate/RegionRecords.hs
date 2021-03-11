@@ -4,11 +4,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Text.LanguageTag.Internal.BCP47.Validate.RegionRecords
-  (lookupRegionDetails, parseRegion, regionToSubtag, lookupRegionRecord) where
+  (lookupRegionDetails, validateRegion, regionToSubtag, lookupRegionRecord) where
 
 import Prelude hiding (LT, GT)
 import Text.LanguageTag.Internal.BCP47.Validate.Region
-import Text.LanguageTag.Internal.BCP47.Validate.RecordTypes
+import Text.LanguageTag.Internal.BCP47.Validate.Types
 import Data.List.NonEmpty (NonEmpty(..))
 import Data.Vector (Vector)
 import qualified Data.Vector as V
@@ -365,8 +365,8 @@ lookupRegionDetails :: Region -> (Subtag, RegionRecord)
 lookupRegionDetails = V.unsafeIndex regionDetails . fromEnum
 
 -- | Validate the given 'Subtag' against the region records in the registry
-parseRegion :: Subtag -> Maybe Region
-parseRegion = fmap toEnum . flip (binSearchIndexOn fst) regionDetails
+validateRegion :: Subtag -> Maybe Region
+validateRegion = fmap toEnum . flip (binSearchIndexOn fst) regionDetails
 
 -- | Look up the 'Subtag' associated to the given 'Region'
 regionToSubtag :: Region -> Subtag

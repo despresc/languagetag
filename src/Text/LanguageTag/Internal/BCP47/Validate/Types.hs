@@ -11,7 +11,7 @@
 --
 -- Warning: this is an internal module and may change or disappear
 -- without regard to the PVP.
-module Text.LanguageTag.Internal.BCP47.Validate.RecordTypes where
+module Text.LanguageTag.Internal.BCP47.Validate.Types where
 
 import Control.DeepSeq (NFData (..))
 import Data.Bits (shiftR)
@@ -61,54 +61,6 @@ data BCP47Tag
   = NormalTag Normal
   | PrivateUse (NonEmpty Subtag)
   | GrandfatheredTag Grandfathered
-
-{-
-
-The rules:
-
-- primary subtags - be registered
-
-- extended language subtags - be registered. recommended that the
-  related primary language subtag be used instead. must only have one
-  extended language subtag (zh-min-nan excluded, I suppose)
-
-- script subtags - should be omitted if it adds no value or if the
-  primary language subtag has a relevant suppress-script field.
-
-- variants - must not be repeated. variants sharing a prefix should
-  not be used in the same tag (variants that can be used in
-  combination should have multiple prefix fields indicating that
-  fact).
-
-- extension subtags - a singleton must appear at most once (except in
-  private use), must have been registered. should canonicalize by
-  ordering the singletions by ascii order.
-
-- grandfathered/redundant - must match exactly, of course.
-
-valid tag:
-
-- well-formed
-- either grandfathered or all the primary language, extended language,
-  script, region, and variant subtags appear in the IANA subtag
-  registry.
-- no duplicate variant subtags
-- no duplicate singleton (extension) subtags
-
-canonicalizing:
-
-- extension sequences are ordered by singleton subtag (ascii
-  case-insensitive)
-- redundant or grandfathered tags are replaced by their preferred
-  value
-- subtags are replaced by their preferred value (notably this means
-  that there will be no extlangs in canonical form)
-
-(so maybe we define a separate canonical tag type? and the canonical
-form -> extlang form transformation can be defined as a CanonicalTag
--> ValidTag function).
-
--}
 
 -- | A normal language tag, as opposed to a private use or
 -- grandfathered tag. Note that validating the subtags in an extension
@@ -214,22 +166,6 @@ data Deprecation a
   | DeprecatedSimple
   | DeprecatedPreferred a
   deriving (Show)
-
-{- TODO HERE: experiment with the vector approach, using the following:
-
-could even have an unboxed vector for index searching (or some kind of
-bytearray from primitive?), then an associated vector for details? but
-that's for later.
-
-Actually, this can be simplified if we keep our Enum representation!
-only ever need to search on the subtag portion of the vector, since
-(toEnum thing) will always give us thing's index in the vector!
-
-Might be more convenient, then, to have only the Vector/(Hash)Map in
-the record modules (perhaps splitting up the components manually?) and
-define all of the lookup stuff in the main Validate module.
-
--}
 
 -- | Search for an element in a vector with the given key using the
 -- given projection function and return its index. The vector must be

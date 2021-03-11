@@ -51,7 +51,7 @@ library
     Text.LanguageTag.BCP47.Validate.Variant
     Text.LanguageTag.Internal.BCP47.Syntax
     Text.LanguageTag.Internal.BCP47.Validate.DataConShow
-    Text.LanguageTag.Internal.BCP47.Validate.RecordTypes
+    Text.LanguageTag.Internal.BCP47.Validate.Types
     Text.LanguageTag.Internal.Subtag
     Text.LanguageTag.Subtag
 
