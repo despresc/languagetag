@@ -147,24 +147,6 @@ parseSubtagMangled t = readSubtag (fromIntegral len) (wchars [])
     go l c = l . (packCharMangled c :)
 
 ----------------------------------------------------------------
--- Maybe subtags
-----------------------------------------------------------------
-
--- | Deconstruct a 'MaybeSubtag'
-maybeSubtag :: a -> (Subtag -> a) -> MaybeSubtag -> a
-maybeSubtag x f (MaybeSubtag (Subtag n))
-  | n == 0 = x
-  | otherwise = f $ Subtag n
-
--- | Convert a 'Subtag' to a 'MaybeSubtag' that is present
-justSubtag :: Subtag -> MaybeSubtag
-justSubtag = MaybeSubtag
-
--- | A 'MaybeSubtag' that is not present
-nullSubtag :: MaybeSubtag
-nullSubtag = MaybeSubtag (Subtag 0)
-
-----------------------------------------------------------------
 -- Subtag characters
 ----------------------------------------------------------------
 

@@ -687,33 +687,38 @@ renderRecordModuleWith tyname imps proj rend reg =
     detailTableEntries = ["  [" <> T.intercalate "\n  ," details <> "]"]
     detailTableName = T.toLower tyname <> "Details"
     theDetailTable =
-      [ detailTableName <> " :: Vector (Subtag, " <> tyname <> "Record)",
+      [ "-- | The subtag and record information associated to the '" <> tyname <> "' type.",
+        detailTableName <> " :: Vector (Subtag, " <> tyname <> "Record)",
         detailTableName <> " = V.fromList"
       ]
         <> detailTableEntries
 
     lookupname1 = "lookup" <> tyname <> "Details"
     lookup1 =
-      [ lookupname1 <> " :: " <> tyname <> " -> (Subtag, " <> tyname <> "Record)",
+      [ "-- | Look up the subtag and record details associated to the given '" <> tyname <> "'",
+        lookupname1 <> " :: " <> tyname <> " -> (Subtag, " <> tyname <> "Record)",
         lookupname1 <> " = V.unsafeIndex " <> detailTableName <> " . fromEnum"
       ]
     lookupname2 = "parse" <> tyname
     lookup2 =
-      [ lookupname2 <> " :: Subtag -> Maybe " <> tyname,
+      [ "-- | Validate the given 'Subtag' against the " <> T.toLower tyname <> " records in the registry",
+        lookupname2 <> " :: Subtag -> Maybe " <> tyname,
         lookupname2 <> " = fmap toEnum . flip (binSearchIndexOn fst) " <> detailTableName
       ]
     lookupname3 = T.toLower tyname <> "ToSubtag"
     lookup3 =
-      [ lookupname3 <> " :: " <> tyname <> " -> Subtag",
+      [ "-- | Look up the 'Subtag' associated to the given '" <> tyname <> "'",
+        lookupname3 <> " :: " <> tyname <> " -> Subtag",
         lookupname3 <> " = fst . " <> lookupname1
       ]
     lookupname4 = "lookup" <> tyname <> "Record"
     lookup4 =
-      [ lookupname4 <> " :: " <> tyname <> " -> " <> tyname <> "Record",
+      [ "-- | Look up the '" <> tyname <> "Record" <> "' associated to the given '" <> tyname <> "'",
+        lookupname4 <> " :: " <> tyname <> " -> " <> tyname <> "Record",
         lookupname4 <> " = snd . " <> lookupname1
       ]
 
--- TODO: duplication, obviously
+-- TODO: duplication, obviously, and rename this to renderRedundant...
 renderRangeRecordModuleWith ::
   -- | the type name
   Text ->
@@ -734,24 +739,27 @@ renderRangeRecordModuleWith tyname imps proj rend reg =
       "{-# LANGUAGE OverloadedStrings #-}",
       "",
       "module Text.LanguageTag.Internal.BCP47.Validate." <> tyname <> "Records",
-      "  (" <> lookupname1 <> ", " <> lookupname2 <> ") where",
+      "  (" <> T.intercalate ", " [lookupname1, lookupname2, lookupname3] <> ") where",
       "",
       "import Prelude hiding (LT, GT)",
       "import Text.LanguageTag.Internal.BCP47.Validate." <> tyname,
       "import Text.LanguageTag.Internal.BCP47.Validate.RecordTypes",
       "import Data.List.NonEmpty (NonEmpty(..))",
       "import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn",
-      "import qualified Data.HashMap.Strict as HM"
+      "import Data.Vector (Vector)",
+      "import qualified Data.Vector as V"
     ]
       <> imps
       <> [""]
-      <> theDataTable
+      <> detailsTable
       <> [""]
       <> lookup1
       <> [""]
       <> lookup2
+      <> [""]
+      <> lookup3
   where
-    tablename = T.toLower tyname <> "Table"
+    detailTableName = T.toLower tyname <> "Details"
     rend' = uncurry $ rend reg
     tableEntries = case M.toAscList $ proj reg of
       (x : xs) -> "  [" <> rend' x : tableMid xs
@@ -763,22 +771,21 @@ renderRangeRecordModuleWith tyname imps proj rend reg =
     lookupname1 = "lookup" <> tyname <> "Details"
     lookup1 =
       [ lookupname1 <> " :: " <> tyname <> " -> (Syn.LanguageTag, RangeRecord)",
-        "lookup" <> tyname <> "Details x = case HM.lookup x tab of",
-        "  Just r -> r",
-        "  Nothing -> error $ \"internal invariant violated: subtag \" <> show x <> \" does not have an associated record\"",
-        "  where",
-        "    tab = HM.fromList $ (\\(a, b, c) -> (a, (b, c))) <$> " <> tablename
+        "lookup" <> tyname <> "Details = V.unsafeIndex " <> detailTableName <> " . fromEnum"
       ]
-    lookupname2 = "lookupTag" <> tyname
+    lookupname2 = "lookup" <> tyname <> "Tag"
     lookup2 =
-      [ lookupname2 <> " :: Syn.LanguageTag -> Maybe " <> tyname,
-        lookupname2 <> " = flip HM.lookup tab",
-        "  where",
-        "    tab = HM.fromList $ (\\(a, b, _) -> (b, a)) <$> " <> tablename
+      [ lookupname2 <> " :: " <> tyname <> " -> Syn.LanguageTag",
+        lookupname2 <> " = fst . " <> lookupname1
       ]
-    theDataTable =
-      [ tablename <> " :: [(" <> tyname <> ", Syn.LanguageTag, " <> "RangeRecord)]",
-        tablename <> " ="
+    lookupname3 = "lookup" <> tyname <> "Record"
+    lookup3 =
+      [ lookupname3 <> " :: " <> tyname <> " -> RangeRecord",
+        lookupname3 <> " = snd . " <> lookupname1
+      ]
+    detailsTable =
+      [ detailTableName <> " :: Vector (Syn.LanguageTag, RangeRecord)",
+        detailTableName <> " = V.fromList"
       ]
         <> tableEntries
 
@@ -806,41 +813,40 @@ renderGrandfatheredRecordModule tyname imps proj rend reg =
       "{-# LANGUAGE OverloadedStrings #-}",
       "",
       "module Text.LanguageTag.Internal.BCP47.Validate.GrandfatheredRecords",
-      "  (lookupGrandfatheredDetails) where",
+      "  (lookupGrandfatheredRecord) where",
       "",
       "import Prelude hiding (LT, GT)",
       "import Text.LanguageTag.Internal.BCP47.Validate.Grandfathered",
       "import Text.LanguageTag.Internal.BCP47.Validate.RecordTypes",
       "import Data.List.NonEmpty (NonEmpty(..))",
-      "import qualified Data.HashMap.Strict as HM"
+      "import Data.Vector (Vector)",
+      "import qualified Data.Vector as V"
     ]
       <> imps
       <> [""]
-      <> theDataTable
+      <> detailsTable
       <> [""]
       <> lookup1
   where
-    tablename = T.toLower tyname <> "Table"
+    detailTableName = T.toLower tyname <> "Details"
     rend' = uncurry $ rend reg
     tableEntries = case M.toAscList $ proj reg of
       (x : xs) -> "  [" <> rend' x : tableMid xs
       [] -> error $ "renderRecordModuleWith: given an empty registry for" <> T.unpack tyname
+    -- FIXME: intercalate
     tableMid [x] = ["  ," <> rend' x <> "]"]
     tableMid (x : xs) = "  ," <> rend' x : tableMid xs
     tableMid [] =
       error $ "renderRecordModuleWith: given a registry with one entry for" <> T.unpack tyname
-    lookupname1 = "lookup" <> tyname <> "Details"
+    lookupname1 = "lookup" <> tyname <> "Record"
     lookup1 =
-      [ lookupname1 <> " :: " <> tyname <> " -> RangeRecord",
-        "lookup" <> tyname <> "Details x = case HM.lookup x tab of",
-        "  Just r -> r",
-        "  Nothing -> error $ \"internal invariant violated: subtag \" <> show x <> \" does not have an associated record\"",
-        "  where",
-        "    tab = HM.fromList  " <> tablename
+      [ "-- | Look up the subtag and record details associated to the given 'Grandfathered' tag.",
+        lookupname1 <> " :: " <> tyname <> " -> RangeRecord",
+        lookupname1 <> "= V.unsafeIndex " <> detailTableName <> " . fromEnum"
       ]
-    theDataTable =
-      [ tablename <> " :: [(" <> tyname <> ", " <> "RangeRecord)]",
-        tablename <> " ="
+    detailsTable =
+      [ detailTableName <> " :: Vector RangeRecord",
+        detailTableName <> " = V.fromList"
       ]
         <> tableEntries
 
@@ -1199,7 +1205,7 @@ renderSplitRegistry sr = do
       "Grandfathered"
       prefixedImports
       grandfatheredRecords
-      $ \reg _ (RangeRecord tyc desc depr) ->
+      $ \reg _ (RangeRecord _ desc depr) ->
         let rendRec =
               T.intercalate
                 " "
@@ -1207,7 +1213,7 @@ renderSplitRegistry sr = do
                   parens $ T.pack $ show desc,
                   resolveDeprGrand reg depr
                 ]
-         in parens $ tyc <> ", " <> rendRec
+         in parens rendRec
 
     showSynTag reg tag = case parseBCP47 tag of
       Right (NormalTag n) -> "Syn.NormalTag $ " <> printSyn reg tag n
@@ -1247,7 +1253,7 @@ renderSplitRegistry sr = do
              "import Text.LanguageTag.Subtag (nullSubtag, justSubtag)"
            ]
     rendrecredundant = renderRangeRecordModuleWith "Redundant" redundantImports redundantRecords $
-      \reg tag (RangeRecord tyc desc depr) ->
+      \reg tag (RangeRecord _ desc depr) ->
         let rendRec =
               T.intercalate
                 " "
@@ -1255,7 +1261,7 @@ renderSplitRegistry sr = do
                   parens $ T.pack $ show desc,
                   resolveDeprRedundant reg depr
                 ]
-         in parens $ tyc <> ", " <> showSynTag reg tag <> ", " <> rendRec
+         in parens $ showSynTag reg tag <> ", " <> rendRec
 
 ----------------------------------------------------------------
 -- Testing functions

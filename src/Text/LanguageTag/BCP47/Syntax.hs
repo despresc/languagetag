@@ -48,8 +48,8 @@ import qualified Data.List.NonEmpty as NE
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Word (Word8)
-import Text.LanguageTag.Internal.BCP47.Validate.Grandfathered
 import Text.LanguageTag.Internal.BCP47.Syntax
+import Text.LanguageTag.Internal.BCP47.Validate.Grandfathered
 import Text.LanguageTag.Internal.Subtag (Subtag (..), SubtagChar (..))
 import Text.LanguageTag.Subtag
 
@@ -386,9 +386,12 @@ parsePrivate initpos inp = do
 -- represented via registered subtags were explicitly grandfathered
 -- into the current standard via the grammar of the tags itself. All
 -- of them are valid, but most are deprecated; see the documentation
--- for 'Grandfathered' for up-to-date details.
+-- for
+-- 'Text.LanguageTag.Internal.BCP47.Validate.Grandfathered.Grandfathered'
+-- for up-to-date details.
 
--- | Embed a 'Grandfathered' language tag in the 'LanguageTag' type
+-- | Embed a 'Text.LanguageTag.BCP47.Validate.Grandfathered' language
+-- tag in the 'LanguageTag' type
 grandfatheredSyntax :: Grandfathered -> LanguageTag
 grandfatheredSyntax = Grandfathered
 {-# INLINE grandfatheredSyntax #-}

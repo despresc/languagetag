@@ -14,6 +14,7 @@ import Data.Vector (Vector)
 import qualified Data.Vector as V
 import Text.LanguageTag.Internal.Subtag (Subtag(..))
 
+-- | The subtag and record information associated to the 'Region' type.
 regionDetails :: Vector (Subtag, RegionRecord)
 regionDetails = V.fromList
   [(Subtag 6972003231727616035, RegionRecord ("World" :| []) NotDeprecated)
@@ -359,14 +360,18 @@ regionDetails = V.fromList
   ,(Subtag 17716035034168688658, RegionRecord ("Zimbabwe" :| []) NotDeprecated)
   ,(Subtag 17719412733889216530, RegionRecord ("Private use" :| []) NotDeprecated)]
 
+-- | Look up the subtag and record details associated to the given 'Region'
 lookupRegionDetails :: Region -> (Subtag, RegionRecord)
 lookupRegionDetails = V.unsafeIndex regionDetails . fromEnum
 
+-- | Validate the given 'Subtag' against the region records in the registry
 parseRegion :: Subtag -> Maybe Region
 parseRegion = fmap toEnum . flip (binSearchIndexOn fst) regionDetails
 
+-- | Look up the 'Subtag' associated to the given 'Region'
 regionToSubtag :: Region -> Subtag
 regionToSubtag = fst . lookupRegionDetails
 
+-- | Look up the 'RegionRecord' associated to the given 'Region'
 lookupRegionRecord :: Region -> RegionRecord
 lookupRegionRecord = snd . lookupRegionDetails

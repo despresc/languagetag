@@ -14,6 +14,7 @@ import Data.Vector (Vector)
 import qualified Data.Vector as V
 import Text.LanguageTag.Internal.Subtag (Subtag(..))
 
+-- | The subtag and record information associated to the 'Script' type.
 scriptDetails :: Vector (Subtag, ScriptRecord)
 scriptDetails = V.fromList
   [(Subtag 14092720702511644692, ScriptRecord ("Adlam" :| []) NotDeprecated)
@@ -275,14 +276,18 @@ scriptDetails = V.fromList
   ,(Subtag 17719359476294746132, ScriptRecord ("Code for undetermined script" :| []) NotDeprecated)
   ,(Subtag 17720494241014087700, ScriptRecord ("Code for uncoded script" :| []) NotDeprecated)]
 
+-- | Look up the subtag and record details associated to the given 'Script'
 lookupScriptDetails :: Script -> (Subtag, ScriptRecord)
 lookupScriptDetails = V.unsafeIndex scriptDetails . fromEnum
 
+-- | Validate the given 'Subtag' against the script records in the registry
 parseScript :: Subtag -> Maybe Script
 parseScript = fmap toEnum . flip (binSearchIndexOn fst) scriptDetails
 
+-- | Look up the 'Subtag' associated to the given 'Script'
 scriptToSubtag :: Script -> Subtag
 scriptToSubtag = fst . lookupScriptDetails
 
+-- | Look up the 'ScriptRecord' associated to the given 'Script'
 lookupScriptRecord :: Script -> ScriptRecord
 lookupScriptRecord = snd . lookupScriptDetails

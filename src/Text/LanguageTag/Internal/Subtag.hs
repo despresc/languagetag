@@ -17,6 +17,9 @@ module Text.LanguageTag.Internal.Subtag
 
     -- * Subtags that might not be present
     MaybeSubtag (..),
+    maybeSubtag,
+    justSubtag,
+    nullSubtag,
 
     -- * Subtag characters
     SubtagChar (..),
@@ -38,6 +41,10 @@ import qualified Data.Vector.Generic as VG
 import qualified Data.Vector.Generic.Mutable as VGM
 import Data.Vector.Unboxed (MVector, Vector)
 import Data.Word (Word64, Word8)
+
+----------------------------------------------------------------
+-- Subtags
+----------------------------------------------------------------
 
 -- | A compact representation of a BCP47 subtag (a string of ASCII
 -- letters and digits of length between one and eight). The 'Ord'
@@ -127,6 +134,10 @@ instance VG.Vector Vector Subtag where
 wrapSubtag :: Word64 -> Maybe Subtag
 wrapSubtag = undefined
 
+----------------------------------------------------------------
+-- Maybe subtags
+----------------------------------------------------------------
+
 -- | A subtag that may not be present. Equivalent to @Maybe
 -- Subtag@. Use 'justSubtag' and 'nullSubtag' to construct these, and
 -- 'maybeSubtag' to eliminate them.
@@ -137,6 +148,24 @@ instance Show MaybeSubtag where
   showsPrec p (MaybeSubtag t) r
     | unwrapSubtag t == 0 = showsPrec p ("" :: String) r
     | otherwise = showsPrec p (renderSubtagBuilder t) r
+
+-- | Deconstruct a 'MaybeSubtag'
+maybeSubtag :: a -> (Subtag -> a) -> MaybeSubtag -> a
+maybeSubtag x f (MaybeSubtag (Subtag n))
+  | n == 0 = x
+  | otherwise = f $ Subtag n
+
+-- | Convert a 'Subtag' to a 'MaybeSubtag' that is present
+justSubtag :: Subtag -> MaybeSubtag
+justSubtag = MaybeSubtag
+
+-- | A 'MaybeSubtag' that is not present
+nullSubtag :: MaybeSubtag
+nullSubtag = MaybeSubtag (Subtag 0)
+
+----------------------------------------------------------------
+-- Subtag characters
+----------------------------------------------------------------
 
 -- | The encoding of a valid subtag character (an ASCII alphabetic
 -- character or digit)
@@ -153,6 +182,10 @@ unpackCharUpper :: SubtagChar -> Char
 unpackCharUpper (SubtagChar w)
   | w >= 97 = BI.w2c $ w - 32
   | otherwise = BI.w2c w
+
+----------------------------------------------------------------
+-- Subtag indexing and rendering
+----------------------------------------------------------------
 
 -- | Index a subtag without bounds checking. Note that
 -- @'unsafeIndexSubtag' 0@ is equivalent to 'subtagHead'.

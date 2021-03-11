@@ -19,6 +19,7 @@ import Text.LanguageTag.Internal.BCP47.Validate.Language
 import Text.LanguageTag.Internal.BCP47.Validate.Script
 import Text.LanguageTag.Internal.BCP47.Validate.Region
 
+-- | The subtag and record information associated to the 'Variant' type.
 variantDetails :: Vector (Subtag, VariantRecord)
 variantDetails = V.fromList
   [(Subtag 7122868793502725176, VariantRecord ("Late Middle French (to 1606)" :| []) NotDeprecated [NormalTag $ Normal Frm Nothing Nothing Nothing (S.fromList []) M.empty []])
@@ -128,14 +129,18 @@ variantDetails = V.fromList
   ,(Subtag 17259806277701625112, VariantRecord ("Wade-Giles romanization" :| []) NotDeprecated [NormalTag $ Normal Zh Nothing (Just Latn) Nothing (S.fromList []) M.empty []])
   ,(Subtag 17424232613601013528, VariantRecord ("Standard X-system orthographic fallback for spelling\nEsperanto" :| []) NotDeprecated [NormalTag $ Normal Eo Nothing Nothing Nothing (S.fromList []) M.empty []])]
 
+-- | Look up the subtag and record details associated to the given 'Variant'
 lookupVariantDetails :: Variant -> (Subtag, VariantRecord)
 lookupVariantDetails = V.unsafeIndex variantDetails . fromEnum
 
+-- | Validate the given 'Subtag' against the variant records in the registry
 parseVariant :: Subtag -> Maybe Variant
 parseVariant = fmap toEnum . flip (binSearchIndexOn fst) variantDetails
 
+-- | Look up the 'Subtag' associated to the given 'Variant'
 variantToSubtag :: Variant -> Subtag
 variantToSubtag = fst . lookupVariantDetails
 
+-- | Look up the 'VariantRecord' associated to the given 'Variant'
 lookupVariantRecord :: Variant -> VariantRecord
 lookupVariantRecord = snd . lookupVariantDetails

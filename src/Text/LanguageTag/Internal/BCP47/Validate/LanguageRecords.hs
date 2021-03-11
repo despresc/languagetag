@@ -15,6 +15,7 @@ import qualified Data.Vector as V
 import Text.LanguageTag.Internal.Subtag (Subtag(..))
 import Text.LanguageTag.Internal.BCP47.Validate.Script
 
+-- | The subtag and record information associated to the 'Language' type.
 languageDetails :: Vector (Subtag, LanguageRecord)
 languageDetails = V.fromList
   [(Subtag 14088385534321754130, LanguageRecord ("Afar" :| []) NotDeprecated Nothing Nothing Nothing)
@@ -8750,14 +8751,18 @@ languageDetails = V.fromList
   ,(Subtag 17720265954912370707, LanguageRecord ("Zaza" :| ["Dimili","Dimli (macrolanguage)","Kirdki","Kirmanjki (macrolanguage)","Zazaki"]) NotDeprecated Nothing Nothing (Just Macrolanguage))
   ,(Subtag 17720345119749570579, LanguageRecord ("Zuojiang Zhuang" :| []) NotDeprecated Nothing (Just Za) Nothing)]
 
+-- | Look up the subtag and record details associated to the given 'Language'
 lookupLanguageDetails :: Language -> (Subtag, LanguageRecord)
 lookupLanguageDetails = V.unsafeIndex languageDetails . fromEnum
 
+-- | Validate the given 'Subtag' against the language records in the registry
 parseLanguage :: Subtag -> Maybe Language
 parseLanguage = fmap toEnum . flip (binSearchIndexOn fst) languageDetails
 
+-- | Look up the 'Subtag' associated to the given 'Language'
 languageToSubtag :: Language -> Subtag
 languageToSubtag = fst . lookupLanguageDetails
 
+-- | Look up the 'LanguageRecord' associated to the given 'Language'
 lookupLanguageRecord :: Language -> LanguageRecord
 lookupLanguageRecord = snd . lookupLanguageDetails

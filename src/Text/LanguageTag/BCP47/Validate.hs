@@ -36,6 +36,17 @@ module Text.LanguageTag.BCP47.Validate
     parseRegion,
     parseVariant,
 
+    -- * The registered subtags
+    -- $thetags
+    bcp47RegistryDate,
+    module Text.LanguageTag.BCP47.Validate.Language,
+    module Text.LanguageTag.BCP47.Validate.Extlang,
+    module Text.LanguageTag.BCP47.Validate.Script,
+    module Text.LanguageTag.BCP47.Validate.Region,
+    module Text.LanguageTag.BCP47.Validate.Variant,
+    module Text.LanguageTag.BCP47.Validate.Grandfathered,
+    module Text.LanguageTag.BCP47.Validate.Redundant,
+
     -- * Registry records
     -- $therecords
     LanguageRecord (..),
@@ -49,35 +60,10 @@ module Text.LanguageTag.BCP47.Validate
     VariantRecord (..),
     lookupVariantRecord,
     RangeRecord (..),
-    lookupGrandfatheredDetails,
+    lookupGrandfatheredRecord,
     lookupRedundantDetails,
     Scope (..),
     Deprecation (..),
-
-    -- * The registered subtags
-    -- $thetags
-    bcp47RegistryDate,
-
-    -- ** Language subtags
-    Language (..),
-
-    -- ** Extended language subtags
-    Extlang (..),
-
-    -- ** Script subtags
-    Script (..),
-
-    -- ** Region subtags
-    Region (..),
-
-    -- ** Variant subtags
-    Variant (..),
-
-    -- ** Grandfathered subtags
-    Grandfathered (..),
-
-    -- ** Redundant subtags
-    Redundant (..),
   )
 where
 
@@ -164,19 +150,18 @@ form -> extlang form transformation can be defined as a CanonicalTag
 
 -- $thetags
 --
--- Below are all of the subtags that are registered with the
--- IANA. Check 'bcp47RegistryDate' for the version of the registry
--- that this library uses.
+-- Below we have re-exported the modules containing all of the subtags
+-- that are registered with the IANA. Check 'bcp47RegistryDate' for
+-- the version of the registry that this library uses.
 --
 -- The names of the subtag data constructors are roughly the same as
--- the subtags themselves; all of them are title case except for the
+-- the subtags themselves; all of them are camel case except for the
 -- 'Region' tags, which are all upper case. Additionally, the
--- 'Extlang' constructors have an @Ext@ prefix, any tag that starts
--- with a digit is prefixed with the first letter of their type, and
--- the redundant and grandfathered tags have been converted from kebab
--- case to camel case. These modifications were necessary to arrive at
--- constructor names that are valid and free of name collisions. Some
--- examples:
+-- 'Extlang' constructors and the constructors corresponding to
+-- subtags that start with a digit are prefixed with the first three
+-- letters of their types. These modifications were necessary to
+-- arrive at constructor names that are valid and free of name
+-- collisions. Some examples:
 --
 -- @
 --  -- for the language subtag en
@@ -188,20 +173,16 @@ form -> extlang form transformation can be defined as a CanonicalTag
 -- -- for the region subtag AU
 -- 'AU' :: 'Region'
 -- -- for the region subtag 419
--- 'R419' :: 'Region'
+-- 'Reg419' :: 'Region'
 -- -- for the variant subtag gascon
 -- 'Gascon' :: 'Variant'
 -- -- for the variant subtag 1606nict
--- 'V1606nict' :: 'Variant'
+-- 'Var1606nict' :: 'Variant'
 -- -- for the grandfathered subtag i-enochian
 -- 'IEnochian' :: 'Grandfathered'
 -- -- for the redundant subtag en-scouse
 -- 'EnScouse' :: 'Redundant'
 -- @
-
-----------------------------------------------------------------
--- Language records
-----------------------------------------------------------------
 
 -- $therecords
 --

@@ -15,6 +15,7 @@ import qualified Data.Vector as V
 import Text.LanguageTag.Internal.Subtag (Subtag(..))
 import Text.LanguageTag.Internal.BCP47.Validate.Language
 
+-- | The subtag and record information associated to the 'Extlang' type.
 extlangDetails :: Vector (Subtag, ExtlangRecord)
 extlangDetails = V.fromList
   [(Subtag 14089361900647219219, ExtlangRecord ("Algerian Saharan Arabic" :| []) False Aao Ar Nothing (Just Ar) Nothing)
@@ -263,14 +264,18 @@ extlangDetails = V.fromList
   ,(Subtag 17712481412587716627, ExtlangRecord ("Zambian Sign Language" :| []) False Zsl Sgn Nothing Nothing Nothing)
   ,(Subtag 17712490208680738835, ExtlangRecord ("Standard Malay" :| []) False Zsm Ms Nothing (Just Ms) Nothing)]
 
+-- | Look up the subtag and record details associated to the given 'Extlang'
 lookupExtlangDetails :: Extlang -> (Subtag, ExtlangRecord)
 lookupExtlangDetails = V.unsafeIndex extlangDetails . fromEnum
 
+-- | Validate the given 'Subtag' against the extlang records in the registry
 parseExtlang :: Subtag -> Maybe Extlang
 parseExtlang = fmap toEnum . flip (binSearchIndexOn fst) extlangDetails
 
+-- | Look up the 'Subtag' associated to the given 'Extlang'
 extlangToSubtag :: Extlang -> Subtag
 extlangToSubtag = fst . lookupExtlangDetails
 
+-- | Look up the 'ExtlangRecord' associated to the given 'Extlang'
 lookupExtlangRecord :: Extlang -> ExtlangRecord
 lookupExtlangRecord = snd . lookupExtlangDetails
