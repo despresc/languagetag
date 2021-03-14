@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -41,6 +41,10 @@ module Text.LanguageTag.Internal.Subtag
     unpackChar,
     unpackCharUpper,
 
+    -- * Subtag tries and functions
+    Trie (..),
+    TrieStep (..),
+
     -- * Unsafe functions
     unsafeIndexSubtag,
   )
@@ -49,6 +53,7 @@ where
 import Control.DeepSeq (NFData)
 import qualified Data.Bits as Bit
 import qualified Data.ByteString.Internal as BI
+import Data.HashMap.Strict (HashMap)
 import Data.Hashable (Hashable (..))
 import qualified Data.List as List
 import qualified Data.Text.Lazy.Builder as TB
@@ -250,3 +255,15 @@ renderSubtagBuilderTitle = TB.fromString . go . unpackSubtag
     go (x : xs) = unpackCharUpper x : fmap unpackChar xs
     go [] = error "internal invariant violated: empty subtag"
 {-# INLINE renderSubtagBuilderTitle #-}
+
+----------------------------------------------------------------
+-- Subtag tries
+----------------------------------------------------------------
+
+-- | A trie indexed by 'Subtag'
+data Trie a = Trie (Maybe a) !(HashMap Subtag (Trie a))
+  deriving (Functor)
+
+-- | A step in a trie path
+data TrieStep a = TrieStep !Subtag !(Trie a)
+  deriving (Functor)

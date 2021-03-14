@@ -31,7 +31,7 @@ library
   build-depends:
     base >=4.12.0.0,
     text >=1.2,
-    containers >=0.5,
+    containers >=0.6.3.1,
     bytestring,
     hashable,
     unordered-containers,

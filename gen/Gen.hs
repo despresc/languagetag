@@ -1221,7 +1221,7 @@ renderSplitRegistry sr = do
                   parens $ T.pack $ show desc,
                   resolveDeprGrand reg depr
                 ]
-         in parens rendRec
+         in rendRec
 
     showSynTag reg tag = case parseBCP47 tag of
       Right (NormalTag n) -> "Syn.NormalTag $ " <> printSyn reg tag n
@@ -1246,12 +1246,13 @@ renderSplitRegistry sr = do
       where
         showSubtag x = "Subtag " <> T.pack (show $ unwrapSubtag x)
         msrender x f = maybeSubtag "nullSubtag" (\s -> parens $ "justSubtag " <> f s) x
+        -- FIXME: horrifying
         resolve' f x = f reg (renderSubtag x) `seq` parens (showSubtag x)
         resolvePl' = resolve' resolvePl
         resolveExt' = resolve' resolveExt
         resolveScr' = resolve' resolveScr
         resolveReg' = resolve' resolveReg
-        resolveVar' = resolve' resolveVar
+        resolveVar' x = resolveVar reg (renderSubtag x) `seq` showSubtag x
 
     redundantImports =
       tagImports

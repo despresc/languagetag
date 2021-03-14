@@ -1,4 +1,3 @@
-{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 -- |
@@ -27,10 +26,12 @@ module Text.LanguageTag.Internal.BCP47.Syntax
     toExtensionChar,
     fromExtensionChar,
     unsafeSubtagCharToExtension,
+    extensionCharToSubtag,
   )
 where
 
 import Control.DeepSeq (NFData (..), rwhnf)
+import qualified Data.ByteString.Internal as BI
 import Data.Hashable (Hashable (..), hashUsing)
 import qualified Data.List as List
 import Data.List.NonEmpty (NonEmpty)
@@ -270,7 +271,6 @@ fromExtensionChar ec
   where
     toC n = toEnum . (+ n) . fromEnum
 
-
 -- | Convert a 'SubtagChar' to an 'ExtensionChar'. Note that the given
 -- subtag character must not be @x@.
 
@@ -283,6 +283,11 @@ unsafeSubtagCharToExtension (SubtagChar n)
   | otherwise = toC 88 n
   where
     toC x = toEnum . subtract x . fromEnum
+
+extensionCharToSubtag :: ExtensionChar -> Subtag
+extensionCharToSubtag = go . fromExtensionChar
+  where
+    go = singleton . SubtagChar . fromIntegral . BI.c2w
 
 instance Hashable ExtensionChar where
   hashWithSalt = hashUsing fromEnum

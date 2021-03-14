@@ -1,9 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 
 -- |
 -- Module      : Text.LanguageTag.BCP47.Syntax
@@ -40,17 +38,26 @@ module Text.LanguageTag.BCP47.Syntax
     Err (..),
     Component (..),
     ErrType (..),
+
+    -- * Tries
+    toSubtags,
+    tagTrie,
+    lookupLanguageTagTrie,
+    lookupLanguageTagTrieLax,
   )
 where
 
 import Control.DeepSeq (NFData (..), rwhnf)
+import Data.Bifunctor (first)
+import Data.Foldable (toList)
 import qualified Data.List.NonEmpty as NE
+import Data.Maybe (mapMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Word (Word8)
 import Text.LanguageTag.Internal.BCP47.Syntax
 import Text.LanguageTag.Internal.BCP47.Validate.Grandfathered
-import Text.LanguageTag.Internal.Subtag (Subtag (..), SubtagChar (..))
+import Text.LanguageTag.Internal.Subtag (Subtag (..), SubtagChar (..), Trie (..))
 import Text.LanguageTag.Subtag
 
 {- TODO:
@@ -444,3 +451,62 @@ instance Finishing a => Finishing ([b] -> a) where
 
 instance Finishing LanguageTag where
   finish = id
+
+----------------------------------------------------------------
+-- Tries
+----------------------------------------------------------------
+
+-- TODO: check round-tripping of this function
+toSubtags :: LanguageTag -> [Subtag]
+toSubtags (NormalTag (Normal p e1 e2 e3 s r vs es ps)) =
+  mapMaybe go [p, e1, e2, e3, s, r] <> vs <> es' <> ps
+  where
+    go = maybeSubtag Nothing Just
+    es' = flip concatMap es $ \(Extension c ts) ->
+      extensionCharToSubtag c : NE.toList ts
+toSubtags (Grandfathered g) = case g of
+  ArtLojban -> [Subtag 14108546179528654867, Subtag 15690354374758891542]
+  CelGaulish -> [Subtag 14382069488147234835, Subtag 14954113284221173783]
+  EnGbOed -> [Subtag 14679482985414131730, Subtag 14954202562683731986, Subtag 16111381376313327635]
+  IAmi -> [Subtag 15132094747964866577, Subtag 14102819922971197459]
+  IBnn -> [Subtag 15132094747964866577, Subtag 14248104991419006995]
+  IDefault -> [Subtag 15132094747964866577, Subtag 14680466211245977112]
+  IEnochian -> [Subtag 15132094747964866577, Subtag 14680466211245977112]
+  IHak -> [Subtag 15132094747964866577, Subtag 15098133032806121491]
+  IKlingon -> [Subtag 15132094747964866577, Subtag 15542853518732230679]
+  ILux -> [Subtag 15132094747964866577, Subtag 15697226132455686163]
+  IMingo -> [Subtag 15132094747964866577, Subtag 15827749698417983509]
+  INavajo -> [Subtag 15132094747964866577, Subtag 15962927641447628822]
+  IPwn -> [Subtag 15132094747964866577, Subtag 16275850723642572819]
+  ITao -> [Subtag 15132094747964866577, Subtag 16827638435018702867]
+  ITay -> [Subtag 15132094747964866577, Subtag 16827550474088480787]
+  ITsu -> [Subtag 15132094747964866577, Subtag 16847869448969781267]
+  NoBok -> [Subtag 15977645578003677202, Subtag 14249204503046782995]
+  NoNyn -> [Subtag 15977645578003677202, Subtag 15989872147304546323]
+  SgnBeFr -> [Subtag 16690181889360658451, Subtag 14237004322024980498, Subtag 14828101773117358098]
+  SgnBeNl -> [Subtag 16690181889360658451, Subtag 14237004322024980498, Subtag 15974267878283149330]
+  SgnChDe -> [Subtag 16690181889360658451, Subtag 14384497209821364242, Subtag 14525234698176692242]
+  ZhGuoyu -> [Subtag 17699146535566049298, Subtag 14976579405109788693]
+  ZhHakka -> [Subtag 17699146535566049298, Subtag 15098140437866610709]
+  ZhMin -> [Subtag 17699146535566049298, Subtag 15827742560719208467]
+  ZhMinNan -> [Subtag 17699146535566049298, Subtag 15827742560719208467, Subtag 15962850549540323347]
+  ZhXiang -> [Subtag 17699146535566049298, Subtag 17412902894784479253]
+
+-- | Convert a language tag indexed list to a 'Trie' with the given
+-- root node value
+tagTrie :: Maybe a -> [(LanguageTag, a)] -> Trie a
+tagTrie r ls = pathTrie $ r' <> fmap (first toSubtags) ls
+  where
+    r' = ([],) <$> toList r
+
+-- | Find an entry in a 'Trie' corresponding to the given
+-- 'LanguageTag' exactly, like 'lookupTrie'
+
+-- TODO: this and Lax might be more efficiently implemented without the toSubtags
+lookupLanguageTagTrie :: LanguageTag -> Trie a -> Maybe a
+lookupLanguageTagTrie = lookupTrie . toSubtags
+
+-- | Find an entry in a 'Trie' that best matches the given list of
+-- subtags, like 'lookupTrieLax'
+lookupLanguageTagTrieLax :: LanguageTag -> Trie a -> Maybe a
+lookupLanguageTagTrieLax = lookupTrieLax . toSubtags

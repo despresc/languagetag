@@ -73,7 +73,7 @@ data Normal = Normal
     region :: Maybe Region,
     variants :: Set Variant,
     extensions :: Map ExtensionChar (NonEmpty ExtensionSubtag),
-    privateuse :: [Subtag]
+    privateUse :: [Subtag]
   }
 
 -- | An extension subtag is a 'Subtag' that is at least two characters

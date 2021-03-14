@@ -1,7 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-
 -- |
 -- Module      : Text.LanguageTag.BCP47.Validate.Redundant
 -- Description : Redundant subtags
