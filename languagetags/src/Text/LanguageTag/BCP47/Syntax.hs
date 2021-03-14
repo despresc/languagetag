@@ -207,14 +207,14 @@ parseBCP47 inp = case T.uncons inp of
 parseBCP47' :: Char -> Text -> Either Err LanguageTag
 parseBCP47' !initchar !inp = tagPop initchar inp Cbeginning 0 >>= parsePrimary
   where
-    initcon l e1 e2 e3 s r v e p = NormalTag $ Normal (justSubtag l) e1 e2 e3 s r v e p
+    initcon l e1 e2 e3 s r v e p = NormalTag $ Normal l e1 e2 e3 s r v e p
 
     -- TODO: could be optimized a bit
     parsePrimary (st, t)
       | containsDigit st = Left $ Err 0 Cbeginning ErrBadChar
       | subtagLength st == 1 =
         if subtagHead st == subtagCharx
-          then NormalTag . Normal nullSubtag nullSubtag nullSubtag nullSubtag nullSubtag nullSubtag [] [] . NE.toList <$> parsePrivate 0 t
+          then PrivateUse <$> parsePrivate 0 t
           else do
             msep <- tagSep Cprimary 0 t
             case msep of
@@ -436,6 +436,10 @@ subtagCharx = SubtagChar 120
 subtagI :: Subtag
 subtagI = Subtag 15132094747964866577
 
+-- TODO HERE: replace me with the correct value
+subtagX :: Subtag
+subtagX = Subtag undefined
+
 ----------------------------------------------------------------
 -- Internal convenience class
 ----------------------------------------------------------------
@@ -459,11 +463,12 @@ instance Finishing LanguageTag where
 -- TODO: check round-tripping of this function
 toSubtags :: LanguageTag -> [Subtag]
 toSubtags (NormalTag (Normal p e1 e2 e3 s r vs es ps)) =
-  mapMaybe go [p, e1, e2, e3, s, r] <> vs <> es' <> ps
+  p : (mapMaybe go [e1, e2, e3, s, r] <> vs <> es' <> ps)
   where
     go = maybeSubtag Nothing Just
     es' = flip concatMap es $ \(Extension c ts) ->
       extensionCharToSubtag c : NE.toList ts
+toSubtags (PrivateUse x) = subtagX : NE.toList x
 toSubtags (Grandfathered g) = case g of
   ArtLojban -> [Subtag 14108546179528654867, Subtag 15690354374758891542]
   CelGaulish -> [Subtag 14382069488147234835, Subtag 14954113284221173783]

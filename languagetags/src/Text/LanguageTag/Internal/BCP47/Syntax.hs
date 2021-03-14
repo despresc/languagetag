@@ -35,7 +35,6 @@ import qualified Data.ByteString.Internal as BI
 import Data.Hashable (Hashable (..), hashUsing)
 import qualified Data.List as List
 import Data.List.NonEmpty (NonEmpty)
-import qualified Data.List.NonEmpty as NE
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -78,11 +77,13 @@ renderScript = maybeSubtag "" $ \s -> TB.fromString $ '-' : List.unfoldr go (s, 
 -- 'renderLanguageTag' y@.
 data LanguageTag
   = NormalTag {-# UNPACK #-} !Normal
+  | PrivateUse !(NonEmpty Subtag)
   | Grandfathered !Grandfathered
   deriving (Eq, Ord)
 
 instance NFData LanguageTag where
   rnf (NormalTag x) = rnf x
+  rnf (PrivateUse x) = rnf x
   rnf (Grandfathered _) = ()
 
 -- TODO: test that this is half the inverse of parse
@@ -94,23 +95,25 @@ instance Hashable LanguageTag where
     s
       `hashWithSalt` (0 :: Int)
       `hashWithSalt` t
-  hashWithSalt s (Grandfathered t) =
+  hashWithSalt s (PrivateUse t) =
     s
       `hashWithSalt` (1 :: Int)
+      `hashWithSalt` t
+  hashWithSalt s (Grandfathered t) =
+    s
+      `hashWithSalt` (2 :: Int)
       `hashWithSalt` t
 
 -- | Render a language tag to a lazy text builder
 renderLanguageTagBuilder :: LanguageTag -> TB.Builder
-renderLanguageTagBuilder (NormalTag (Normal pr e1 e2 e3 sc reg vars exts pu))
-  | pr == nullSubtag = TB.singleton 'x' <> foldMap renderLowPref pu
-  | otherwise =
-    pr' <> e1' <> e2' <> e3' <> sc' <> reg'
-      <> vars'
-      <> exts'
-      <> pu'
+renderLanguageTagBuilder (NormalTag (Normal pr e1 e2 e3 sc reg vars exts pu)) =
+  pr' <> e1' <> e2' <> e3' <> sc' <> reg'
+    <> vars'
+    <> exts'
+    <> pu'
   where
     renderLowPref s = "-" <> renderSubtagBuilder s
-    pr' = maybeSubtag "" renderSubtagBuilder pr
+    pr' = renderSubtagBuilder pr
     e1' = maybeSubtag "" renderLowPref e1
     e2' = maybeSubtag "" renderLowPref e2
     e3' = maybeSubtag "" renderLowPref e3
@@ -122,6 +125,9 @@ renderLanguageTagBuilder (NormalTag (Normal pr e1 e2 e3 sc reg vars exts pu))
     pu'
       | null pu = ""
       | otherwise = "-" <> TB.singleton 'x' <> foldMap renderLowPref pu
+renderLanguageTagBuilder (PrivateUse t) = TB.singleton 'x' <> foldMap renderLowPref t
+  where
+    renderLowPref s = "-" <> renderSubtagBuilder s
 renderLanguageTagBuilder (Grandfathered t) = case t of
   ArtLojban -> "art-lojban"
   CelGaulish -> "cel-gaulish"
@@ -180,7 +186,7 @@ renderLanguageTag = TL.toStrict . TB.toLazyText . renderLanguageTagBuilder
 -- * if an @extlang@ component is not 'nullSubtag' then all the
 --   previous @extlang@ components must not be 'nullSubtag' either.
 data Normal = Normal
-  { primlang :: {-# UNPACK #-} !MaybeSubtag,
+  { primlang :: {-# UNPACK #-} !Subtag,
     extlang1 :: {-# UNPACK #-} !MaybeSubtag,
     extlang2 :: {-# UNPACK #-} !MaybeSubtag,
     extlang3 :: {-# UNPACK #-} !MaybeSubtag,
@@ -427,7 +433,7 @@ unsafeFullNormalTag ::
 unsafeFullNormalTag l me me2 me3 ms mr vs es pus =
   NormalTag $
     Normal
-      { primlang = justSubtag $ parseSubtagMangled l,
+      { primlang = parseSubtagMangled l,
         extlang1 = mmangled me,
         extlang2 = mmangled me2,
         extlang3 = mmangled me3,
@@ -450,5 +456,5 @@ unsafeFullNormalTag l me me2 me3 ms mr vs es pus =
 -- those private use subtags. This function uses 'parseSubtagMangled',
 -- and so the warnings for that function apply here as well.
 unsafePrivateTag :: NonEmpty Text -> LanguageTag
-unsafePrivateTag = unsafeNormalTag "" "" "" "" [] [] . NE.toList
+unsafePrivateTag = PrivateUse . fmap parseSubtagMangled
 {-# INLINE unsafePrivateTag #-}

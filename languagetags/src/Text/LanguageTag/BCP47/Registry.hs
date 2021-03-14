@@ -32,6 +32,8 @@ module Text.LanguageTag.BCP47.Registry
   )
 where
 
+import qualified Data.Map.Strict as M
+import qualified Data.Set as S
 import Text.LanguageTag.BCP47.Registry.Extlang
 import Text.LanguageTag.BCP47.Registry.Grandfathered
 import Text.LanguageTag.BCP47.Registry.Language
@@ -42,10 +44,28 @@ import Text.LanguageTag.BCP47.Registry.Variant
 import qualified Text.LanguageTag.BCP47.Syntax as Syn
 import Text.LanguageTag.Internal.BCP47.Registry.Date
 import Text.LanguageTag.Internal.BCP47.Registry.Types
-import Text.LanguageTag.Subtag (Subtag)
+import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn
+import Text.LanguageTag.Subtag (Subtag, justSubtag, nullSubtag)
 
 toSubtags :: BCP47Tag -> [Subtag]
 toSubtags = Syn.toSubtags . toSyntaxTag
 
 toSyntaxTag :: BCP47Tag -> Syn.LanguageTag
-toSyntaxTag = undefined
+toSyntaxTag (NormalTag n) =
+  Syn.NormalTag $
+    Syn.Normal
+      { Syn.primlang = languageToSubtag $ language n,
+        Syn.extlang1 = mto extlangToSubtag extlang n,
+        Syn.extlang2 = nullSubtag,
+        Syn.extlang3 = nullSubtag,
+        Syn.script = mto scriptToSubtag script n,
+        Syn.region = mto regionToSubtag region n,
+        Syn.variants = S.toList $ S.map variantToSubtag $ variants n,
+        Syn.extensions = fmap toExt $ M.toList $ extensions n,
+        Syn.privateUse = privateUse n
+      }
+  where
+    mto f p x = maybe nullSubtag (justSubtag . f) $ p x
+    toExt (c, x) = Syn.Extension c $ fromExtensionSubtag <$> x
+toSyntaxTag (PrivateUse x) = Syn.PrivateUse x
+toSyntaxTag (GrandfatheredTag x) = Syn.Grandfathered x

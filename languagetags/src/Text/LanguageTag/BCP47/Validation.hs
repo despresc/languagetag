@@ -27,7 +27,6 @@ module Text.LanguageTag.BCP47.Validation
 where
 
 import qualified Data.List as List
-import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import Text.LanguageTag.BCP47.Registry
@@ -81,16 +80,31 @@ maybeValidate cmp f = maybeSubtag (pure Nothing) (fmap Just . validate cmp f)
 validateBCP47 :: Syn.LanguageTag -> Either ValidateError BCP47Tag
 validateBCP47 = validateBCP47'
 
--- TODO: bring back the private use tag in syntax, I think?
 -- TODO: should probably write the lax version of this
 validateBCP47' :: Syn.LanguageTag -> VM BCP47Tag
-validateBCP47' (Syn.NormalTag (Syn.Normal mpl e1 e2 e3 s r vs es ps)) =
-  maybeSubtag neps go mpl
+validateBCP47' (Syn.NormalTag (Syn.Normal pl e1 e2 e3 s r vs es ps)) = case validateLanguage pl of
+  Nothing -> throw $ ErrorLanguage pl
+  Just valpl -> do
+    vale1 <- maybeValidate ErrorExtlang validateExtlang e1
+    guardNull e2
+    guardNull e3
+    vals <- maybeValidate ErrorScript validateScript s
+    valr <- maybeValidate ErrorRegion validateRegion r
+    valvs <- List.foldl' addVariant (pure mempty) vs
+    vales <- List.foldl' addExtension (pure mempty) es
+    pure $
+      NormalTag
+        Normal
+          { language = valpl,
+            extlang = vale1,
+            script = vals,
+            region = valr,
+            variants = valvs,
+            extensions = vales,
+            privateUse = ps
+          }
   where
     guardNull = maybeSubtag (pure ()) $ throw . ErrorExcessExtlang
-    neps = case NE.nonEmpty ps of
-      Just l -> pure $ PrivateUse l
-      Nothing -> error "internal invariant violated: tag has no primary language and an empty private use section"
     addVariant st v = do
       st' <- st
       v' <- validate ErrorVariant validateVariant v
@@ -104,27 +118,7 @@ validateBCP47' (Syn.NormalTag (Syn.Normal mpl e1 e2 e3 s r vs es ps)) =
       M.alterF (insertExtension c $ Syn.extTags e) c m'
     insertExtension _ ts Nothing = pure $ Just $ ExtensionSubtag <$> ts
     insertExtension c _ (Just _) = throw $ ErrorDuplicateExtension c
-    go pl = case validateLanguage pl of
-      Nothing -> throw $ ErrorLanguage pl
-      Just valpl -> do
-        vale1 <- maybeValidate ErrorExtlang validateExtlang e1
-        guardNull e2
-        guardNull e3
-        vals <- maybeValidate ErrorScript validateScript s
-        valr <- maybeValidate ErrorRegion validateRegion r
-        valvs <- List.foldl' addVariant (pure mempty) vs
-        vales <- List.foldl' addExtension (pure mempty) es
-        pure $
-          NormalTag
-            Normal
-              { language = valpl,
-                extlang = vale1,
-                script = vals,
-                region = valr,
-                variants = valvs,
-                extensions = vales,
-                privateUse = ps
-              }
+validateBCP47' (Syn.PrivateUse x) = pure $ PrivateUse x
 validateBCP47' (Syn.Grandfathered x) = pure $ GrandfatheredTag x
 
 {-

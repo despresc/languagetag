@@ -778,12 +778,12 @@ renderRangeRecordModuleWith tyname imps proj rend reg =
     lookupname1 = "lookup" <> tyname <> "Details"
     lookup1 =
       [ "-- | Look up the tag and record details associated to the given '" <> tyname <> "' tag",
-        lookupname1 <> " :: " <> tyname <> " -> (Syn.LanguageTag, RangeRecord)",
+        lookupname1 <> " :: " <> tyname <> " -> (Syn.Normal, RangeRecord)",
         "lookup" <> tyname <> "Details = V.unsafeIndex " <> detailTableName <> " . fromEnum"
       ]
     lookupname2 = T.toLower tyname <> "ToTag"
     lookup2 =
-      [ lookupname2 <> " :: " <> tyname <> " -> Syn.LanguageTag",
+      [ lookupname2 <> " :: " <> tyname <> " -> Syn.Normal",
         lookupname2 <> " = fst . " <> lookupname1
       ]
     lookupname3 = "lookup" <> tyname <> "Record"
@@ -792,7 +792,7 @@ renderRangeRecordModuleWith tyname imps proj rend reg =
         lookupname3 <> " = snd . " <> lookupname1
       ]
     detailsTable =
-      [ detailTableName <> " :: Vector (Syn.LanguageTag, RangeRecord)",
+      [ detailTableName <> " :: Vector (Syn.Normal, RangeRecord)",
         detailTableName <> " = V.fromList"
       ]
         <> tableEntries
@@ -1145,7 +1145,7 @@ renderSplitRegistry sr = do
         T.intercalate
           " "
           [ "Normal",
-            resolvePl reg $ renderSubtag $ maybeSubtag (error "no primary language subtag?") id pl,
+            resolvePl reg $ renderSubtag pl,
             mrender' e1 (resolveExt reg . renderSubtag),
             mrender' sc (resolveScr reg . renderSubtag),
             mrender' regn (resolveReg reg . renderSubtag),
@@ -1233,7 +1233,7 @@ renderSplitRegistry sr = do
         T.intercalate
           " "
           [ "Syn.Normal",
-            msrender pl resolvePl',
+            resolvePl' pl,
             msrender e1 resolveExt',
             "nullSubtag",
             "nullSubtag",
