@@ -978,7 +978,7 @@ renderSplitRegistry sr = do
     ]
   where
     rendwrite p (x, y) = T.writeFile (p <> x) $ y sr
-    intprefix = "./src/Text/LanguageTag/Internal/BCP47/Registry/"
+    intprefix = "../languagetags/src/Text/LanguageTag/Internal/BCP47/Registry/"
     regdatemodule =
       T.unlines
         [ warning,
