@@ -12,6 +12,10 @@ import Text.LanguageTag.BCP47.Syntax
 
 - test case insensitivity in the grandfathered tags
 
+- test that the canonicalization of a redundant tag considered as a
+  normal tag exactly matches its preferred value in the associated
+  record (this is actually quite important!)
+
 -}
 
 irregularTags :: [(Text, Grandfathered)]

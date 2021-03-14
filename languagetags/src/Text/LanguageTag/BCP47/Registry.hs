@@ -13,8 +13,12 @@
 -- <https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry>.
 module Text.LanguageTag.BCP47.Registry
   ( BCP47Tag (..),
+    toSyntaxTag,
+    toSubtags,
     Normal (..),
     ExtensionSubtag,
+    toExtensionSubtag,
+    fromExtensionSubtag,
     bcp47RegistryDate,
     Scope (..),
     Deprecation (..),
@@ -35,5 +39,13 @@ import Text.LanguageTag.BCP47.Registry.Redundant
 import Text.LanguageTag.BCP47.Registry.Region
 import Text.LanguageTag.BCP47.Registry.Script
 import Text.LanguageTag.BCP47.Registry.Variant
+import qualified Text.LanguageTag.BCP47.Syntax as Syn
 import Text.LanguageTag.Internal.BCP47.Registry.Date
 import Text.LanguageTag.Internal.BCP47.Registry.Types
+import Text.LanguageTag.Subtag (Subtag)
+
+toSubtags :: BCP47Tag -> [Subtag]
+toSubtags = Syn.toSubtags . toSyntaxTag
+
+toSyntaxTag :: BCP47Tag -> Syn.LanguageTag
+toSyntaxTag = undefined

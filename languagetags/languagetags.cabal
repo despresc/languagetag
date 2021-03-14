@@ -40,6 +40,7 @@ library
     vector
   ghc-options: -Wall
   exposed-modules:
+    Text.LanguageTag.BCP47.Canonicalization
     Text.LanguageTag.BCP47.Registry
     Text.LanguageTag.BCP47.Registry.Extlang
     Text.LanguageTag.BCP47.Registry.Grandfathered
@@ -48,8 +49,8 @@ library
     Text.LanguageTag.BCP47.Registry.Region
     Text.LanguageTag.BCP47.Registry.Script
     Text.LanguageTag.BCP47.Registry.Variant
-    Text.LanguageTag.BCP47.Validation
     Text.LanguageTag.BCP47.Syntax
+    Text.LanguageTag.BCP47.Validation
     Text.LanguageTag.Internal.BCP47.Registry.DataConShow
     Text.LanguageTag.Internal.BCP47.Registry.Types
     Text.LanguageTag.Internal.BCP47.Syntax
@@ -57,6 +58,7 @@ library
     Text.LanguageTag.Subtag
 
   other-modules:
+    Text.LanguageTag.Internal.BCP47.Registry.Date
     Text.LanguageTag.Internal.BCP47.Registry.Extlang
     Text.LanguageTag.Internal.BCP47.Registry.ExtlangRecords
     Text.LanguageTag.Internal.BCP47.Registry.Grandfathered
@@ -68,7 +70,6 @@ library
     Text.LanguageTag.Internal.BCP47.Registry.RedundantRecords
     Text.LanguageTag.Internal.BCP47.Registry.Region
     Text.LanguageTag.Internal.BCP47.Registry.RegionRecords
-    Text.LanguageTag.Internal.BCP47.Registry.Date
     Text.LanguageTag.Internal.BCP47.Registry.Script
     Text.LanguageTag.Internal.BCP47.Registry.ScriptRecords
     Text.LanguageTag.Internal.BCP47.Registry.Variant

@@ -100,11 +100,11 @@ instance NFData ExtensionSubtag where
 
 -- | A primary language subtag record
 data LanguageRecord = LanguageRecord
-  { langDescription :: NonEmpty Text,
-    langDeprecation :: Deprecation Language,
-    langScriptSuppression :: Maybe Script,
-    langMacrolanguage :: Maybe Language,
-    langScope :: Maybe Scope
+  { languageDescription :: NonEmpty Text,
+    languageDeprecation :: Deprecation Language,
+    languageScriptSuppression :: Maybe Script,
+    languageMacrolanguage :: Maybe Language,
+    languageScope :: Maybe Scope
   }
 
 -- | An extended language subtag record. In these records, a preferred
@@ -149,7 +149,7 @@ data RegionRecord = RegionRecord
 -- recommended as the replacement for the tag.
 data RangeRecord = RangeRecord
   { rangeDescription :: NonEmpty Text,
-    rangeDeprecation :: Deprecation BCP47Tag
+    rangeDeprecation :: Deprecation Normal
   }
 
 -- | The scope of a language or extended language

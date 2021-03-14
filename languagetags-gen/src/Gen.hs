@@ -1136,7 +1136,7 @@ renderSplitRegistry sr = do
 
     showPrefs reg l = "[" <> T.intercalate "," (showTag reg <$> l) <> "]"
     showTag reg tag = case parseBCP47 tag of
-      Right (NormalTag n) -> "NormalTag $ " <> printNormalTag reg tag n
+      Right (NormalTag n) -> printNormalTag reg tag n
       _ -> error $ T.unpack $ "can't parse tag value " <> tag
     printNormalTag reg tag (Normal pl e1 e2 e3 sc regn vars exts pus)
       | not $ null exts && null pus && nullSubtag == e2 && nullSubtag == e3 =
@@ -1179,21 +1179,21 @@ renderSplitRegistry sr = do
     resolveDeprGrand _ NotDeprecated = "NotDeprecated"
     resolveDeprGrand _ DeprecatedSimple = "DeprecatedSimple"
     resolveDeprGrand reg (DeprecatedPreferred x) = case x of
-      "en-GB-oxendict" -> parens "DeprecatedPreferred $ NormalTag $ Normal En Nothing Nothing (Just GB) (S.singleton Oxendict) M.empty []"
+      "en-GB-oxendict" -> parens "DeprecatedPreferred $ Normal En Nothing Nothing (Just GB) (S.singleton Oxendict) M.empty []"
       _ ->
         parens $
-          "DeprecatedPreferred $ NormalTag $ Normal "
+          "DeprecatedPreferred $ Normal "
             <> resolvePl reg x
             <> " Nothing Nothing Nothing S.empty M.empty []"
 
     resolveDeprRedundant _ NotDeprecated = "NotDeprecated"
     resolveDeprRedundant _ DeprecatedSimple = "DeprecatedSimple"
     resolveDeprRedundant reg (DeprecatedPreferred x) = case x of
-      "cmn-Hans" -> parens "DeprecatedPreferred $ NormalTag $ Normal Cmn Nothing (Just Hans) Nothing S.empty M.empty []"
-      "cmn-Hant" -> parens "DeprecatedPreferred $ NormalTag $ Normal Cmn Nothing (Just Hant) Nothing S.empty M.empty []"
+      "cmn-Hans" -> parens "DeprecatedPreferred $ Normal Cmn Nothing (Just Hans) Nothing S.empty M.empty []"
+      "cmn-Hant" -> parens "DeprecatedPreferred $ Normal Cmn Nothing (Just Hant) Nothing S.empty M.empty []"
       _ ->
         parens $
-          "DeprecatedPreferred $ NormalTag $ Normal "
+          "DeprecatedPreferred $ Normal "
             <> resolvePl reg x
             <> " Nothing Nothing Nothing S.empty M.empty []"
 
@@ -1224,7 +1224,7 @@ renderSplitRegistry sr = do
          in rendRec
 
     showSynTag reg tag = case parseBCP47 tag of
-      Right (NormalTag n) -> "Syn.NormalTag $ " <> printSyn reg tag n
+      Right (NormalTag n) -> printSyn reg tag n
       _ -> error $ T.unpack $ "can't parse tag value " <> tag
     printSyn reg tag (Normal pl e1 e2 e3 sc regn vars exts pus)
       | not $ null exts && null pus && nullSubtag == e2 && nullSubtag == e3 =
