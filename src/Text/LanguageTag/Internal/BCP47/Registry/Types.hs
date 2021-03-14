@@ -3,7 +3,7 @@
 -- TODO: qualify exports
 
 -- |
--- Module      : Text.LanguageTag.Internal.BCP47.Validate
+-- Module      : Text.LanguageTag.Internal.BCP47.Registry.Types
 -- Description : Subtag record types
 -- Copyright   : 2021 Christian Despres
 -- License     : BSD-2-Clause
@@ -11,7 +11,7 @@
 --
 -- Warning: this is an internal module and may change or disappear
 -- without regard to the PVP.
-module Text.LanguageTag.Internal.BCP47.Validate.Types where
+module Text.LanguageTag.Internal.BCP47.Registry.Types where
 
 import Control.DeepSeq (NFData (..))
 import Data.Bits (shiftR)
@@ -23,12 +23,12 @@ import Data.Text (Text)
 import Data.Vector (Vector)
 import qualified Data.Vector as V
 import Text.LanguageTag.Internal.BCP47.Syntax (ExtensionChar (..))
-import Text.LanguageTag.Internal.BCP47.Validate.Extlang
-import Text.LanguageTag.Internal.BCP47.Validate.Grandfathered
-import Text.LanguageTag.Internal.BCP47.Validate.Language
-import Text.LanguageTag.Internal.BCP47.Validate.Region
-import Text.LanguageTag.Internal.BCP47.Validate.Script
-import Text.LanguageTag.Internal.BCP47.Validate.Variant
+import Text.LanguageTag.Internal.BCP47.Registry.Extlang
+import Text.LanguageTag.Internal.BCP47.Registry.Grandfathered
+import Text.LanguageTag.Internal.BCP47.Registry.Language
+import Text.LanguageTag.Internal.BCP47.Registry.Region
+import Text.LanguageTag.Internal.BCP47.Registry.Script
+import Text.LanguageTag.Internal.BCP47.Registry.Variant
 import Text.LanguageTag.Subtag (Subtag, subtagLength)
 
 -- | A valid (not merely well-formed) BCP47 language tag. These fall

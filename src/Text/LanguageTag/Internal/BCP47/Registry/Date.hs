@@ -1,6 +1,6 @@
 -- This is an auto-generated file. Do not edit by hand.
 
-module Text.LanguageTag.Internal.BCP47.Validate.RegistryDate where
+module Text.LanguageTag.Internal.BCP47.Registry.Date where
 
 import Data.Time.Calendar (Day(..))
 

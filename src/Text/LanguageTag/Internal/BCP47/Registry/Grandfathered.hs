@@ -2,7 +2,7 @@
 
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Text.LanguageTag.Internal.BCP47.Validate.Grandfathered where
+module Text.LanguageTag.Internal.BCP47.Registry.Grandfathered where
 
 import Prelude hiding (LT, GT)
 import Control.DeepSeq (NFData(..), rwhnf)

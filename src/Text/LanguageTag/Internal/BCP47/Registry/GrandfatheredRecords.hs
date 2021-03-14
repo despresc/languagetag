@@ -3,20 +3,20 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Text.LanguageTag.Internal.BCP47.Validate.GrandfatheredRecords
+module Text.LanguageTag.Internal.BCP47.Registry.GrandfatheredRecords
   (lookupGrandfatheredRecord) where
 
 import Prelude hiding (LT, GT)
-import Text.LanguageTag.Internal.BCP47.Validate.Grandfathered
-import Text.LanguageTag.Internal.BCP47.Validate.Types
+import Text.LanguageTag.Internal.BCP47.Registry.Grandfathered
+import Text.LanguageTag.Internal.BCP47.Registry.Types
 import Data.List.NonEmpty (NonEmpty(..))
 import Data.Vector (Vector)
 import qualified Data.Vector as V
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
-import Text.LanguageTag.Internal.BCP47.Validate.Language
-import Text.LanguageTag.Internal.BCP47.Validate.Region
-import Text.LanguageTag.Internal.BCP47.Validate.Variant
+import Text.LanguageTag.Internal.BCP47.Registry.Language
+import Text.LanguageTag.Internal.BCP47.Registry.Region
+import Text.LanguageTag.Internal.BCP47.Registry.Variant
 
 grandfatheredDetails :: Vector RangeRecord
 grandfatheredDetails = V.fromList
@@ -49,4 +49,4 @@ grandfatheredDetails = V.fromList
 
 -- | Look up the subtag and record details associated to the given 'Grandfathered' tag.
 lookupGrandfatheredRecord :: Grandfathered -> RangeRecord
-lookupGrandfatheredRecord= V.unsafeIndex grandfatheredDetails . fromEnum
+lookupGrandfatheredRecord = V.unsafeIndex grandfatheredDetails . fromEnum

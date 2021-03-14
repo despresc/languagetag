@@ -3,20 +3,20 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Text.LanguageTag.Internal.BCP47.Validate.RedundantRecords
-  (lookupRedundantDetails, lookupRedundantTag, lookupRedundantRecord) where
+module Text.LanguageTag.Internal.BCP47.Registry.RedundantRecords
+  (lookupRedundantDetails, redundantToTag, lookupRedundantRecord) where
 
 import Prelude hiding (LT, GT)
-import Text.LanguageTag.Internal.BCP47.Validate.Redundant
-import Text.LanguageTag.Internal.BCP47.Validate.Types
+import Text.LanguageTag.Internal.BCP47.Registry.Redundant
+import Text.LanguageTag.Internal.BCP47.Registry.Types
 import Data.List.NonEmpty (NonEmpty(..))
 import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn
 import Data.Vector (Vector)
 import qualified Data.Vector as V
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
-import Text.LanguageTag.Internal.BCP47.Validate.Script
-import Text.LanguageTag.Internal.BCP47.Validate.Language
+import Text.LanguageTag.Internal.BCP47.Registry.Script
+import Text.LanguageTag.Internal.BCP47.Registry.Language
 import Text.LanguageTag.Internal.Subtag (Subtag(..))
 import Text.LanguageTag.Subtag (nullSubtag, justSubtag)
 
@@ -94,8 +94,8 @@ redundantDetails = V.fromList
 lookupRedundantDetails :: Redundant -> (Syn.LanguageTag, RangeRecord)
 lookupRedundantDetails = V.unsafeIndex redundantDetails . fromEnum
 
-lookupRedundantTag :: Redundant -> Syn.LanguageTag
-lookupRedundantTag = fst . lookupRedundantDetails
+redundantToTag :: Redundant -> Syn.LanguageTag
+redundantToTag = fst . lookupRedundantDetails
 
 lookupRedundantRecord :: Redundant -> RangeRecord
 lookupRedundantRecord = snd . lookupRedundantDetails

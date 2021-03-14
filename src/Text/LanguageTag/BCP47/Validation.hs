@@ -1,5 +1,5 @@
 -- |
--- Module      : Text.LanguageTag.BCP47.Validate
+-- Module      : Text.LanguageTag.BCP47.Validation
 -- Description : Language tag validation
 -- Copyright   : 2021 Christian Despres
 -- License     : BSD-2-Clause
@@ -7,14 +7,14 @@
 --
 -- This module provides the 'validateBCP47' function to validate a
 -- syntactically well-formed 'LanguageTag', transforming it into a
--- 'BCP47Tag' value. This module also re-exports the modules
--- containing the data types that represent all of the subtags in the
--- IANA registry, the current version of which is available at
--- <https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry>. See
--- 'bcp47RegistryDate' for the version of the registry that this
--- library uses.
-module Text.LanguageTag.BCP47.Validate
-  ( -- * Valid tags
+-- 'BCP47Tag' value, as well as functions to validate the different
+-- types of subtags. See
+-- 'Text.LanguageTag.BCP47.Registry.bcp47RegistryDate' for the version
+-- of the registry that this library uses; the current version of the
+-- IANA subtag registry is available at
+-- <https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry>.
+module Text.LanguageTag.BCP47.Validation
+  ( -- * Tag validation
     validateBCP47,
     BCP47Tag (..),
     Normal (..),
@@ -22,46 +22,12 @@ module Text.LanguageTag.BCP47.Validate
     toExtensionSubtag,
     fromExtensionSubtag,
 
-    -- ** Tag validation and conversion
+    -- * Subtag validation
     validateLanguage,
-    languageToSubtag,
     validateExtlang,
-    extlangToSubtag,
     validateScript,
-    scriptToSubtag,
     validateRegion,
-    regionToSubtag,
     validateVariant,
-    variantToSubtag,
-
-    -- * The registered subtags
-    -- $thetags
-    bcp47RegistryDate,
-    module Text.LanguageTag.BCP47.Validate.Language,
-    module Text.LanguageTag.BCP47.Validate.Extlang,
-    module Text.LanguageTag.BCP47.Validate.Script,
-    module Text.LanguageTag.BCP47.Validate.Region,
-    module Text.LanguageTag.BCP47.Validate.Variant,
-    module Text.LanguageTag.BCP47.Validate.Grandfathered,
-    module Text.LanguageTag.BCP47.Validate.Redundant,
-
-    -- * Registry records
-    -- $therecords
-    LanguageRecord (..),
-    lookupLanguageRecord,
-    ExtlangRecord (..),
-    lookupExtlangRecord,
-    ScriptRecord (..),
-    lookupScriptRecord,
-    RegionRecord (..),
-    lookupRegionRecord,
-    VariantRecord (..),
-    lookupVariantRecord,
-    RangeRecord (..),
-    lookupGrandfatheredRecord,
-    lookupRedundantDetails,
-    Scope (..),
-    Deprecation (..),
   )
 where
 
@@ -69,24 +35,15 @@ import qualified Data.List as List
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
+import Text.LanguageTag.BCP47.Registry
 import qualified Text.LanguageTag.BCP47.Syntax as Syn
-import Text.LanguageTag.BCP47.Validate.Extlang
-import Text.LanguageTag.BCP47.Validate.Grandfathered
-import Text.LanguageTag.BCP47.Validate.Language
-import Text.LanguageTag.BCP47.Validate.Redundant
-import Text.LanguageTag.BCP47.Validate.Region
-import Text.LanguageTag.BCP47.Validate.Script
-import Text.LanguageTag.BCP47.Validate.Variant
+import Text.LanguageTag.Internal.BCP47.Registry.ExtlangRecords
+import Text.LanguageTag.Internal.BCP47.Registry.LanguageRecords
+import Text.LanguageTag.Internal.BCP47.Registry.RegionRecords
+import Text.LanguageTag.Internal.BCP47.Registry.ScriptRecords
+import Text.LanguageTag.Internal.BCP47.Registry.Types
+import Text.LanguageTag.Internal.BCP47.Registry.VariantRecords
 import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn
-import Text.LanguageTag.Internal.BCP47.Validate.ExtlangRecords
-import Text.LanguageTag.Internal.BCP47.Validate.GrandfatheredRecords
-import Text.LanguageTag.Internal.BCP47.Validate.LanguageRecords
-import Text.LanguageTag.Internal.BCP47.Validate.RedundantRecords
-import Text.LanguageTag.Internal.BCP47.Validate.RegionRecords
-import Text.LanguageTag.Internal.BCP47.Validate.RegistryDate
-import Text.LanguageTag.Internal.BCP47.Validate.ScriptRecords
-import Text.LanguageTag.Internal.BCP47.Validate.Types
-import Text.LanguageTag.Internal.BCP47.Validate.VariantRecords
 import Text.LanguageTag.Internal.Subtag (Subtag (..), Trie (..))
 import Text.LanguageTag.Subtag
   ( MaybeSubtag,

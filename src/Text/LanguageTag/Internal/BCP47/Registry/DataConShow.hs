@@ -1,5 +1,5 @@
 -- |
--- Module      : Text.LanguageTag.Internal.BCP47.Validate.DataConShow
+-- Module      : Text.LanguageTag.Internal.BCP47.Registry.DataConShow
 -- Description : Showing the data constructors associated to subtags
 -- Copyright   : 2021 Christian Despres
 -- License     : BSD-2-Clause
@@ -14,7 +14,7 @@
 -- instances manually using the functions in this module avoids this
 -- problem, and the functions can also be used to render the
 -- constructors in the first place.
-module Text.LanguageTag.Internal.BCP47.Validate.DataConShow where
+module Text.LanguageTag.Internal.BCP47.Registry.DataConShow where
 
 import Data.Char (isDigit)
 import qualified Data.Text.Lazy as TL

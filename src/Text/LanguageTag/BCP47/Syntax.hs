@@ -32,7 +32,7 @@ module Text.LanguageTag.BCP47.Syntax
     -- ** Grandfathered tags
     -- $grandfathered
     grandfatheredSyntax,
-    module Text.LanguageTag.Internal.BCP47.Validate.Grandfathered,
+    module Text.LanguageTag.Internal.BCP47.Registry.Grandfathered,
 
     -- * Errors
     Err (..),
@@ -55,8 +55,8 @@ import Data.Maybe (mapMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Word (Word8)
+import Text.LanguageTag.Internal.BCP47.Registry.Grandfathered
 import Text.LanguageTag.Internal.BCP47.Syntax
-import Text.LanguageTag.Internal.BCP47.Validate.Grandfathered
 import Text.LanguageTag.Internal.Subtag (Subtag (..), SubtagChar (..), Trie (..))
 import Text.LanguageTag.Subtag
 
@@ -406,10 +406,10 @@ parsePrivate initpos inp = do
 -- into the current standard via the grammar of the tags itself. All
 -- of them are valid, but most are deprecated; see the documentation
 -- for
--- 'Text.LanguageTag.Internal.BCP47.Validate.Grandfathered.Grandfathered'
+-- 'Text.LanguageTag.Internal.BCP47.Registry.Grandfathered.Grandfathered'
 -- for up-to-date details.
 
--- | Embed a 'Text.LanguageTag.BCP47.Validate.Grandfathered' language
+-- | Embed a 'Text.LanguageTag.BCP47.Registry.Grandfathered' language
 -- tag in the 'LanguageTag' type
 grandfatheredSyntax :: Grandfathered -> LanguageTag
 grandfatheredSyntax = Grandfathered

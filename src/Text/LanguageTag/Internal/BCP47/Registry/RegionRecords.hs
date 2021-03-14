@@ -3,12 +3,12 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Text.LanguageTag.Internal.BCP47.Validate.RegionRecords
+module Text.LanguageTag.Internal.BCP47.Registry.RegionRecords
   (lookupRegionDetails, validateRegion, regionToSubtag, lookupRegionRecord) where
 
 import Prelude hiding (LT, GT)
-import Text.LanguageTag.Internal.BCP47.Validate.Region
-import Text.LanguageTag.Internal.BCP47.Validate.Types
+import Text.LanguageTag.Internal.BCP47.Registry.Region
+import Text.LanguageTag.Internal.BCP47.Registry.Types
 import Data.List.NonEmpty (NonEmpty(..))
 import Data.Vector (Vector)
 import qualified Data.Vector as V

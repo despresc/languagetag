@@ -3,21 +3,21 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Text.LanguageTag.Internal.BCP47.Validate.VariantRecords
+module Text.LanguageTag.Internal.BCP47.Registry.VariantRecords
   (lookupVariantDetails, validateVariant, variantToSubtag, lookupVariantRecord) where
 
 import Prelude hiding (LT, GT)
-import Text.LanguageTag.Internal.BCP47.Validate.Variant
-import Text.LanguageTag.Internal.BCP47.Validate.Types
+import Text.LanguageTag.Internal.BCP47.Registry.Variant
+import Text.LanguageTag.Internal.BCP47.Registry.Types
 import Data.List.NonEmpty (NonEmpty(..))
 import Data.Vector (Vector)
 import qualified Data.Vector as V
 import Text.LanguageTag.Internal.Subtag (Subtag(..))
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
-import Text.LanguageTag.Internal.BCP47.Validate.Language
-import Text.LanguageTag.Internal.BCP47.Validate.Script
-import Text.LanguageTag.Internal.BCP47.Validate.Region
+import Text.LanguageTag.Internal.BCP47.Registry.Language
+import Text.LanguageTag.Internal.BCP47.Registry.Script
+import Text.LanguageTag.Internal.BCP47.Registry.Region
 
 -- | The subtag and record information associated to the 'Variant' type.
 variantDetails :: Vector (Subtag, VariantRecord)

@@ -3,17 +3,17 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Text.LanguageTag.Internal.BCP47.Validate.LanguageRecords
+module Text.LanguageTag.Internal.BCP47.Registry.LanguageRecords
   (lookupLanguageDetails, validateLanguage, languageToSubtag, lookupLanguageRecord) where
 
 import Prelude hiding (LT, GT)
-import Text.LanguageTag.Internal.BCP47.Validate.Language
-import Text.LanguageTag.Internal.BCP47.Validate.Types
+import Text.LanguageTag.Internal.BCP47.Registry.Language
+import Text.LanguageTag.Internal.BCP47.Registry.Types
 import Data.List.NonEmpty (NonEmpty(..))
 import Data.Vector (Vector)
 import qualified Data.Vector as V
 import Text.LanguageTag.Internal.Subtag (Subtag(..))
-import Text.LanguageTag.Internal.BCP47.Validate.Script
+import Text.LanguageTag.Internal.BCP47.Registry.Script
 
 -- | The subtag and record information associated to the 'Language' type.
 languageDetails :: Vector (Subtag, LanguageRecord)

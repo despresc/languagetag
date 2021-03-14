@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 -- |
--- Module      : Text.LanguageTag.Internal.BCP47.Validate.Orphans
+-- Module      : Text.LanguageTag.Internal.BCP47.Registry.Orphans
 -- Description : Orphan instances for the subtag types
 -- Copyright   : 2021 Christian Despres
 -- License     : BSD-2-Clause
@@ -10,21 +10,21 @@
 --
 -- This module contains all of the orphan 'Show' instances for the
 -- different registered subtag types. Also see
--- "Text.LanguageTag.Internal.BCP47.Validate.DataConShow".
-module Text.LanguageTag.Internal.BCP47.Validate.Orphans where
+-- "Text.LanguageTag.Internal.BCP47.Registry.DataConShow".
+module Text.LanguageTag.Internal.BCP47.Registry.Orphans where
 
-import Text.LanguageTag.Internal.BCP47.Validate.DataConShow
-import Text.LanguageTag.Internal.BCP47.Validate.Extlang
-import Text.LanguageTag.Internal.BCP47.Validate.ExtlangRecords
-import Text.LanguageTag.Internal.BCP47.Validate.Language
-import Text.LanguageTag.Internal.BCP47.Validate.LanguageRecords
-import Text.LanguageTag.Internal.BCP47.Validate.Region
-import Text.LanguageTag.Internal.BCP47.Validate.RegionRecords
-import Text.LanguageTag.Internal.BCP47.Validate.Script
-import Text.LanguageTag.Internal.BCP47.Validate.ScriptRecords
-import Text.LanguageTag.Internal.BCP47.Validate.Types
-import Text.LanguageTag.Internal.BCP47.Validate.Variant
-import Text.LanguageTag.Internal.BCP47.Validate.VariantRecords
+import Text.LanguageTag.Internal.BCP47.Registry.DataConShow
+import Text.LanguageTag.Internal.BCP47.Registry.Extlang
+import Text.LanguageTag.Internal.BCP47.Registry.ExtlangRecords
+import Text.LanguageTag.Internal.BCP47.Registry.Language
+import Text.LanguageTag.Internal.BCP47.Registry.LanguageRecords
+import Text.LanguageTag.Internal.BCP47.Registry.Region
+import Text.LanguageTag.Internal.BCP47.Registry.RegionRecords
+import Text.LanguageTag.Internal.BCP47.Registry.Script
+import Text.LanguageTag.Internal.BCP47.Registry.ScriptRecords
+import Text.LanguageTag.Internal.BCP47.Registry.Types
+import Text.LanguageTag.Internal.BCP47.Registry.Variant
+import Text.LanguageTag.Internal.BCP47.Registry.VariantRecords
 
 instance Show Language where
   show = languageConShow . languageToSubtag

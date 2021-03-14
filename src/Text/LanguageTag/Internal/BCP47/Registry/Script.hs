@@ -2,7 +2,7 @@
 
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Text.LanguageTag.Internal.BCP47.Validate.Script where
+module Text.LanguageTag.Internal.BCP47.Registry.Script where
 
 import Prelude hiding (LT, GT)
 import Control.DeepSeq (NFData(..), rwhnf)

@@ -3,17 +3,17 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Text.LanguageTag.Internal.BCP47.Validate.ExtlangRecords
+module Text.LanguageTag.Internal.BCP47.Registry.ExtlangRecords
   (lookupExtlangDetails, validateExtlang, extlangToSubtag, lookupExtlangRecord) where
 
 import Prelude hiding (LT, GT)
-import Text.LanguageTag.Internal.BCP47.Validate.Extlang
-import Text.LanguageTag.Internal.BCP47.Validate.Types
+import Text.LanguageTag.Internal.BCP47.Registry.Extlang
+import Text.LanguageTag.Internal.BCP47.Registry.Types
 import Data.List.NonEmpty (NonEmpty(..))
 import Data.Vector (Vector)
 import qualified Data.Vector as V
 import Text.LanguageTag.Internal.Subtag (Subtag(..))
-import Text.LanguageTag.Internal.BCP47.Validate.Language
+import Text.LanguageTag.Internal.BCP47.Registry.Language
 
 -- | The subtag and record information associated to the 'Extlang' type.
 extlangDetails :: Vector (Subtag, ExtlangRecord)
