@@ -12,7 +12,7 @@ import Text.LanguageTag.Internal.BCP47.Registry.Types
 import Data.List.NonEmpty (NonEmpty(..))
 import Data.Vector (Vector)
 import qualified Data.Vector as V
-import Text.LanguageTag.Internal.Subtag (Subtag(..))
+import Text.LanguageTag.Internal.BCP47.Subtag (Subtag(..))
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import Text.LanguageTag.Internal.BCP47.Registry.Language

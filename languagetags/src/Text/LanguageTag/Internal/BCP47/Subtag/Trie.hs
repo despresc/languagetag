@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveFunctor #-}
 
 -- |
--- Module      : Text.LanguageTag.Internal.Subtag.Trie
+-- Module      : Text.LanguageTag.Internal.BCP47.Subtag.Trie
 -- Description : Internal subtag trie definitions
 -- Copyright   : 2021 Christian Despres
 -- License     : BSD-2-Clause
@@ -9,10 +9,10 @@
 --
 -- Warning: this is an internal module and may change or disappear
 -- without regard to the PVP.
-module Text.LanguageTag.Internal.Subtag.Trie where
+module Text.LanguageTag.Internal.BCP47.Subtag.Trie where
 
 import Data.HashMap.Strict (HashMap)
-import Text.LanguageTag.Internal.Subtag (Subtag)
+import Text.LanguageTag.Internal.BCP47.Subtag (Subtag)
 
 -- | A trie indexed by 'Subtag'
 data Trie a = Trie (Maybe a) !(HashMap Subtag (Trie a))

@@ -31,6 +31,10 @@ import qualified Data.List as List
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import Text.LanguageTag.BCP47.Registry
+import Text.LanguageTag.BCP47.Subtag
+  ( MaybeSubtag,
+    maybeSubtag,
+  )
 import qualified Text.LanguageTag.BCP47.Syntax as Syn
 import Text.LanguageTag.Internal.BCP47.Registry.ExtlangRecords
 import Text.LanguageTag.Internal.BCP47.Registry.LanguageRecords
@@ -38,12 +42,8 @@ import Text.LanguageTag.Internal.BCP47.Registry.RegionRecords
 import Text.LanguageTag.Internal.BCP47.Registry.ScriptRecords
 import Text.LanguageTag.Internal.BCP47.Registry.Types
 import Text.LanguageTag.Internal.BCP47.Registry.VariantRecords
+import Text.LanguageTag.Internal.BCP47.Subtag (Subtag (..))
 import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn
-import Text.LanguageTag.Internal.Subtag (Subtag (..))
-import Text.LanguageTag.Subtag
-  ( MaybeSubtag,
-    maybeSubtag,
-  )
 
 -- | A possible error during validation
 data ValidateError

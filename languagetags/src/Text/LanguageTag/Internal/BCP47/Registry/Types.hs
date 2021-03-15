@@ -22,6 +22,7 @@ import Data.Set (Set)
 import Data.Text (Text)
 import Data.Vector (Vector)
 import qualified Data.Vector as V
+import Text.LanguageTag.BCP47.Subtag (Subtag, subtagLength)
 import Text.LanguageTag.Internal.BCP47.Registry.Extlang
 import Text.LanguageTag.Internal.BCP47.Registry.Grandfathered
 import Text.LanguageTag.Internal.BCP47.Registry.Language
@@ -29,7 +30,6 @@ import Text.LanguageTag.Internal.BCP47.Registry.Region
 import Text.LanguageTag.Internal.BCP47.Registry.Script
 import Text.LanguageTag.Internal.BCP47.Registry.Variant
 import Text.LanguageTag.Internal.BCP47.Syntax (ExtensionChar (..))
-import Text.LanguageTag.Subtag (Subtag, subtagLength)
 
 -- | A valid (not merely well-formed) BCP47 language tag. These fall
 -- into three categories:

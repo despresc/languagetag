@@ -4,7 +4,7 @@
 {-# LANGUAGE TypeFamilies #-}
 
 -- |
--- Module      : Text.LanguageTag.Internal.Subtag
+-- Module      : Text.LanguageTag.Internal.BCP47.Subtag
 -- Description : Subtag types and functions
 -- Copyright   : 2021 Christian Despres
 -- License     : BSD-2-Clause
@@ -16,7 +16,7 @@
 -- the rest of the library to satisfy particular invariants that the
 -- type does not enforce. Other components of the library may
 -- misbehave if ill-formed values are given to them.
-module Text.LanguageTag.Internal.Subtag
+module Text.LanguageTag.Internal.BCP47.Subtag
   ( -- * Subtags
     Subtag (..),
     unpackSubtag,

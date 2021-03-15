@@ -42,8 +42,8 @@ import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Builder as TB
 import Data.Word (Word8)
 import Text.LanguageTag.Internal.BCP47.Registry.Grandfathered
-import Text.LanguageTag.Internal.Subtag (SubtagChar (..))
-import Text.LanguageTag.Subtag
+import Text.LanguageTag.Internal.BCP47.Subtag (SubtagChar (..))
+import Text.LanguageTag.BCP47.Subtag
 
 renderRegion :: MaybeSubtag -> TB.Builder
 renderRegion = maybeSubtag "" go

@@ -50,8 +50,8 @@ import qualified Data.Text as T
 import Data.Word (Word8)
 import Text.LanguageTag.Internal.BCP47.Registry.Grandfathered
 import Text.LanguageTag.Internal.BCP47.Syntax
-import Text.LanguageTag.Internal.Subtag (Subtag (..), SubtagChar (..))
-import Text.LanguageTag.Subtag
+import Text.LanguageTag.Internal.BCP47.Subtag (Subtag (..), SubtagChar (..))
+import Text.LanguageTag.BCP47.Subtag
 
 {- TODO:
 - spin out the try* functions into their own functions?

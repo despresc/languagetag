@@ -12,7 +12,7 @@ import Text.LanguageTag.Internal.BCP47.Registry.Types
 import Data.List.NonEmpty (NonEmpty(..))
 import Data.Vector (Vector)
 import qualified Data.Vector as V
-import Text.LanguageTag.Internal.Subtag (Subtag(..))
+import Text.LanguageTag.Internal.BCP47.Subtag (Subtag(..))
 import Text.LanguageTag.Internal.BCP47.Registry.Script
 
 -- | The subtag and record information associated to the 'Language' type.

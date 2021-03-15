@@ -1,12 +1,12 @@
 {-# LANGUAGE BangPatterns #-}
 
 -- |
--- Module      : Text.LanguageTag.Subtag.Trie
+-- Module      : Text.LanguageTag.BCP47.Subtag.Trie
 -- Description : Tries indexed by subtags
 -- Copyright   : 2021 Christian Despres
 -- License     : BSD-2-Clause
 -- Maintainer  : Christian Despres
-module Text.LanguageTag.Subtag.Trie
+module Text.LanguageTag.BCP47.Subtag.Trie
   ( Trie,
     nullTrie,
     trie,
@@ -26,8 +26,8 @@ where
 import Control.Applicative ((<|>))
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as List
-import Text.LanguageTag.Internal.Subtag (Subtag (..))
-import Text.LanguageTag.Internal.Subtag.Trie
+import Text.LanguageTag.Internal.BCP47.Subtag (Subtag (..))
+import Text.LanguageTag.Internal.BCP47.Subtag.Trie
 
 -- | Construct a trie with a possibly-empty root node and the given
 -- children. In case of duplicates 'Subtag' entries in the list, the

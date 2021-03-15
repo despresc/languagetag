@@ -19,7 +19,7 @@ module Text.LanguageTag.Internal.BCP47.Registry.DataConShow where
 import Data.Char (isDigit)
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Builder as TB
-import Text.LanguageTag.Subtag
+import Text.LanguageTag.BCP47.Subtag
 
 -- | Show a subtag in the style of a language data constructor
 languageConShow :: Subtag -> String

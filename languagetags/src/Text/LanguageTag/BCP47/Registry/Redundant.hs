@@ -12,7 +12,8 @@
 module Text.LanguageTag.BCP47.Registry.Redundant
   ( -- * Redundant tags
     Redundant (..),
-    redundantToTag,
+    redundantToSyntaxTag,
+    redundantToValidTag,
 
     -- * Redundant tag records
     RangeRecord (..),
@@ -21,5 +22,14 @@ module Text.LanguageTag.BCP47.Registry.Redundant
 where
 
 import Text.LanguageTag.Internal.BCP47.Registry.Redundant
-import Text.LanguageTag.Internal.BCP47.Registry.RedundantRecords
+import Text.LanguageTag.Internal.BCP47.Registry.RedundantRecords hiding
+  ( redundantToSyntaxTag,
+  )
+import qualified Text.LanguageTag.Internal.BCP47.Registry.RedundantRecords as Internal
 import Text.LanguageTag.Internal.BCP47.Registry.Types
+import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn
+
+-- | Convert a 'Redundant' tag to a merely well-formed 'Syn.BCP47' tag
+redundantToSyntaxTag :: Redundant -> Syn.BCP47
+redundantToSyntaxTag = Syn.NormalTag . Internal.redundantToSyntaxTag
+{-# INLINE redundantToSyntaxTag #-}

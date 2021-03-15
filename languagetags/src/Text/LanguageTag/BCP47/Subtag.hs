@@ -1,7 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 
 -- |
--- Module      : Text.LanguageTag.Subtag
+-- Module      : Text.LanguageTag.BCP47.Subtag
 -- Description : Generic lanuage subtags
 -- Copyright   : 2021 Christian Despres
 -- License     : BSD-2-Clause
@@ -10,7 +10,7 @@
 -- The 'Subtag' and related types in this module provide a compact and
 -- uniform representation for language tag components that are common
 -- to many different standards.
-module Text.LanguageTag.Subtag
+module Text.LanguageTag.BCP47.Subtag
   ( -- * Subtags
     Subtag,
     parseSubtag,
@@ -66,7 +66,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Builder as TB
 import Data.Word (Word64, Word8)
-import Text.LanguageTag.Internal.Subtag
+import Text.LanguageTag.Internal.BCP47.Subtag
 
 ----------------------------------------------------------------
 -- Subtags

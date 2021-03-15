@@ -42,11 +42,11 @@ import Text.LanguageTag.BCP47.Registry.Redundant
 import Text.LanguageTag.BCP47.Registry.Region
 import Text.LanguageTag.BCP47.Registry.Script
 import Text.LanguageTag.BCP47.Registry.Variant
+import Text.LanguageTag.BCP47.Subtag (Subtag, justSubtag, nullSubtag)
 import qualified Text.LanguageTag.BCP47.Syntax as Syn
 import Text.LanguageTag.Internal.BCP47.Registry.Date
 import Text.LanguageTag.Internal.BCP47.Registry.Types
 import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn
-import Text.LanguageTag.Subtag (Subtag, justSubtag, nullSubtag)
 
 -- | Convert a 'BCP47' tag to its component subtags
 toSubtags :: BCP47 -> NonEmpty Subtag

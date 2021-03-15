@@ -11,9 +11,9 @@ module Text.LanguageTag.BCP47.Syntax.Trie where
 
 import Data.Bifunctor (first)
 import Data.Foldable (toList)
+import Text.LanguageTag.BCP47.Subtag.Trie (lookupTrie, lookupTrieLax, pathTrie)
 import Text.LanguageTag.BCP47.Syntax (BCP47, toSubtags)
-import Text.LanguageTag.Internal.Subtag.Trie (Trie (..))
-import Text.LanguageTag.Subtag.Trie (lookupTrie, lookupTrieLax, pathTrie)
+import Text.LanguageTag.Internal.BCP47.Subtag.Trie (Trie (..))
 
 -- | Convert a language tag indexed list to a 'Trie' with the given
 -- root node value

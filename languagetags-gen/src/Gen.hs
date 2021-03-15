@@ -34,10 +34,7 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import Data.Time.Calendar (Day (..))
 import Text.LanguageTag.BCP47.Registry (Deprecation (..), Scope (..))
-import Text.LanguageTag.BCP47.Syntax (parseBCP47)
-import Text.LanguageTag.Internal.BCP47.Registry.DataConShow
-import Text.LanguageTag.Internal.BCP47.Syntax (BCP47 (NormalTag), Normal (..))
-import Text.LanguageTag.Subtag
+import Text.LanguageTag.BCP47.Subtag
   ( Subtag,
     maybeSubtag,
     nullSubtag,
@@ -45,6 +42,9 @@ import Text.LanguageTag.Subtag
     renderSubtagLower,
     unwrapSubtag,
   )
+import Text.LanguageTag.BCP47.Syntax (parseBCP47)
+import Text.LanguageTag.Internal.BCP47.Registry.DataConShow
+import Text.LanguageTag.Internal.BCP47.Syntax (BCP47 (NormalTag), Normal (..))
 
 {-
 TODO:
@@ -675,7 +675,7 @@ renderRecordModuleWith tyname imps proj rend reg =
       "import Data.List.NonEmpty (NonEmpty(..))",
       "import Data.Vector (Vector)",
       "import qualified Data.Vector as V",
-      "import Text.LanguageTag.Internal.Subtag (Subtag(..))"
+      "import Text.LanguageTag.Internal.BCP47.Subtag (Subtag(..))"
     ]
       <> imps
       <> [""]
@@ -746,7 +746,7 @@ renderRangeRecordModuleWith tyname imps proj rend reg =
       "{-# LANGUAGE OverloadedStrings #-}",
       "",
       "module Text.LanguageTag.Internal.BCP47.Registry." <> tyname <> "Records",
-      "  (" <> T.intercalate ", " [lookupname1, lookupname2, lookupname3] <> ") where",
+      "  (" <> T.intercalate ", " [lookupname1, lookupname2, lookupname3, lookupname4] <> ") where",
       "",
       "import Prelude hiding (LT, GT)",
       "import Text.LanguageTag.Internal.BCP47.Registry." <> tyname,
@@ -765,6 +765,8 @@ renderRangeRecordModuleWith tyname imps proj rend reg =
       <> lookup2
       <> [""]
       <> lookup3
+      <> [""]
+      <> lookup4
   where
     detailTableName = T.toLower tyname <> "Details"
     rend' = uncurry $ rend reg
@@ -778,21 +780,29 @@ renderRangeRecordModuleWith tyname imps proj rend reg =
     lookupname1 = "lookup" <> tyname <> "Details"
     lookup1 =
       [ "-- | Look up the tag and record details associated to the given '" <> tyname <> "' tag",
-        lookupname1 <> " :: " <> tyname <> " -> (Syn.Normal, RangeRecord)",
+        lookupname1 <> " :: " <> tyname <> " -> (Normal, Syn.Normal, RangeRecord)",
         "lookup" <> tyname <> "Details = V.unsafeIndex " <> detailTableName <> " . fromEnum"
       ]
-    lookupname2 = T.toLower tyname <> "ToTag"
+    lookupname2 = T.toLower tyname <> "ToValidTag"
     lookup2 =
-      [ lookupname2 <> " :: " <> tyname <> " -> Syn.Normal",
-        lookupname2 <> " = fst . " <> lookupname1
+      [ "-- | Convert a '" <> tyname <> "' tag to a 'Normal' validated tag",
+        lookupname2 <> " :: " <> tyname <> " -> Normal",
+        lookupname2 <> " = (\\(x, _, _) -> x) . " <> lookupname1
       ]
-    lookupname3 = "lookup" <> tyname <> "Record"
+    lookupname3 = T.toLower tyname <> "ToSyntaxTag"
     lookup3 =
-      [ lookupname3 <> " :: " <> tyname <> " -> RangeRecord",
-        lookupname3 <> " = snd . " <> lookupname1
+      [ "-- | Convert a '" <> tyname <> "' tag to a merely well-formed tag",
+        lookupname3 <> " :: " <> tyname <> " -> Syn.Normal",
+        lookupname3 <> " = (\\(_, y, _) -> y) . " <> lookupname1
+      ]
+    lookupname4 = "lookup" <> tyname <> "Record"
+    lookup4 =
+      [ "-- | Look up the record associated to the given '" <> tyname <> "' tag",
+        lookupname4 <> " :: " <> tyname <> " -> RangeRecord",
+        lookupname4 <> " = (\\(_, _, z) -> z) . " <> lookupname1
       ]
     detailsTable =
-      [ detailTableName <> " :: Vector (Syn.Normal, RangeRecord)",
+      [ detailTableName <> " :: Vector (Normal, Syn.Normal, RangeRecord)",
         detailTableName <> " = V.fromList"
       ]
         <> tableEntries
@@ -1256,10 +1266,13 @@ renderSplitRegistry sr = do
 
     redundantImports =
       tagImports
-        <> [ "import Text.LanguageTag.Internal.BCP47.Registry.Script",
+        <> [ "import Text.LanguageTag.BCP47.Subtag (nullSubtag, justSubtag)",
+             "import Text.LanguageTag.Internal.BCP47.Registry.Script",
              "import Text.LanguageTag.Internal.BCP47.Registry.Language",
-             "import Text.LanguageTag.Internal.Subtag (Subtag(..))",
-             "import Text.LanguageTag.Subtag (nullSubtag, justSubtag)"
+             "import Text.LanguageTag.Internal.BCP47.Registry.Region",
+             "import Text.LanguageTag.Internal.BCP47.Registry.Extlang",
+             "import Text.LanguageTag.Internal.BCP47.Registry.Variant",
+             "import Text.LanguageTag.Internal.BCP47.Subtag (Subtag(..))"
            ]
     rendrecredundant = renderRangeRecordModuleWith "Redundant" redundantImports redundantRecords $
       \reg tag (RangeRecord _ desc depr) ->
@@ -1270,7 +1283,7 @@ renderSplitRegistry sr = do
                   parens $ T.pack $ show desc,
                   resolveDeprRedundant reg depr
                 ]
-         in parens $ showSynTag reg tag <> ", " <> rendRec
+         in parens $ showTag reg tag <> ", " <> showSynTag reg tag <> ", " <> rendRec
 
 ----------------------------------------------------------------
 -- Testing functions
