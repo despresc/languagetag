@@ -12,7 +12,7 @@
 -- is available at
 -- <https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry>.
 module Text.LanguageTag.BCP47.Registry
-  ( BCP47Tag (..),
+  ( BCP47 (..),
     toSyntaxTag,
     toSubtags,
     Normal (..),
@@ -32,6 +32,7 @@ module Text.LanguageTag.BCP47.Registry
   )
 where
 
+import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import Text.LanguageTag.BCP47.Registry.Extlang
@@ -47,10 +48,13 @@ import Text.LanguageTag.Internal.BCP47.Registry.Types
 import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn
 import Text.LanguageTag.Subtag (Subtag, justSubtag, nullSubtag)
 
-toSubtags :: BCP47Tag -> [Subtag]
+-- | Convert a 'BCP47' tag to its component subtags
+toSubtags :: BCP47 -> NonEmpty Subtag
 toSubtags = Syn.toSubtags . toSyntaxTag
 
-toSyntaxTag :: BCP47Tag -> Syn.LanguageTag
+-- | Convert a 'BCP47' tag back to a merely well-formed 'Syn.BCP47'
+-- tag
+toSyntaxTag :: BCP47 -> Syn.BCP47
 toSyntaxTag (NormalTag n) =
   Syn.NormalTag $
     Syn.Normal

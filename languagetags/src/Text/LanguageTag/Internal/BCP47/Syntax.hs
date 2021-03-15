@@ -14,9 +14,9 @@
 -- type does not enforce. Other components of the library may
 -- misbehave if ill-formed values are given to them.
 module Text.LanguageTag.Internal.BCP47.Syntax
-  ( LanguageTag (..),
-    renderLanguageTag,
-    renderLanguageTagBuilder,
+  ( BCP47 (..),
+    renderBCP47,
+    renderBCP47Builder,
     Normal (..),
     unsafeNormalTag,
     unsafeFullNormalTag,
@@ -50,7 +50,7 @@ renderRegion = maybeSubtag "" go
   where
     go s
       | subtagLength s == 2 = TB.fromString $ '-' : List.unfoldr capgo (s, 0)
-      | otherwise = renderSubtagBuilder s
+      | otherwise = renderSubtagBuilderLower s
     capgo (n, idx)
       | idx == (2 :: Word8) = Nothing
       | otherwise =
@@ -67,30 +67,30 @@ renderScript = maybeSubtag "" $ \s -> TB.fromString $ '-' : List.unfoldr go (s, 
          in Just (unsafeUnpackUpperLetter c, (n', idx + 1))
       | otherwise =
         let (c, n') = unsafePopChar n
-         in Just (unpackChar c, (n', idx + 1))
+         in Just (unpackCharLower c, (n', idx + 1))
 
 -- | A syntactically well-formed BCP47 tag. See
 -- <https://tools.ietf.org/html/bcp47#section-2.1> for the full
 -- details. Note that the 'Ord' instance does not correspond to that
 -- of 'Text', in the sense that there are language tags @x@ and @y@
--- such that @x < y@ and yet @'renderLanguageTag' x >
--- 'renderLanguageTag' y@.
-data LanguageTag
+-- such that @x < y@ and yet @'renderBCP47' x >
+-- 'renderBCP47' y@.
+data BCP47
   = NormalTag {-# UNPACK #-} !Normal
   | PrivateUse !(NonEmpty Subtag)
   | Grandfathered !Grandfathered
   deriving (Eq, Ord)
 
-instance NFData LanguageTag where
+instance NFData BCP47 where
   rnf (NormalTag x) = rnf x
   rnf (PrivateUse x) = rnf x
   rnf (Grandfathered _) = ()
 
 -- TODO: test that this is half the inverse of parse
-instance Show LanguageTag where
-  showsPrec p ps r = showsPrec p (renderLanguageTagBuilder ps) r
+instance Show BCP47 where
+  showsPrec p ps r = showsPrec p (renderBCP47Builder ps) r
 
-instance Hashable LanguageTag where
+instance Hashable BCP47 where
   hashWithSalt s (NormalTag t) =
     s
       `hashWithSalt` (0 :: Int)
@@ -105,15 +105,15 @@ instance Hashable LanguageTag where
       `hashWithSalt` t
 
 -- | Render a language tag to a lazy text builder
-renderLanguageTagBuilder :: LanguageTag -> TB.Builder
-renderLanguageTagBuilder (NormalTag (Normal pr e1 e2 e3 sc reg vars exts pu)) =
+renderBCP47Builder :: BCP47 -> TB.Builder
+renderBCP47Builder (NormalTag (Normal pr e1 e2 e3 sc reg vars exts pu)) =
   pr' <> e1' <> e2' <> e3' <> sc' <> reg'
     <> vars'
     <> exts'
     <> pu'
   where
-    renderLowPref s = "-" <> renderSubtagBuilder s
-    pr' = renderSubtagBuilder pr
+    renderLowPref s = "-" <> renderSubtagBuilderLower s
+    pr' = renderSubtagBuilderLower pr
     e1' = maybeSubtag "" renderLowPref e1
     e2' = maybeSubtag "" renderLowPref e2
     e3' = maybeSubtag "" renderLowPref e3
@@ -125,10 +125,10 @@ renderLanguageTagBuilder (NormalTag (Normal pr e1 e2 e3 sc reg vars exts pu)) =
     pu'
       | null pu = ""
       | otherwise = "-" <> TB.singleton 'x' <> foldMap renderLowPref pu
-renderLanguageTagBuilder (PrivateUse t) = TB.singleton 'x' <> foldMap renderLowPref t
+renderBCP47Builder (PrivateUse t) = TB.singleton 'x' <> foldMap renderLowPref t
   where
-    renderLowPref s = "-" <> renderSubtagBuilder s
-renderLanguageTagBuilder (Grandfathered t) = case t of
+    renderLowPref s = "-" <> renderSubtagBuilderLower s
+renderBCP47Builder (Grandfathered t) = case t of
   ArtLojban -> "art-lojban"
   CelGaulish -> "cel-gaulish"
   EnGbOed -> "en-GB-oed"
@@ -155,28 +155,12 @@ renderLanguageTagBuilder (Grandfathered t) = case t of
   ZhMin -> "zh-min"
   ZhMinNan -> "zh-min-nan"
   ZhXiang -> "zh-xiang"
-{-# INLINE renderLanguageTagBuilder #-}
+{-# INLINE renderBCP47Builder #-}
 
 -- | Render a language tag to a strict text string
-renderLanguageTag :: LanguageTag -> Text
-renderLanguageTag = TL.toStrict . TB.toLazyText . renderLanguageTagBuilder
-{-# INLINE renderLanguageTag #-}
-
--- TODO HERE: might want to export a LanguageTag -> Normal function or
--- LanguageTag -> Maybe Normal function insteand of the entire
--- LanguageTag constructor and the other sub-constructors.
--- Also consider:
---
--- - replacing [Extension] et al. with Vector Extension
---
--- - making things a little lazier? (in parsing and such, though if we
---   use vector then things will naturally be less lazy).
---
--- - getting rid of the Finish class and making parsing more
---   straightforward?
--- Also should probably consolidate the two grandfathered types into
--- one! Then we don't need to recreate the type in the Grandfathered
--- module. Also consider defining and using the Ext type here.
+renderBCP47 :: BCP47 -> Text
+renderBCP47 = TL.toStrict . TB.toLazyText . renderBCP47Builder
+{-# INLINE renderBCP47 #-}
 
 -- | Invariants:
 --
@@ -290,6 +274,9 @@ unsafeSubtagCharToExtension (SubtagChar n)
   where
     toC x = toEnum . subtract x . fromEnum
 
+-- | Convert an 'ExtensionChar' to a singleton 'Subtag'
+
+-- TODO: the direct definition might be a little more efficient
 extensionCharToSubtag :: ExtensionChar -> Subtag
 extensionCharToSubtag = go . fromExtensionChar
   where
@@ -354,8 +341,8 @@ instance Hashable Extension where
 -- All types of subtags but the primary language subtag are optional;
 -- the empty text value @""@ should be used for subtags that are not
 -- present. All 'Text' values in the lists should be non-empty. Also
--- note that a 'LanguageTag' is case-insensitive, so the subtag @en@
--- and the subtag @EN@ will result in the same value.
+-- note that a 'BCP47' tag is case-insensitive, so the subtag @en@ and
+-- the subtag @EN@ will result in the same value.
 --
 -- Examples of well-formed normal tags:
 --
@@ -400,7 +387,7 @@ unsafeNormalTag ::
   [(Char, NonEmpty Text)] ->
   -- | private use subtags
   [Text] ->
-  LanguageTag
+  BCP47
 unsafeNormalTag l me = unsafeFullNormalTag l me "" ""
 
 -- | Construct a full normal tag from its components. You probably
@@ -429,7 +416,7 @@ unsafeFullNormalTag ::
   [(Char, NonEmpty Text)] ->
   -- | private use subtags
   [Text] ->
-  LanguageTag
+  BCP47
 unsafeFullNormalTag l me me2 me3 ms mr vs es pus =
   NormalTag $
     Normal
@@ -455,6 +442,6 @@ unsafeFullNormalTag l me me2 me3 ms mr vs es pus =
 -- digits or letters long. This function constructs such a tag given
 -- those private use subtags. This function uses 'parseSubtagMangled',
 -- and so the warnings for that function apply here as well.
-unsafePrivateTag :: NonEmpty Text -> LanguageTag
+unsafePrivateTag :: NonEmpty Text -> BCP47
 unsafePrivateTag = PrivateUse . fmap parseSubtagMangled
 {-# INLINE unsafePrivateTag #-}

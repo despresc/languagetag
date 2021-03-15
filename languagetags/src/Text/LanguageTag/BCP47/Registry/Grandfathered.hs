@@ -26,7 +26,7 @@ import Text.LanguageTag.Internal.BCP47.Registry.GrandfatheredRecords
 import Text.LanguageTag.Internal.BCP47.Registry.Types
 import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn
 
--- | Render a 'Grandfathered' tag to a 'Syn.LanguageTag'
-grandfatheredToTag :: Grandfathered -> Syn.LanguageTag
+-- | Render a 'Grandfathered' tag to a 'Syn.BCP47' tag
+grandfatheredToTag :: Grandfathered -> Syn.BCP47
 grandfatheredToTag = Syn.Grandfathered
 {-# INLINE grandfatheredToTag #-}

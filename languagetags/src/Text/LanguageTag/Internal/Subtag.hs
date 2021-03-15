@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -24,7 +23,7 @@ module Text.LanguageTag.Internal.Subtag
     unwrapSubtag,
     wrapSubtag,
     subtagHead,
-    renderSubtagBuilder,
+    renderSubtagBuilderLower,
     renderSubtagBuilderUpper,
     renderSubtagBuilderTitle,
     subtagLength,
@@ -38,12 +37,8 @@ module Text.LanguageTag.Internal.Subtag
 
     -- * Subtag characters
     SubtagChar (..),
-    unpackChar,
+    unpackCharLower,
     unpackCharUpper,
-
-    -- * Subtag tries and functions
-    Trie (..),
-    TrieStep (..),
 
     -- * Unsafe functions
     unsafeIndexSubtag,
@@ -53,7 +48,6 @@ where
 import Control.DeepSeq (NFData)
 import qualified Data.Bits as Bit
 import qualified Data.ByteString.Internal as BI
-import Data.HashMap.Strict (HashMap)
 import Data.Hashable (Hashable (..))
 import qualified Data.List as List
 import qualified Data.Text.Lazy.Builder as TB
@@ -105,7 +99,7 @@ subtagLength' = fromIntegral . (Bit..&.) sel . unwrapSubtag
 
 -- TODO: check that this is half the inverse of parse
 instance Show Subtag where
-  showsPrec p ps r = showsPrec p (renderSubtagBuilder ps) r
+  showsPrec p ps r = showsPrec p (renderSubtagBuilderLower ps) r
 
 newtype instance MVector s Subtag = MV_Subtag (MVector s Word64)
 
@@ -155,8 +149,35 @@ instance VG.Vector Vector Subtag where
 
 -- | Convert the internal representation of a 'Subtag' back to a
 -- 'Subtag'
+
+-- A brief reference: the three lower bits are the length `len`, which
+-- must be between 1 and 8. The highest len * 7 bits are the subtag
+-- content, and must be lower case ASCII letters or digits. Bits 4 and
+-- 5 record whether the subtag content contains any letters or digits,
+-- respectively. All remaining bits must be 0 (might be relaxed if we
+-- ever expand the range of the subtag type to, e.g., include upper
+-- case letters and symbols).
 wrapSubtag :: Word64 -> Maybe Subtag
-wrapSubtag = undefined
+wrapSubtag n
+  | 1 <= len,
+    len <= 8,
+    claimsLetter == (numLetters > 0),
+    claimsDigit == (numDigits > 0),
+    numLetters + numDigits == fromIntegral len,
+    otherBits == 0 =
+    Just $ Subtag n
+  | otherwise = Nothing
+  where
+    len = fromIntegral (n Bit..&. 7) :: Word8
+    isLetter x = 97 <= x && x <= 122
+    isDigit x = 48 <= x && x <= 57
+    claimsLetter = Bit.testBit n 4
+    claimsDigit = Bit.testBit n 5
+    chars = unSubtagChar . unsafeIndexSubtag (Subtag n) <$> [0 .. len]
+    numLetters = length $ filter isLetter chars
+    numDigits = length $ filter isDigit chars
+    otherBits = Bit.shiftL (Bit.shiftR n 5) (5 + fromIntegral len * 7)
+{-# INLINE wrapSubtag #-}
 
 ----------------------------------------------------------------
 -- Maybe subtags
@@ -171,7 +192,7 @@ newtype MaybeSubtag = MaybeSubtag {unMaybeSubtag :: Subtag}
 instance Show MaybeSubtag where
   showsPrec p (MaybeSubtag t) r
     | unwrapSubtag t == 0 = showsPrec p ("" :: String) r
-    | otherwise = showsPrec p (renderSubtagBuilder t) r
+    | otherwise = showsPrec p (renderSubtagBuilderLower t) r
 
 -- | Deconstruct a 'MaybeSubtag'
 maybeSubtag :: a -> (Subtag -> a) -> MaybeSubtag -> a
@@ -196,9 +217,12 @@ nullSubtag = MaybeSubtag (Subtag 0)
 newtype SubtagChar = SubtagChar {unSubtagChar :: Word8}
   deriving (Eq, Ord, Show, Hashable)
 
--- | Unpack an ASCII alphanumeric character from a 'SubtagChar'
-unpackChar :: SubtagChar -> Char
-unpackChar (SubtagChar w) = BI.w2c w
+-- | Unpack an ASCII alphanumeric character from a 'SubtagChar' to a
+-- lower case 'Char'
+
+-- N.B. will want unpackChar if the scope of Subtag ever expands
+unpackCharLower :: SubtagChar -> Char
+unpackCharLower (SubtagChar w) = BI.w2c w
 
 -- | Unpack an ASCII alphanumeric character from a 'SubtagChar' to an
 -- upper case 'Char'
@@ -239,9 +263,12 @@ unpackSubtag w = List.unfoldr go 0
 {-# INLINE unpackSubtag #-}
 
 -- | Render a subtag in lower case to a lazy text builder
-renderSubtagBuilder :: Subtag -> TB.Builder
-renderSubtagBuilder = TB.fromString . fmap unpackChar . unpackSubtag
-{-# INLINE renderSubtagBuilder #-}
+
+-- N.B. will want a plain renderSubtagBuilder and renderSubtag if the
+-- scope of Subtag ever expands
+renderSubtagBuilderLower :: Subtag -> TB.Builder
+renderSubtagBuilderLower = TB.fromString . fmap unpackCharLower . unpackSubtag
+{-# INLINE renderSubtagBuilderLower #-}
 
 -- | Render a subtag in upper case to a lazy text builder
 renderSubtagBuilderUpper :: Subtag -> TB.Builder
@@ -252,18 +279,6 @@ renderSubtagBuilderUpper = TB.fromString . fmap unpackCharUpper . unpackSubtag
 renderSubtagBuilderTitle :: Subtag -> TB.Builder
 renderSubtagBuilderTitle = TB.fromString . go . unpackSubtag
   where
-    go (x : xs) = unpackCharUpper x : fmap unpackChar xs
-    go [] = error "internal invariant violated: empty subtag"
+    go (x : xs) = unpackCharUpper x : fmap unpackCharLower xs
+    go [] = ""
 {-# INLINE renderSubtagBuilderTitle #-}
-
-----------------------------------------------------------------
--- Subtag tries
-----------------------------------------------------------------
-
--- | A trie indexed by 'Subtag'
-data Trie a = Trie (Maybe a) !(HashMap Subtag (Trie a))
-  deriving (Functor)
-
--- | A step in a trie path
-data TrieStep a = TrieStep !Subtag !(Trie a)
-  deriving (Functor)

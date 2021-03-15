@@ -57,7 +57,7 @@ import Text.LanguageTag.Subtag (Subtag, subtagLength)
 -- the fact that they are so registered will only influence
 -- canonicalization, and only when the redundant tag has been
 -- deprecated.
-data BCP47Tag
+data BCP47
   = NormalTag Normal
   | PrivateUse (NonEmpty Subtag)
   | GrandfatheredTag Grandfathered

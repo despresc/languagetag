@@ -36,13 +36,13 @@ import Data.Time.Calendar (Day (..))
 import Text.LanguageTag.BCP47.Registry (Deprecation (..), Scope (..))
 import Text.LanguageTag.BCP47.Syntax (parseBCP47)
 import Text.LanguageTag.Internal.BCP47.Registry.DataConShow
-import Text.LanguageTag.Internal.BCP47.Syntax (LanguageTag (NormalTag), Normal (..))
+import Text.LanguageTag.Internal.BCP47.Syntax (BCP47 (NormalTag), Normal (..))
 import Text.LanguageTag.Subtag
   ( Subtag,
     maybeSubtag,
     nullSubtag,
     parseSubtag,
-    renderSubtag,
+    renderSubtagLower,
     unwrapSubtag,
   )
 
@@ -1145,11 +1145,11 @@ renderSplitRegistry sr = do
         T.intercalate
           " "
           [ "Normal",
-            resolvePl reg $ renderSubtag pl,
-            mrender' e1 (resolveExt reg . renderSubtag),
-            mrender' sc (resolveScr reg . renderSubtag),
-            mrender' regn (resolveReg reg . renderSubtag),
-            "(S.fromList [" <> T.intercalate ", " (resolveVar reg . renderSubtag <$> vars) <> "])",
+            resolvePl reg $ renderSubtagLower pl,
+            mrender' e1 (resolveExt reg . renderSubtagLower),
+            mrender' sc (resolveScr reg . renderSubtagLower),
+            mrender' regn (resolveReg reg . renderSubtagLower),
+            "(S.fromList [" <> T.intercalate ", " (resolveVar reg . renderSubtagLower <$> vars) <> "])",
             "M.empty",
             "[]"
           ]
@@ -1247,12 +1247,12 @@ renderSplitRegistry sr = do
         showSubtag x = "Subtag " <> T.pack (show $ unwrapSubtag x)
         msrender x f = maybeSubtag "nullSubtag" (\s -> parens $ "justSubtag " <> f s) x
         -- FIXME: horrifying
-        resolve' f x = f reg (renderSubtag x) `seq` parens (showSubtag x)
+        resolve' f x = f reg (renderSubtagLower x) `seq` parens (showSubtag x)
         resolvePl' = resolve' resolvePl
         resolveExt' = resolve' resolveExt
         resolveScr' = resolve' resolveScr
         resolveReg' = resolve' resolveReg
-        resolveVar' x = resolveVar reg (renderSubtag x) `seq` showSubtag x
+        resolveVar' x = resolveVar reg (renderSubtagLower x) `seq` showSubtag x
 
     redundantImports =
       tagImports

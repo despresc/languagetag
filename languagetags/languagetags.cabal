@@ -50,12 +50,15 @@ library
     Text.LanguageTag.BCP47.Registry.Script
     Text.LanguageTag.BCP47.Registry.Variant
     Text.LanguageTag.BCP47.Syntax
+    Text.LanguageTag.BCP47.Syntax.Trie
     Text.LanguageTag.BCP47.Validation
     Text.LanguageTag.Internal.BCP47.Registry.DataConShow
     Text.LanguageTag.Internal.BCP47.Registry.Types
     Text.LanguageTag.Internal.BCP47.Syntax
     Text.LanguageTag.Internal.Subtag
+    Text.LanguageTag.Internal.Subtag.Trie
     Text.LanguageTag.Subtag
+    Text.LanguageTag.Subtag.Trie
 
   other-modules:
     Text.LanguageTag.Internal.BCP47.Registry.Date

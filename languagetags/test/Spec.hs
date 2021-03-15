@@ -16,6 +16,9 @@ import Text.LanguageTag.BCP47.Syntax
   normal tag exactly matches its preferred value in the associated
   record (this is actually quite important!)
 
+- test all of the parsing and conversion functions (usual suspects,
+  but also things like wrapSubtag - will want to go module-by-module)
+
 -}
 
 irregularTags :: [(Text, Grandfathered)]
@@ -71,10 +74,10 @@ main = hspec $
       describe "parses the irregular tag" $ do
         let test (l, t) =
               it (T.unpack l) $
-                parseBCP47 l `shouldBe` (Right $ grandfatheredSyntax t)
+                parseBCP47 l `shouldBe` Right (grandfatheredSyntax t)
         traverse_ test irregularTags
       describe "parses the regular tag" $ do
         let test (l, t) =
               it (T.unpack l) $
-                parseBCP47 l `shouldBe` (Right $ grandfatheredSyntax t)
+                parseBCP47 l `shouldBe` Right (grandfatheredSyntax t)
         traverse_ test regularTags

@@ -6,9 +6,9 @@
 -- Maintainer  : Christian Despres
 --
 -- This module provides the 'validateBCP47' function to validate a
--- syntactically well-formed 'LanguageTag', transforming it into a
--- 'BCP47Tag' value, as well as functions to validate the different
--- types of subtags. See
+-- syntactically well-formed 'Syn.BCP47' tag, transforming it into a
+-- validated 'BCP47' tag, as well as functions to validate the
+-- different types of subtags. See
 -- 'Text.LanguageTag.BCP47.Registry.bcp47RegistryDate' for the version
 -- of the registry that this library uses; the current version of the
 -- IANA subtag registry is available at
@@ -16,6 +16,7 @@
 module Text.LanguageTag.BCP47.Validation
   ( -- * Tag validation
     validateBCP47,
+    ValidateError (..),
 
     -- * Subtag validation
     validateLanguage,
@@ -44,6 +45,7 @@ import Text.LanguageTag.Subtag
     maybeSubtag,
   )
 
+-- | A possible error during validation
 data ValidateError
   = ErrorLanguage Subtag
   | ErrorExtlang Subtag
@@ -77,11 +79,11 @@ maybeValidate cmp f = maybeSubtag (pure Nothing) (fmap Just . validate cmp f)
 -- there must be no duplicate variants, duplicate extension
 -- singletons, more than one extended language subtag, or unregistered
 -- subtags. Any 'Grandfathered' tag will be valid as well.
-validateBCP47 :: Syn.LanguageTag -> Either ValidateError BCP47Tag
+validateBCP47 :: Syn.BCP47 -> Either ValidateError BCP47
 validateBCP47 = validateBCP47'
 
 -- TODO: should probably write the lax version of this
-validateBCP47' :: Syn.LanguageTag -> VM BCP47Tag
+validateBCP47' :: Syn.BCP47 -> VM BCP47
 validateBCP47' (Syn.NormalTag (Syn.Normal pl e1 e2 e3 s r vs es ps)) = case validateLanguage pl of
   Nothing -> throw $ ErrorLanguage pl
   Just valpl -> do

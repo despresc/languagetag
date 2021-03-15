@@ -56,4 +56,4 @@ deriving instance Show RangeRecord
 -- FIXME: temporary show instances
 deriving instance Show Normal
 
-deriving instance Show BCP47Tag
+deriving instance Show BCP47
