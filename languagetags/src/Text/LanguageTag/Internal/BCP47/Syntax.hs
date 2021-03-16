@@ -88,7 +88,6 @@ instance NFData BCP47 where
   rnf (PrivateUse x) = rnf x
   rnf (Grandfathered _) = ()
 
--- TODO: test that this is half the inverse of parse
 instance Show BCP47 where
   showsPrec p ps r = showsPrec p (renderBCP47Builder ps) r
 

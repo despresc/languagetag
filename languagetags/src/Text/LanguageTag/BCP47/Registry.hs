@@ -1,5 +1,5 @@
 -- |
--- Description : Language subtags
+-- Description : Registered BCP47 tags, subtags and their records
 -- Copyright   : 2021 Christian Despres
 -- License     : BSD-2-Clause
 -- Maintainer  : Christian Despres

@@ -75,8 +75,6 @@ import Data.Word (Word64, Word8)
 -- highest chunks of 7 bits encode the actual characters (first
 -- character the highest). (This leaves us with 2 bits left over, in
 -- fact, not that this is useful to us at the moment).
---
--- TODO: add a test that toSubtag is actually an order homomorphism
 newtype Subtag = Subtag Word64
   deriving (Eq, Ord, Hashable, NFData)
 
@@ -97,7 +95,6 @@ subtagLength' = fromIntegral . (Bit..&.) sel . unwrapSubtag
   where
     sel = 15
 
--- TODO: check that this is half the inverse of parse
 instance Show Subtag where
   showsPrec p ps r = showsPrec p (renderSubtagBuilderLower ps) r
 

@@ -1256,7 +1256,8 @@ renderSplitRegistry sr = do
       where
         showSubtag x = "Subtag " <> T.pack (show $ unwrapSubtag x)
         msrender x f = maybeSubtag "nullSubtag" (\s -> parens $ "justSubtag " <> f s) x
-        -- FIXME: horrifying
+        -- FIXME: should not be necessary - the type system will
+        -- complain about unregistered tags on its own
         resolve' f x = f reg (renderSubtagLower x) `seq` parens (showSubtag x)
         resolvePl' = resolve' resolvePl
         resolveExt' = resolve' resolveExt

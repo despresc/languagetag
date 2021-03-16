@@ -56,7 +56,12 @@ import Text.LanguageTag.Internal.BCP47.Syntax
 - spin out the try* functions into their own functions?
 - benchmark a more straightforward implementation that does things
   like pre-splitting the input
+
 - clean up the structure of the error types and how they are emitted
+ (e.g. Err 0 Cprimary ErrNeededTag can only occur when the start is
+ "x" or "i", and ErrNeededTag can otherwise only occur after a
+ singleton)
+
 -}
 
 -- | The most recent successfully-parsed component
@@ -102,9 +107,6 @@ data SyntaxError = SyntaxError
 instance NFData SyntaxError where
   rnf = rwhnf
 
--- TODO: remember that Err 0 Cprimary ErrNeededTag can only occur
--- when the start is "x" or "i".
-
 -- | The type of error that occurred during parsing
 data SyntaxErrorType
   = -- | empty input
@@ -128,8 +130,6 @@ instance NFData SyntaxErrorType where
 ----------------------------------------------------------------
 
 -- | Convert a 'BCP47' tag into its component subtags
-
--- TODO: check round-tripping of this function
 toSubtags :: BCP47 -> NonEmpty Subtag
 toSubtags (NormalTag (Normal p e1 e2 e3 s r vs es ps)) =
   p NE.:| (mapMaybe go [e1, e2, e3, s, r] <> vs <> es' <> ps)

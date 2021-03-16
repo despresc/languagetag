@@ -1,7 +1,5 @@
-{-# OPTIONS_HADDOCK not-home #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-
--- TODO: qualify exports
+{-# OPTIONS_HADDOCK not-home #-}
 
 -- |
 -- Description : Subtag record types
@@ -11,7 +9,23 @@
 --
 -- Warning: this is an internal module and may change or disappear
 -- without regard to the PVP.
-module Text.LanguageTag.Internal.BCP47.Registry.Types where
+module Text.LanguageTag.Internal.BCP47.Registry.Types
+  ( BCP47 (..),
+    Normal (..),
+    ExtensionSubtag (..),
+    toExtensionSubtag,
+    fromExtensionSubtag,
+    LanguageRecord (..),
+    ExtlangRecord (..),
+    ScriptRecord (..),
+    RegionRecord (..),
+    VariantRecord (..),
+    RangeRecord (..),
+    Scope (..),
+    Deprecation (..),
+    binSearchIndexOn,
+  )
+where
 
 import Control.DeepSeq (NFData (..))
 import Data.Bits (shiftR)
@@ -213,7 +227,9 @@ binSearchIndexOn proj b v = go 0 (V.length v)
   where
     -- n.b. we are searching for indices between low and high,
     -- inclusive of low and exclusive of high, and since low < high at
-    -- the start, then low <= idx < high for the entire run.
+    -- the start, then low <= idx < high for the entire run. The idx
+    -- == low check is necessary to catch the case where the element
+    -- is not present (otherwise it could be omitted).
     go low high
       | idx == low = if b == proj a then Just idx else Nothing
       | otherwise = case compare b (proj a) of
@@ -224,19 +240,3 @@ binSearchIndexOn proj b v = go 0 (V.length v)
         idx = (low + high) `shiftR` 1
         a = V.unsafeIndex v idx
 {-# INLINE binSearchIndexOn #-}
-
--- | Search for an element in a vector with the given key using the
--- given projection function and return its index. The vector must be
--- sorted with respect to the projection and must contain an element
--- with the given key.
-binSearchIndexOnPresent :: Ord b => (a -> b) -> b -> Vector a -> Maybe Int
-binSearchIndexOnPresent proj b v = go 0 (V.length v)
-  where
-    go low high = case compare b (proj a) of
-      Prelude.LT -> go low idx
-      EQ -> Just idx
-      Prelude.GT -> go idx high
-      where
-        idx = (low + high) `shiftR` 1
-        a = V.unsafeIndex v idx
-{-# INLINE binSearchIndexOnPresent #-}
