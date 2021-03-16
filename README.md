@@ -1,11 +1,13 @@
 # Languagetags: Language tag analysis
 
-The `languagetags` library provides BCP47-compliant language tag
+The `languagetags` library provides
+[BCP47](https://tools.ietf.org/html/bcp47)-compliant language tag
 parsing and processing tools. For tag and subtag validation and
 canonicalization, and other registry-related processing, it uses the
 `languagetags-gen` package in this repository to generate the relevant
-functions from a copy of the IANA subtag registry in
-`languagetags-gen/registry/bcp47`.
+functions from a copy of the [IANA subtag
+registry](https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry)
+in `languagetags-gen/registry/bcp47`.
 
 Since this library will need to update from time to time as the subtag
 registry itself updates, the following version-bumping scheme will
@@ -34,8 +36,9 @@ BCP47 standard:
   prefix will never be added to the record
 
 Otherwise the relevant types and functions will change as the registry
-updates. See <https://tools.ietf.org/html/bcp47#section-3.3> for the
-full registry maintenance details.
+updates. See the [registry maintenance
+section](https://tools.ietf.org/html/bcp47#section-3.3) of the
+standard for the full details.
 
 ## Future
 
