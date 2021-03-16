@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_HADDOCK not-home #-}
 
 -- |
--- Module      : Text.LanguageTag.Internal.BCP47.Syntax
 -- Description : Internal language tag types and functions
 -- Copyright   : 2021 Christian Despres
 -- License     : BSD-2-Clause
@@ -23,8 +23,8 @@ module Text.LanguageTag.Internal.BCP47.Syntax
     unsafePrivateTag,
     Extension (..),
     ExtensionChar (..),
-    toExtensionChar,
-    fromExtensionChar,
+    charToExtensionChar,
+    extensionCharToChar,
     unsafeSubtagCharToExtension,
     extensionCharToSubtag,
   )
@@ -41,9 +41,9 @@ import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Builder as TB
 import Data.Word (Word8)
+import Text.LanguageTag.BCP47.Subtag
 import Text.LanguageTag.Internal.BCP47.Registry.Grandfathered
 import Text.LanguageTag.Internal.BCP47.Subtag (SubtagChar (..))
-import Text.LanguageTag.BCP47.Subtag
 
 renderRegion :: MaybeSubtag -> TB.Builder
 renderRegion = maybeSubtag "" go
@@ -71,14 +71,16 @@ renderScript = maybeSubtag "" $ \s -> TB.fromString $ '-' : List.unfoldr go (s, 
 
 -- | A syntactically well-formed BCP47 tag. See
 -- <https://tools.ietf.org/html/bcp47#section-2.1> for the full
--- details. Note that the 'Ord' instance does not correspond to that
--- of 'Text', in the sense that there are language tags @x@ and @y@
--- such that @x < y@ and yet @'renderBCP47' x >
--- 'renderBCP47' y@.
+-- details. Note that the 'Ord' instance is based on a
+-- component-by-component comparison of tags, so that, e.g., a tag
+-- with an absent region subtag will always be lower than the same tag
+-- with an added region subtag. It also considers normal tags to be
+-- lower than grandfathered tags, which are lower than private use
+-- tags.
 data BCP47
   = NormalTag {-# UNPACK #-} !Normal
-  | PrivateUse !(NonEmpty Subtag)
   | Grandfathered !Grandfathered
+  | PrivateUse !(NonEmpty Subtag)
   deriving (Eq, Ord)
 
 instance NFData BCP47 where
@@ -104,7 +106,8 @@ instance Hashable BCP47 where
       `hashWithSalt` (2 :: Int)
       `hashWithSalt` t
 
--- | Render a language tag to a lazy text builder
+-- | Render a language tag to a lazy text builder according to the
+-- BCP47 guidelines
 renderBCP47Builder :: BCP47 -> TB.Builder
 renderBCP47Builder (NormalTag (Normal pr e1 e2 e3 sc reg vars exts pu)) =
   pr' <> e1' <> e2' <> e3' <> sc' <> reg'
@@ -121,7 +124,7 @@ renderBCP47Builder (NormalTag (Normal pr e1 e2 e3 sc reg vars exts pu)) =
     reg' = renderRegion reg
     vars' = foldMap renderLowPref vars
     exts' = foldMap renderExtension exts
-    renderExtension (Extension s t) = "-" <> TB.singleton (fromExtensionChar s) <> foldMap renderLowPref t
+    renderExtension (Extension s t) = "-" <> TB.singleton (extensionCharToChar s) <> foldMap renderLowPref t
     pu'
       | null pu = ""
       | otherwise = "-" <> TB.singleton 'x' <> foldMap renderLowPref pu
@@ -157,18 +160,30 @@ renderBCP47Builder (Grandfathered t) = case t of
   ZhXiang -> "zh-xiang"
 {-# INLINE renderBCP47Builder #-}
 
--- | Render a language tag to a strict text string
+-- | Render a language tag to a strict text string according to the BCP47 guidelines
 renderBCP47 :: BCP47 -> Text
 renderBCP47 = TL.toStrict . TB.toLazyText . renderBCP47Builder
 {-# INLINE renderBCP47 #-}
 
--- | Invariants:
+-- | Various well-formedness invariants:
 --
--- * if 'primlang' is 'nullSubtag' then everything must be empty
---   except for 'privateUse', which must be non-empty.
+-- * if 'primlang' has length at least 4 then each of the @extlang@
+--   components must be 'nullSubtag'. The 'primlang' must also be
+--   between two and eight letters.
 --
 -- * if an @extlang@ component is not 'nullSubtag' then all the
---   previous @extlang@ components must not be 'nullSubtag' either.
+--   previous @extlang@ components must not be 'nullSubtag' either
+--
+-- * the 'script' component must be exactly four letters, if present
+--
+-- * the 'region' component must be exactly two letters or three
+--   digits, if present
+--
+-- * the 'variants' must all be between four and eight letters or
+--   digits, and if a variant has length four then it must begin with
+--   a digit
+--
+-- * the extension subtags must all have length at least two
 data Normal = Normal
   { primlang :: {-# UNPACK #-} !Subtag,
     extlang1 :: {-# UNPACK #-} !MaybeSubtag,
@@ -235,9 +250,10 @@ data ExtensionChar
   | ExtZ
   deriving (Eq, Ord, Show, Enum, Bounded)
 
--- | Convert an ASCII alphanumeric character other than X to an 'ExtensionChar'
-toExtensionChar :: Char -> Maybe ExtensionChar
-toExtensionChar c
+-- | Convert an ASCII alphanumeric character other than @x@ or @X@ to
+-- an 'ExtensionChar'
+charToExtensionChar :: Char -> Maybe ExtensionChar
+charToExtensionChar c
   | c < '0' = Nothing
   | c <= '9' = toC 48 c
   | c < 'A' = Nothing
@@ -253,8 +269,8 @@ toExtensionChar c
     toC n = Just . toEnum . subtract n . fromEnum
 
 -- | Convert an 'ExtensionChar' to a lower case 'Char'.
-fromExtensionChar :: ExtensionChar -> Char
-fromExtensionChar ec
+extensionCharToChar :: ExtensionChar -> Char
+extensionCharToChar ec
   | ec <= Ext9 = toC 48 ec
   | ec <= ExtW = toC 87 ec
   | otherwise = toC 88 ec
@@ -278,7 +294,7 @@ unsafeSubtagCharToExtension (SubtagChar n)
 
 -- TODO: the direct definition might be a little more efficient
 extensionCharToSubtag :: ExtensionChar -> Subtag
-extensionCharToSubtag = go . fromExtensionChar
+extensionCharToSubtag = go . extensionCharToChar
   where
     go = singleton . SubtagChar . fromIntegral . BI.c2w
 
@@ -339,8 +355,8 @@ instance Hashable Extension where
 -- * Private use subtags: between one and eight digits or letters.
 --
 -- All types of subtags but the primary language subtag are optional;
--- the empty text value @""@ should be used for subtags that are not
--- present. All 'Text' values in the lists should be non-empty. Also
+-- the empty text value @""@ should be used for subtags that are
+-- absent. All 'Text' values in the lists should be non-empty. Also
 -- note that a 'BCP47' tag is case-insensitive, so the subtag @en@ and
 -- the subtag @EN@ will result in the same value.
 --
@@ -431,7 +447,7 @@ unsafeFullNormalTag l me me2 me3 ms mr vs es pus =
         privateUse = parseSubtagMangled <$> pus
       }
   where
-    toExtension (c, ext) = Extension (fromMaybe ExtA $ toExtensionChar c) (parseSubtagMangled <$> ext)
+    toExtension (c, ext) = Extension (fromMaybe ExtA $ charToExtensionChar c) (parseSubtagMangled <$> ext)
     mmangled t
       | T.null t = nullSubtag
       | otherwise = justSubtag $ parseSubtagMangled t

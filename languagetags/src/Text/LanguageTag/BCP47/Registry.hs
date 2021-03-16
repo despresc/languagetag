@@ -1,5 +1,4 @@
 -- |
--- Module      : Text.LanguageTag.BCP47.Registry
 -- Description : Language subtags
 -- Copyright   : 2021 Christian Despres
 -- License     : BSD-2-Clause
@@ -16,6 +15,10 @@ module Text.LanguageTag.BCP47.Registry
     toSyntaxTag,
     toSubtags,
     Normal (..),
+    Syn.ExtensionChar (..),
+    Syn.charToExtensionChar,
+    Syn.extensionCharToChar,
+    Syn.extensionCharToSubtag,
     ExtensionSubtag,
     toExtensionSubtag,
     fromExtensionSubtag,
@@ -71,5 +74,5 @@ toSyntaxTag (NormalTag n) =
   where
     mto f p x = maybe nullSubtag (justSubtag . f) $ p x
     toExt (c, x) = Syn.Extension c $ fromExtensionSubtag <$> x
-toSyntaxTag (PrivateUse x) = Syn.PrivateUse x
+toSyntaxTag (PrivateUseTag x) = Syn.PrivateUse x
 toSyntaxTag (GrandfatheredTag x) = Syn.Grandfathered x

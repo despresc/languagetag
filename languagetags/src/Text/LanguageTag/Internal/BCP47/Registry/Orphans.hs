@@ -2,7 +2,6 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 -- |
--- Module      : Text.LanguageTag.Internal.BCP47.Registry.Orphans
 -- Description : Orphan instances for the subtag types
 -- Copyright   : 2021 Christian Despres
 -- License     : BSD-2-Clause
@@ -53,7 +52,6 @@ deriving instance Show VariantRecord
 
 deriving instance Show RangeRecord
 
--- FIXME: temporary show instances
 deriving instance Show Normal
 
 deriving instance Show BCP47

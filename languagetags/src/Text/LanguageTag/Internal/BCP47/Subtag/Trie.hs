@@ -1,7 +1,6 @@
 {-# LANGUAGE DeriveFunctor #-}
 
 -- |
--- Module      : Text.LanguageTag.Internal.BCP47.Subtag.Trie
 -- Description : Internal subtag trie definitions
 -- Copyright   : 2021 Christian Despres
 -- License     : BSD-2-Clause
@@ -15,9 +14,10 @@ import Data.HashMap.Strict (HashMap)
 import Text.LanguageTag.Internal.BCP47.Subtag (Subtag)
 
 -- | A trie indexed by 'Subtag'
-data Trie a = Trie (Maybe a) !(HashMap Subtag (Trie a))
+data Trie a = Trie !(Maybe a) !(HashMap Subtag (Trie a))
   deriving (Functor)
 
--- | A step in a trie path
+-- | A step in a trie path; a child of a trie node. Equivalent to
+-- @('Subtag', 'Trie' a)@.
 data TrieStep a = TrieStep !Subtag !(Trie a)
   deriving (Functor)

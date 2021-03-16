@@ -1,5 +1,4 @@
 -- |
--- Module      : Text.LanguageTag.BCP47.Validation
 -- Description : Language tag validation
 -- Copyright   : 2021 Christian Despres
 -- License     : BSD-2-Clause
@@ -30,9 +29,10 @@ where
 import qualified Data.List as List
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
-import Text.LanguageTag.BCP47.Registry
+import Text.LanguageTag.BCP47.Registry as Reg
 import Text.LanguageTag.BCP47.Subtag
   ( MaybeSubtag,
+    Subtag,
     maybeSubtag,
   )
 import qualified Text.LanguageTag.BCP47.Syntax as Syn
@@ -42,7 +42,6 @@ import Text.LanguageTag.Internal.BCP47.Registry.RegionRecords
 import Text.LanguageTag.Internal.BCP47.Registry.ScriptRecords
 import Text.LanguageTag.Internal.BCP47.Registry.Types
 import Text.LanguageTag.Internal.BCP47.Registry.VariantRecords
-import Text.LanguageTag.Internal.BCP47.Subtag (Subtag (..))
 import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn
 
 -- | A possible error during validation
@@ -78,12 +77,14 @@ maybeValidate cmp f = maybeSubtag (pure Nothing) (fmap Just . validate cmp f)
 -- | Validate a language tag strictly: for normal tags, this means
 -- there must be no duplicate variants, duplicate extension
 -- singletons, more than one extended language subtag, or unregistered
--- subtags. Any 'Grandfathered' tag will be valid as well.
-validateBCP47 :: Syn.BCP47 -> Either ValidateError BCP47
+-- subtags. Any
+-- 'Text.LanguageTag.BCP47.Registry.Grandfathered.Grandfathered' tag
+-- will be valid as well.
+validateBCP47 :: Syn.BCP47 -> Either ValidateError Reg.BCP47
 validateBCP47 = validateBCP47'
 
 -- TODO: should probably write the lax version of this
-validateBCP47' :: Syn.BCP47 -> VM BCP47
+validateBCP47' :: Syn.BCP47 -> VM Reg.BCP47
 validateBCP47' (Syn.NormalTag (Syn.Normal pl e1 e2 e3 s r vs es ps)) = case validateLanguage pl of
   Nothing -> throw $ ErrorLanguage pl
   Just valpl -> do
@@ -120,60 +121,8 @@ validateBCP47' (Syn.NormalTag (Syn.Normal pl e1 e2 e3 s r vs es ps)) = case vali
       M.alterF (insertExtension c $ Syn.extTags e) c m'
     insertExtension _ ts Nothing = pure $ Just $ ExtensionSubtag <$> ts
     insertExtension c _ (Just _) = throw $ ErrorDuplicateExtension c
-validateBCP47' (Syn.PrivateUse x) = pure $ PrivateUse x
+validateBCP47' (Syn.PrivateUse x) = pure $ PrivateUseTag x
 validateBCP47' (Syn.Grandfathered x) = pure $ GrandfatheredTag x
-
-{-
-
-The rules:
-
-- primary subtags - be registered
-
-- extended language subtags - be registered. recommended that the
-  related primary language subtag be used instead. must only have one
-  extended language subtag (zh-min-nan excluded, I suppose)
-
-- script subtags - should be omitted if it adds no value or if the
-  primary language subtag has a relevant suppress-script field.
-
-- variants - must not be repeated. variants sharing a prefix should
-  not be used in the same tag (variants that can be used in
-  combination should have multiple prefix fields indicating that
-  fact).
-
-- extension subtags - a singleton must appear at most once (except in
-  private use), must have been registered. should canonicalize by
-  ordering the singletions by ascii order.
-
-- grandfathered/redundant - must match exactly, of course.
-
-valid tag:
-
-- well-formed
-- either grandfathered or all the primary language, extended language,
-  script, region, and variant subtags appear in the IANA subtag
-  registry.
-- no duplicate variant subtags
-- no duplicate singleton (extension) subtags
-
-canonicalizing:
-
-- extension sequences are ordered by singleton subtag (ascii
-  case-insensitive)
-- redundant or grandfathered tags are replaced by their preferred
-  value
-- subtags are replaced by their preferred value (notably this means
-  that there will be no extlangs in canonical form)
-
-(so maybe we define a separate canonical tag type? and the canonical
-form -> extlang form transformation can be defined as a CanonicalTag
--> ValidTag function).
-
--}
-
-----------------------------------------------------------------
--- Validation
-----------------------------------------------------------------
 
 ----------------------------------------------------------------
 -- Tag exports

@@ -1,5 +1,6 @@
+{-# OPTIONS_HADDOCK not-home #-}
+
 -- |
--- Module      : Text.LanguageTag.Internal.BCP47.Registry.DataConShow
 -- Description : Showing the data constructors associated to subtags
 -- Copyright   : 2021 Christian Despres
 -- License     : BSD-2-Clause
@@ -13,7 +14,7 @@
 -- takes a very long time. Writing the registered subtag types' show
 -- instances manually using the functions in this module avoids this
 -- problem, and the functions can also be used to render the
--- constructors in the first place.
+-- constructors during code generation.
 module Text.LanguageTag.Internal.BCP47.Registry.DataConShow where
 
 import Data.Char (isDigit)

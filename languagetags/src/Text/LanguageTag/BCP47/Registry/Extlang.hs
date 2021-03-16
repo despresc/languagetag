@@ -1,5 +1,4 @@
 -- |
--- Module      : Text.LanguageTag.BCP47.Registry.Extlang
 -- Description : Extended language subtags
 -- Copyright   : 2021 Christian Despres
 -- License     : BSD-2-Clause

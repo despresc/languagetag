@@ -1014,7 +1014,7 @@ renderSplitRegistry sr = do
     rendextlang = renderSubtagModuleWith
       "Extlang"
       "extended language"
-      "These are prefixed with \"Ext\" because they may overlap with primary language subtags. Note that if extended language subtags have a preferred value, then it refers to a primary subtag."
+      "These are prefixed with \"Ext\" because they may overlap with primary language subtags. Note that if extended language subtags have a preferred value, then it refers to a primary language subtag."
       extlangRecords
       $ \(ExtlangRecord a x y z _ _ _ _) ->
         ( a,
@@ -1033,13 +1033,13 @@ renderSplitRegistry sr = do
       renderSubtagModuleWith
         "Region"
         "region"
-        "The names of region constructors come from the corresponding subtag, except that region subtags beginning with a number are prefixed with @Reg@."
+        "The names of region constructors come from the corresponding subtag, except that subtags beginning with a number are prefixed with @Reg@."
         regionRecords
         $ \(RegionRecord a x y) -> (a, x, y, Nothing)
     rendvariant = renderSubtagModuleWith
       "Variant"
       "variant"
-      "The names of region constructors come from the corresponding subtag, except that they are in title case and variant subtags beginning with a number are prefixed with @Var@."
+      "The names of variant constructors come from the corresponding subtag, except that they are in title case and subtags beginning with a number are prefixed with @Var@."
       variantRecords
       $ \(VariantRecord a x y _) -> (a, x, y, Nothing)
     rendgrandfathered =
@@ -1053,7 +1053,7 @@ renderSplitRegistry sr = do
       renderModuleWith
         "Redundant"
         "redundant"
-        ""
+        "The names of redundant constructors come from the corresponding tag, by converting the subtags to title case then removing the intermediate dashes."
         (date sr)
         $ \(RangeRecord a x y) -> (a, x, y, Nothing)
 

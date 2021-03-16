@@ -2,9 +2,9 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_HADDOCK not-home #-}
 
 -- |
--- Module      : Text.LanguageTag.Internal.BCP47.Subtag
 -- Description : Subtag types and functions
 -- Copyright   : 2021 Christian Despres
 -- License     : BSD-2-Clause
@@ -183,9 +183,9 @@ wrapSubtag n
 -- Maybe subtags
 ----------------------------------------------------------------
 
--- | A subtag that may not be present. Equivalent to @Maybe
--- Subtag@. Use 'justSubtag' and 'nullSubtag' to construct these, and
--- 'maybeSubtag' to eliminate them.
+-- | A subtag that may not be present. Equivalent to @'Maybe'
+-- 'Subtag'@. Use 'justSubtag' and 'nullSubtag' to construct these,
+-- and 'maybeSubtag' to eliminate them.
 newtype MaybeSubtag = MaybeSubtag {unMaybeSubtag :: Subtag}
   deriving (Eq, Ord, Hashable)
 
@@ -194,7 +194,7 @@ instance Show MaybeSubtag where
     | unwrapSubtag t == 0 = showsPrec p ("" :: String) r
     | otherwise = showsPrec p (renderSubtagBuilderLower t) r
 
--- | Deconstruct a 'MaybeSubtag'
+-- | Eliminate a 'MaybeSubtag'
 maybeSubtag :: a -> (Subtag -> a) -> MaybeSubtag -> a
 maybeSubtag x f (MaybeSubtag (Subtag n))
   | n == 0 = x
@@ -204,7 +204,7 @@ maybeSubtag x f (MaybeSubtag (Subtag n))
 justSubtag :: Subtag -> MaybeSubtag
 justSubtag = MaybeSubtag
 
--- | A 'MaybeSubtag' that is not present
+-- | A 'MaybeSubtag' that is absent
 nullSubtag :: MaybeSubtag
 nullSubtag = MaybeSubtag (Subtag 0)
 
@@ -212,8 +212,8 @@ nullSubtag = MaybeSubtag (Subtag 0)
 -- Subtag characters
 ----------------------------------------------------------------
 
--- | The encoding of a valid subtag character (an ASCII alphabetic
--- character or digit)
+-- | The encoding of a valid subtag character (an ASCII lower case
+-- alphabetic character or digit)
 newtype SubtagChar = SubtagChar {unSubtagChar :: Word8}
   deriving (Eq, Ord, Show, Hashable)
 
@@ -262,7 +262,7 @@ unpackSubtag w = List.unfoldr go 0
          in Just (c, idx + 1)
 {-# INLINE unpackSubtag #-}
 
--- | Render a subtag in lower case to a lazy text builder
+-- | Render a subtag to a lower case lazy text builder
 
 -- N.B. will want a plain renderSubtagBuilder and renderSubtag if the
 -- scope of Subtag ever expands
@@ -270,12 +270,12 @@ renderSubtagBuilderLower :: Subtag -> TB.Builder
 renderSubtagBuilderLower = TB.fromString . fmap unpackCharLower . unpackSubtag
 {-# INLINE renderSubtagBuilderLower #-}
 
--- | Render a subtag in upper case to a lazy text builder
+-- | Render a subtag to an upper case lazy text builder
 renderSubtagBuilderUpper :: Subtag -> TB.Builder
 renderSubtagBuilderUpper = TB.fromString . fmap unpackCharUpper . unpackSubtag
 {-# INLINE renderSubtagBuilderUpper #-}
 
--- | Render a subtag in title case to a lazy text builder
+-- | Render a subtag to a title case lazy text builder
 renderSubtagBuilderTitle :: Subtag -> TB.Builder
 renderSubtagBuilderTitle = TB.fromString . go . unpackSubtag
   where

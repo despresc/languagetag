@@ -1,9 +1,9 @@
+{-# OPTIONS_HADDOCK not-home #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 -- TODO: qualify exports
 
 -- |
--- Module      : Text.LanguageTag.Internal.BCP47.Registry.Types
 -- Description : Subtag record types
 -- Copyright   : 2021 Christian Despres
 -- License     : BSD-2-Clause
@@ -15,10 +15,12 @@ module Text.LanguageTag.Internal.BCP47.Registry.Types where
 
 import Control.DeepSeq (NFData (..))
 import Data.Bits (shiftR)
-import Data.Hashable (Hashable)
+import Data.Hashable (Hashable (..))
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as M
 import Data.Set (Set)
+import qualified Data.Set as S
 import Data.Text (Text)
 import Data.Vector (Vector)
 import qualified Data.Vector as V
@@ -38,7 +40,7 @@ import Text.LanguageTag.Internal.BCP47.Syntax (ExtensionChar (..))
 --   zero or more additional subtags that qualify the meaning of the
 --   tag. Most tags that you will encounter are normal tags.
 --
--- * 'PrivateUse' language tags start with @x-@ and are followed by
+-- * 'PrivateUseTag' language tags start with @x-@ and are followed by
 --   one or more private use subtags. These tags are totally
 --   uninterpreted; their meaning is specified by private agreement,
 --   and the only condition on their validity is that the subtags be
@@ -53,14 +55,36 @@ import Text.LanguageTag.Internal.BCP47.Syntax (ExtensionChar (..))
 --
 -- Note that there is also a fourth type of tag, the "redundant" tags,
 -- that are valid 'Normal' tags but for historical reasons are also
--- registered in their entirety. These are represented as normal tags;
--- the fact that they are so registered will only influence
--- canonicalization, and only when the redundant tag has been
--- deprecated.
+-- registered in their entirety. These are represented as 'Normal'
+-- tags; the fact that they are registered has no influence on their
+-- treatment, since validating and canonicalizing them as if they were
+-- not registered gives exactly the same results as validating and
+-- canonicalizing them while taking into consideration their registry
+-- information.
 data BCP47
   = NormalTag Normal
-  | PrivateUse (NonEmpty Subtag)
+  | PrivateUseTag (NonEmpty Subtag)
   | GrandfatheredTag Grandfathered
+  deriving (Eq, Ord)
+
+instance Hashable BCP47 where
+  hashWithSalt s (NormalTag t) =
+    s
+      `hashWithSalt` (0 :: Int)
+      `hashWithSalt` t
+  hashWithSalt s (PrivateUseTag t) =
+    s
+      `hashWithSalt` (1 :: Int)
+      `hashWithSalt` t
+  hashWithSalt s (GrandfatheredTag t) =
+    s
+      `hashWithSalt` (2 :: Int)
+      `hashWithSalt` t
+
+instance NFData BCP47 where
+  rnf (NormalTag x) = rnf x
+  rnf (PrivateUseTag x) = rnf x
+  rnf (GrandfatheredTag _) = ()
 
 -- | A normal language tag, as opposed to a private use or
 -- grandfathered tag. Note that validating the subtags in an extension
@@ -75,6 +99,20 @@ data Normal = Normal
     extensions :: Map ExtensionChar (NonEmpty ExtensionSubtag),
     privateUse :: [Subtag]
   }
+  deriving (Eq, Ord)
+
+instance Hashable Normal where
+  hashWithSalt sl (Normal l e s r v es p) =
+    sl `hashWithSalt` l `hashWithSalt` e
+      `hashWithSalt` s
+      `hashWithSalt` r
+      `hashWithSalt` S.toList v
+      `hashWithSalt` M.toList es
+      `hashWithSalt` p
+
+instance NFData Normal where
+  rnf (Normal l e s r v es p) =
+    rnf l `seq` rnf e `seq` rnf s `seq` rnf r `seq` rnf v `seq` rnf es `seq` rnf p
 
 -- | An extension subtag is a 'Subtag' that is at least two characters
 -- long

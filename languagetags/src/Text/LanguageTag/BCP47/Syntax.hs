@@ -3,7 +3,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 -- |
--- Module      : Text.LanguageTag.BCP47.Syntax
 -- Description : Language tag types and parser
 -- Copyright   : 2021 Christian Despres
 -- License     : BSD-2-Clause
@@ -35,9 +34,9 @@ module Text.LanguageTag.BCP47.Syntax
     module Text.LanguageTag.Internal.BCP47.Registry.Grandfathered,
 
     -- * Errors
-    Err (..),
+    SyntaxError (..),
     Component (..),
-    ErrType (..),
+    SyntaxErrorType (..),
   )
 where
 
@@ -48,40 +47,41 @@ import Data.Maybe (mapMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Word (Word8)
-import Text.LanguageTag.Internal.BCP47.Registry.Grandfathered
-import Text.LanguageTag.Internal.BCP47.Syntax
-import Text.LanguageTag.Internal.BCP47.Subtag (Subtag (..), SubtagChar (..))
 import Text.LanguageTag.BCP47.Subtag
+import Text.LanguageTag.Internal.BCP47.Registry.Grandfathered
+import Text.LanguageTag.Internal.BCP47.Subtag (Subtag (..), SubtagChar (..))
+import Text.LanguageTag.Internal.BCP47.Syntax
 
 {- TODO:
 - spin out the try* functions into their own functions?
 - benchmark a more straightforward implementation that does things
   like pre-splitting the input
+- clean up the structure of the error types and how they are emitted
 -}
 
--- | The component just before what we're trying to parse.
+-- | The most recent successfully-parsed component
 data Component
   = -- | just started
     Cbeginning
-  | -- | primary language tag
+  | -- | primary language subtag
     Cprimary
-  | -- | first language extension
-    Clext1
-  | -- | second language extension
-    Clext2
-  | -- | the entire language tag
+  | -- | first extended language subtag
+    Cextl1
+  | -- | second extended language subtag
+    Cextl2
+  | -- | the entire language subtag section
     Clanguage
-  | -- | script tag
+  | -- | script subtag
     Cscript
-  | -- | region tag
+  | -- | region subtag
     Cregion
-  | -- | variant tag
+  | -- | variant subtag
     Cvariant
-  | -- | extension tag
+  | -- | extension subtag
     Cextension
-  | -- | private use tag
+  | -- | private use subtag
     Cprivateuse
-  | -- | tag right after an initial @i-@
+  | -- | subtag right after an initial @i-@
     CirregI
   deriving (Eq, Ord, Show, Read)
 
@@ -89,40 +89,38 @@ instance NFData Component where
   rnf = rwhnf
 
 -- | An error that may occur during parsing
-data Err = Err
+data SyntaxError = SyntaxError
   { -- | the start of the tag where the error occurred
     errPos :: !Int,
     -- | the section just before the erroneous tag
     errComponent :: !Component,
     -- | the error itself
-    errType :: !ErrType
+    errType :: !SyntaxErrorType
   }
   deriving (Eq, Ord, Show, Read)
 
-instance NFData Err where
+instance NFData SyntaxError where
   rnf = rwhnf
 
 -- TODO: remember that Err 0 Cprimary ErrNeededTag can only occur
 -- when the start is "x" or "i".
 
 -- | The type of error that occurred during parsing
-data ErrType
+data SyntaxErrorType
   = -- | empty input
-    ErrEmpty
-  | -- | character was encountered that was incorrect for the section
-    ErrBadChar
+    SyntaxErrorEmpty
   | -- | another tag was expected
-    ErrNeededTag
-  | -- | expecting a tag separator or the end of input
-    ErrTagEnd
+    SyntaxErrorNeededTag
+  | -- | expecting a subtag separator or the end of input
+    SyntaxErrorSubtagEnd
   | -- | invalid tag
-    ErrBadTag
+    SyntaxErrorBadSubtag
   | -- | an @i-@ tag should be followed by exactly one
     -- tag
-    ErrIrregINum
+    SyntaxErrorIrregINum
   deriving (Eq, Ord, Show, Read)
 
-instance NFData ErrType where
+instance NFData SyntaxErrorType where
   rnf = rwhnf
 
 ----------------------------------------------------------------
@@ -178,20 +176,20 @@ tagPop ::
   Text ->
   Component ->
   Int ->
-  Either Err (Subtag, Text)
+  Either SyntaxError (Subtag, Text)
 tagPop initchar inp clast pos = case popSubtag initchar inp of
   Just (s, t) -> Right (s, t)
-  Nothing -> Left $ Err pos clast ErrBadChar
+  Nothing -> Left $ SyntaxError pos clast SyntaxErrorBadSubtag
 
 -- returns the character immediately after the separator if there was
 -- one, and Nothing on end of input.
-tagSep :: Component -> Int -> Text -> Either Err (Maybe (Char, Text))
+tagSep :: Component -> Int -> Text -> Either SyntaxError (Maybe (Char, Text))
 tagSep !clast !pos !inp = case T.uncons inp of
   Just (c, t)
     | c == '-' -> case T.uncons t of
       Just (c', t') -> Right $ Just (c', t')
-      Nothing -> Left $ Err pos clast ErrTagEnd
-    | otherwise -> Left $ Err pos clast ErrTagEnd
+      Nothing -> Left $ SyntaxError pos clast SyntaxErrorSubtagEnd
+    | otherwise -> Left $ SyntaxError pos clast SyntaxErrorSubtagEnd
   Nothing -> Right Nothing
 
 mfinish ::
@@ -201,8 +199,8 @@ mfinish ::
   Int ->
   Text ->
   a ->
-  (a -> Subtag -> Component -> Int -> Text -> Either Err BCP47) ->
-  Either Err BCP47
+  (a -> Subtag -> Component -> Int -> Text -> Either SyntaxError BCP47) ->
+  Either SyntaxError BCP47
 mfinish !len !clast !pos !inp !con !pr = do
   let pos' = fromIntegral len + pos + 1
   mc <- tagSep clast pos' inp
@@ -218,10 +216,10 @@ isDigit c = w >= 48 && w <= 57
     w = unwrapChar c
 
 -- | Parse a BCP47 language tag
-parseBCP47 :: Text -> Either Err BCP47
+parseBCP47 :: Text -> Either SyntaxError BCP47
 parseBCP47 inp = case T.uncons inp of
   Just (c, t) -> catchIrregulars $ parseBCP47' c t
-  Nothing -> Left $ Err 0 Cbeginning ErrEmpty
+  Nothing -> Left $ SyntaxError 0 Cbeginning SyntaxErrorEmpty
   where
     -- FIXME: sufficient for the moment
     catchIrregulars (Right a) = Right a
@@ -240,14 +238,14 @@ parseBCP47 inp = case T.uncons inp of
             Right $ Grandfathered SgnChDe
           | otherwise = Left e
 
-parseBCP47' :: Char -> Text -> Either Err BCP47
+parseBCP47' :: Char -> Text -> Either SyntaxError BCP47
 parseBCP47' !initchar !inp = tagPop initchar inp Cbeginning 0 >>= parsePrimary
   where
     initcon l e1 e2 e3 s r v e p = NormalTag $ Normal l e1 e2 e3 s r v e p
 
     -- TODO: could be optimized a bit
     parsePrimary (st, t)
-      | containsDigit st = Left $ Err 0 Cbeginning ErrBadChar
+      | containsDigit st = Left $ SyntaxError 0 Cbeginning SyntaxErrorBadSubtag
       | subtagLength st == 1 =
         if subtagHead st == subtagCharx
           then PrivateUse <$> parsePrivate 0 t
@@ -255,7 +253,7 @@ parseBCP47' !initchar !inp = tagPop initchar inp Cbeginning 0 >>= parsePrimary
             msep <- tagSep Cprimary 0 t
             case msep of
               Just (c, t') -> parseIrregularI st c t'
-              Nothing -> Left $ Err 0 Cprimary ErrNeededTag
+              Nothing -> Left $ SyntaxError 0 Cprimary SyntaxErrorNeededTag
       | subtagLength st >= 4 =
         mfinish
           (subtagLength st)
@@ -286,23 +284,23 @@ parseBCP47' !initchar !inp = tagPop initchar inp Cbeginning 0 >>= parsePrimary
           case msep of
             Nothing -> pure $ Grandfathered ZhMin
             Just (c, t') -> do
-              (st2, t'') <- tagPop c t' Clext1 pos'
+              (st2, t'') <- tagPop c t' Cextl1 pos'
               case unwrapSubtag st2 of
                 15962850549540323347
                   | T.null t'' -> pure $ Grandfathered ZhMinNan
-                _ -> tryLext2 (con $ justSubtag st1) st2 Clext1 pos' t''
+                _ -> tryLext2 (con $ justSubtag st1) st2 Cextl1 pos' t''
         (17699146535566049298, 17412902894784479253)
           | T.null t -> pure $ Grandfathered ZhXiang
         _ -> tryLext1 con st1 clast pos t
 
     tryLext1 !con st clast pos t
       | containsOnlyLetters st && subtagLength st == 3 =
-        mfinish (subtagLength st) Clext1 pos t (con $ justSubtag st) tryLext2
+        mfinish (subtagLength st) Cextl1 pos t (con $ justSubtag st) tryLext2
       | otherwise = tryScript (con nullSubtag nullSubtag nullSubtag) st clast pos t
 
     tryLext2 !con st clast pos t
       | containsOnlyLetters st && subtagLength st == 3 =
-        mfinish (subtagLength st) Clext2 pos t (con $ justSubtag st) tryLext3
+        mfinish (subtagLength st) Cextl2 pos t (con $ justSubtag st) tryLext3
       | otherwise = tryScript (con nullSubtag nullSubtag) st clast pos t
 
     tryLext3 !con st clast pos t
@@ -318,11 +316,11 @@ parseBCP47' !initchar !inp = tagPop initchar inp Cbeginning 0 >>= parsePrimary
     tryRegion !con st clast pos t
       | subtagLength st == 2 =
         if containsDigit st
-          then Left $ Err pos clast ErrBadTag
+          then Left $ SyntaxError pos clast SyntaxErrorBadSubtag
           else mfinish (subtagLength st) Cregion pos t (con $ justSubtag st) tryVariant
       | subtagLength st == 3 =
         if containsLetter st
-          then Left $ Err pos clast ErrBadTag
+          then Left $ SyntaxError pos clast SyntaxErrorBadSubtag
           else mfinish (subtagLength st) Cregion pos t (con $ justSubtag st) tryVariant
       | otherwise = tryVariant (con nullSubtag) st clast pos t
 
@@ -330,13 +328,13 @@ parseBCP47' !initchar !inp = tagPop initchar inp Cbeginning 0 >>= parsePrimary
       | subtagLength st == 4 =
         if isDigit $ subtagHead st
           then mfinish (subtagLength st) Cvariant pos t (con . (st :)) tryVariant
-          else Left $ Err pos clast ErrBadTag
+          else Left $ SyntaxError pos clast SyntaxErrorBadSubtag
       | subtagLength st >= 5 =
         mfinish (subtagLength st) Cvariant pos t (con . (st :)) tryVariant
       | otherwise = trySingleton (con []) st clast pos t
 
     trySingleton con st clast pos t
-      | subtagLength st /= 1 = Left $ Err pos clast ErrBadTag
+      | subtagLength st /= 1 = Left $ SyntaxError pos clast SyntaxErrorBadSubtag
       | subtagHead st == subtagCharx =
         parsePrivateUse (con []) pos t
       | otherwise =
@@ -360,7 +358,7 @@ parseBCP47' !initchar !inp = tagPop initchar inp Cbeginning 0 >>= parsePrimary
         Just (c, t') -> do
           (st, t'') <- tagPop c t' Cprivateuse pos'
           parsePrivateUseTag con st Cprivateuse pos' t''
-        Nothing -> Left $ Err pos Cprivateuse ErrNeededTag
+        Nothing -> Left $ SyntaxError pos Cprivateuse SyntaxErrorNeededTag
 
     parsePrivateUseTag con st _ pos t =
       mfinish (subtagLength st) Cprivateuse pos t (con . (st :)) parsePrivateUseTag
@@ -380,18 +378,18 @@ parseBCP47' !initchar !inp = tagPop initchar inp Cbeginning 0 >>= parsePrimary
                 t''
                 (con . (st NE.:|))
                 parseExtensionTag
-            else Left $ Err pos Cextension ErrNeededTag
-        Nothing -> Left $ Err pos Cextension ErrNeededTag
+            else Left $ SyntaxError pos Cextension SyntaxErrorNeededTag
+        Nothing -> Left $ SyntaxError pos Cextension SyntaxErrorNeededTag
 
     parseExtensionTag con st _ pos t
       | subtagLength st == 1 = trySingleton (con []) st Cextension pos t
       | otherwise = mfinish (subtagLength st) Cextension pos t (con . (st :)) parseExtensionTag
 
     parseIrregularI st c t
-      | st /= subtagI = Left $ Err 0 Cbeginning ErrBadChar
+      | st /= subtagI = Left $ SyntaxError 0 Cbeginning SyntaxErrorBadSubtag
       | otherwise = case tagPop c t Cbeginning 0 of
         Right (st', t') -> case T.uncons t' of
-          Just _ -> Left $ Err 0 Cprimary ErrIrregINum
+          Just _ -> Left $ SyntaxError 0 Cprimary SyntaxErrorIrregINum
           Nothing -> recognizeIrregI st'
         Left e -> Left e
 
@@ -409,16 +407,16 @@ parseBCP47' !initchar !inp = tagPop initchar inp Cbeginning 0 >>= parsePrimary
       16827550474088480787 -> Right $ Grandfathered ITao
       16827638435018702867 -> Right $ Grandfathered ITay
       16847869448969781267 -> Right $ Grandfathered ITsu
-      _ -> Left $ Err 2 CirregI ErrBadTag
+      _ -> Left $ SyntaxError 2 CirregI SyntaxErrorBadSubtag
 
-parsePrivate :: Int -> Text -> Either Err (NE.NonEmpty Subtag)
+parsePrivate :: Int -> Text -> Either SyntaxError (NE.NonEmpty Subtag)
 parsePrivate initpos inp = do
   ms <- tagSep Cprivateuse initpos inp
   case ms of
     Just (c, t) -> do
       (st, t') <- tagPop c t Cprivateuse initpos
       parsePrivateUseTag (st NE.:|) (initpos + fromIntegral (subtagLength st) + 1) t'
-    Nothing -> Left $ Err initpos Cprivateuse ErrNeededTag
+    Nothing -> Left $ SyntaxError initpos Cprivateuse SyntaxErrorNeededTag
   where
     parsePrivateUseTag con pos t = do
       mc <- tagSep Cprivateuse pos t

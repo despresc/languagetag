@@ -1,5 +1,4 @@
 -- |
--- Module      : Text.LanguageTag.BCP47.Registry.Grandfathered
 -- Description : Grandfathered subtags
 -- Copyright   : 2021 Christian Despres
 -- License     : BSD-2-Clause

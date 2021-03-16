@@ -1,15 +1,13 @@
 {-# LANGUAGE BangPatterns #-}
 
 -- |
--- Module      : Text.LanguageTag.BCP47.Subtag
--- Description : Generic lanuage subtags
+-- Description : BCP47 subtags
 -- Copyright   : 2021 Christian Despres
 -- License     : BSD-2-Clause
 -- Maintainer  : Christian Despres
 --
 -- The 'Subtag' and related types in this module provide a compact and
--- uniform representation for language tag components that are common
--- to many different standards.
+-- uniform representation for BCP47 subtags.
 module Text.LanguageTag.BCP47.Subtag
   ( -- * Subtags
     Subtag,
@@ -19,7 +17,6 @@ module Text.LanguageTag.BCP47.Subtag
     containsOnlyLetters,
     containsDigit,
     containsOnlyDigits,
-    parseSubtagMangled,
     unpackSubtag,
     unwrapSubtag,
     wrapSubtag,
@@ -30,7 +27,7 @@ module Text.LanguageTag.BCP47.Subtag
     indexSubtag,
     singleton,
 
-    -- * Subtags that might not be present
+    -- * Subtags that might be absent
     MaybeSubtag,
     maybeSubtag,
     justSubtag,
@@ -40,7 +37,6 @@ module Text.LanguageTag.BCP47.Subtag
     SubtagChar,
     packChar,
     unpackCharLower,
-    packCharMangled,
     unwrapChar,
 
     -- * Additional rendering functions
@@ -54,6 +50,8 @@ module Text.LanguageTag.BCP47.Subtag
     unsafeUnpackUpperLetter,
     unsafeIndexSubtag,
     unsafePopChar,
+    parseSubtagMangled,
+    packCharMangled,
   )
 where
 
@@ -94,17 +92,17 @@ containsLetter (Subtag n) = n `Bit.testBit` 4
 containsOnlyLetters :: Subtag -> Bool
 containsOnlyLetters = not . containsDigit
 
--- | 'containsLetter' is 'True' exactly when the given 'Subtag'
+-- | 'containsDigit' is 'True' exactly when the given 'Subtag'
 -- contains a digit (an ASCII numeral)
 containsDigit :: Subtag -> Bool
 containsDigit (Subtag n) = n `Bit.testBit` 5
 
--- | 'containsLetter' is 'True' exactly when the given 'Subtag'
+-- | 'containsOnlyDigits' is 'True' exactly when the given 'Subtag'
 -- contains only digits (ASCII numerals)
 containsOnlyDigits :: Subtag -> Bool
 containsOnlyDigits = not . containsLetter
 
--- | Index a subtag.
+-- | Return the 'SubtagChar' at the given index
 indexSubtag :: Subtag -> Word8 -> Maybe SubtagChar
 indexSubtag t idx
   | subtagLength t >= idx = Nothing
@@ -116,8 +114,7 @@ readSubtag len = Subtag . fst . List.foldl' go (len, 57)
     go :: (Word64, Int) -> SubtagChar -> (Word64, Int)
     go (!acc, !idx) (SubtagChar !n) = (acc + Bit.shiftL (fromIntegral n) idx, idx - 7)
 
--- | Attempt to parse a text string as a subtag. This also returns
--- whether or not we saw a letter or a digit, respectively.
+-- | Attempt to parse a text string as a subtag
 parseSubtag :: Text -> Maybe Subtag
 parseSubtag inp
   | Just (c, t) <- T.uncons inp,
@@ -137,8 +134,8 @@ parseSubtag inp
 
 -- | Given the initial character of a subtag and the remainder of a
 -- 'Text' stream, attempt to parse the rest of the subtag, failing if
--- an invalid character is encountered and returning the resulting
--- 'Subtag' and the remainder of the stream.
+-- an invalid character is encountered and otherwise returning the
+-- resulting 'Subtag' and the remainder of the stream.
 popSubtag :: Char -> Text -> Maybe (Subtag, Text)
 popSubtag initchar inp = case packCharDetail initchar of
   Just (c, sc) -> go 1 (c :) (toSeenChar sc) inp
@@ -171,7 +168,7 @@ parseSubtagMangled t = readSubtag (fromIntegral len) (wchars [])
 -- Subtag characters
 ----------------------------------------------------------------
 
--- | Unwrap a subtag character
+-- | Return the internal representation of a 'SubtagChar'
 unwrapChar :: SubtagChar -> Word8
 unwrapChar (SubtagChar w) = w
 
@@ -202,7 +199,7 @@ packCharDetail = onChar Nothing low high dig
     dig w = Just (SubtagChar w, True)
 
 -- | Like 'packChar', but replaces any invalid character with the
--- letter a.
+-- letter @a@
 packCharMangled :: Char -> SubtagChar
 packCharMangled = fromMaybe (SubtagChar 97) . packChar
 

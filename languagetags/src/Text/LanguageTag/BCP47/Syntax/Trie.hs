@@ -2,8 +2,7 @@
 {-# LANGUAGE TupleSections #-}
 
 -- |
--- Module      : Text.LanguageTag.BCP47.Syntax.Trie
--- Description : Subtag trie interface with BCP47 tags
+-- Description : BCP47 tag interface to subtag tries
 -- Copyright   : 2021 Christian Despres
 -- License     : BSD-2-Clause
 -- Maintainer  : Christian Despres
@@ -29,7 +28,9 @@ tagTrie r ls = pathTrie $ r' <> fmap (first $ toList . toSubtags) ls
 lookupBCP47Trie :: BCP47 -> Trie a -> Maybe a
 lookupBCP47Trie = lookupTrie . toList . toSubtags
 
--- | Find an entry in a 'Trie' that best matches the given list of
--- subtags, like 'lookupTrieLax'
+-- | Find an entry in a 'Trie' that best matches the given 'BCP47'
+-- tag, like 'lookupTrieLax'. Note that this does not perform any
+-- canonicalization or consider other information like macrolanguage
+-- relationships that might improve matching.
 lookupBCP47TrieLax :: BCP47 -> Trie a -> Maybe a
 lookupBCP47TrieLax = lookupTrieLax . toList . toSubtags
