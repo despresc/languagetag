@@ -37,7 +37,7 @@ Otherwise the relevant types and functions will change as the registry
 updates. See <https://tools.ietf.org/html/bcp47#section-3.3> for the
 full registry maintenance details.
 
-# Future
+## Future
 
 The library may be updated in future to add support for other
 language-tag-related standards, like ISO 639.
