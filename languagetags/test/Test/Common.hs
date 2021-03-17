@@ -393,18 +393,14 @@ shrinkTagishText t =
 
 -- | Shrink a text tag
 
--- FIXME: Temporarily very conservative
-shrinkTagText :: Text -> [Text]
-shrinkTagText = const []
-{-
+-- Very conservative until I feel like writing it properly
 shrinkTagText :: Text -> [Text]
 shrinkTagText = fmap (T.intercalate "-") . go . T.split (== '-')
   where
     go (x : xs)
       | x == "x" =
         ("x" :) <$> filter (not . null) (shrinkListWith shrinkSubtagText xs)
-    go [] = []
--}
+    go _ = []
 
 shrinkSynExtension :: Syn.Extension -> [Syn.Extension]
 shrinkSynExtension (Syn.Extension c es) = Syn.Extension c <$> mapMaybe NE.nonEmpty shrinks
@@ -413,36 +409,18 @@ shrinkSynExtension (Syn.Extension c es) = Syn.Extension c <$> mapMaybe NE.nonEmp
     shrinks = shrinkListWith shrinkSubtag es'
 
 -- | Shrink a syntactic normal tag
+
+-- Very conservative until I feel like writing it properly
 shrinkSynNormal :: Syn.Normal -> [Syn.Normal]
-shrinkSynNormal n = prefs <> shrunkVars <> shrunkExts <> shrunkPus
-  where
-    prefs =
-      [n {Syn.extlang3 = nullSubtag} | Syn.extlang3 n /= nullSubtag]
-        <> [n {Syn.extlang2 = nullSubtag, Syn.extlang3 = nullSubtag} | Syn.extlang2 n /= nullSubtag]
-        <> [n {Syn.extlang1 = nullSubtag, Syn.extlang2 = nullSubtag, Syn.extlang3 = nullSubtag} | Syn.extlang1 n /= nullSubtag]
-        <> [n {Syn.script = nullSubtag} | Syn.script n /= nullSubtag]
-        <> [n {Syn.region = nullSubtag} | Syn.region n /= nullSubtag]
-    shrunkVars =
-      (\x -> n {Syn.variants = x})
-        <$> shrinkListWith shrinkSubtag (Syn.variants n)
-    shrunkExts =
-      (\x -> n {Syn.extensions = x})
-        <$> shrinkListWith shrinkSynExtension (Syn.extensions n)
-    shrunkPus =
-      (\x -> n {Syn.privateUse = x})
-        <$> shrinkListWith shrinkSubtag (Syn.privateUse n)
+shrinkSynNormal = const []
 
 shrinkPrivateUseTag :: NonEmpty Subtag -> [NonEmpty Subtag]
 shrinkPrivateUseTag = mapMaybe NE.nonEmpty . shrinkListWith shrinkSubtag . NE.toList
 
--- FIXME: Temporarily very conservative
 shrinkSynTag :: Syn.BCP47 -> [Syn.BCP47]
-shrinkSynTag = const []
-{-
 shrinkSynTag (Syn.NormalTag n) = Syn.NormalTag <$> shrinkSynNormal n
 shrinkSynTag (Syn.PrivateUse t) = Syn.PrivateUse <$> shrinkPrivateUseTag t
 shrinkSynTag (Syn.Grandfathered _) = []
--}
 
 ----------------------------------------------------------------
 -- Utility

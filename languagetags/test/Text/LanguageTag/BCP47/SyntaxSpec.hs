@@ -2,7 +2,6 @@
 
 module Text.LanguageTag.BCP47.SyntaxSpec (spec) where
 
-import qualified Data.Char as Char
 import Data.Either (isRight)
 import Data.Foldable (traverse_)
 import Data.Text (Text)
@@ -13,7 +12,6 @@ import Test.Hspec.QuickCheck
 import Test.QuickCheck
   ( forAll,
     forAllShrink,
-    shrink,
     (===),
   )
 import Text.LanguageTag.BCP47.Registry (Grandfathered (..))

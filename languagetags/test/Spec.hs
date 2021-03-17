@@ -2,13 +2,9 @@
 
 module Main where
 
-import Data.Foldable (traverse_)
-import Data.Text (Text)
-import qualified Data.Text as T
 import Test.Hspec
 import Test.Hspec.QuickCheck (modifyMaxSuccess)
 import qualified Text.LanguageTag.BCP47.SubtagSpec as SubtagSpec
-import Text.LanguageTag.BCP47.Syntax
 import qualified Text.LanguageTag.BCP47.SyntaxSpec as SyntaxSpec
 
 {- TODO:

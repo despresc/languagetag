@@ -9,8 +9,7 @@ import Test.Common
 import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck
-  ( forAll,
-    forAllShrink,
+  ( forAllShrink,
     shrink,
     (===),
   )
