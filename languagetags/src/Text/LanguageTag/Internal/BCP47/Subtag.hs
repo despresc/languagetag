@@ -70,7 +70,7 @@ import Data.Word (Word64, Word8)
 -- These tags are always stored and printed entirely in lower case
 -- when on their own.
 
--- The three lowest bits encode the length of the tag. The next two
+-- The four lowest bits encode the length of the tag. The next two
 -- bits record whether or not the tag contains a letter or digit. The
 -- highest chunks of 7 bits encode the actual characters (first
 -- character the highest). (This leaves us with 2 bits left over, in
@@ -147,7 +147,7 @@ instance VG.Vector Vector Subtag where
 -- | Convert the internal representation of a 'Subtag' back to a
 -- 'Subtag'
 
--- A brief reference: the three lower bits are the length `len`, which
+-- A brief reference: the four lower bits are the length `len`, which
 -- must be between 1 and 8. The highest len * 7 bits are the subtag
 -- content, and must be lower case ASCII letters or digits. Bits 4 and
 -- 5 record whether the subtag content contains any letters or digits,
@@ -165,15 +165,15 @@ wrapSubtag n
     Just $ Subtag n
   | otherwise = Nothing
   where
-    len = fromIntegral (n Bit..&. 7) :: Word8
+    len = fromIntegral (n Bit..&. 15) :: Word8
     isLetter x = 97 <= x && x <= 122
     isDigit x = 48 <= x && x <= 57
     claimsLetter = Bit.testBit n 4
     claimsDigit = Bit.testBit n 5
-    chars = unSubtagChar . unsafeIndexSubtag (Subtag n) <$> [0 .. len]
+    chars = unSubtagChar . unsafeIndexSubtag (Subtag n) <$> [0 .. (len - 1)]
     numLetters = length $ filter isLetter chars
     numDigits = length $ filter isDigit chars
-    otherBits = Bit.shiftL (Bit.shiftR n 5) (5 + fromIntegral len * 7)
+    otherBits = Bit.shiftL (Bit.shiftR n 6) (6 + fromIntegral len * 7)
 {-# INLINE wrapSubtag #-}
 
 ----------------------------------------------------------------

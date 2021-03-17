@@ -45,18 +45,22 @@ import Text.LanguageTag.BCP47.Subtag
 import Text.LanguageTag.Internal.BCP47.Registry.Grandfathered
 import Text.LanguageTag.Internal.BCP47.Subtag (SubtagChar (..))
 
+-- | Render a possibly-absent region subtag in the middle of a tag,
+-- with an initial @-@
 renderRegion :: MaybeSubtag -> TB.Builder
 renderRegion = maybeSubtag "" go
   where
     go s
       | subtagLength s == 2 = TB.fromString $ '-' : List.unfoldr capgo (s, 0)
-      | otherwise = renderSubtagBuilderLower s
+      | otherwise = "-" <> renderSubtagBuilderLower s
     capgo (n, idx)
       | idx == (2 :: Word8) = Nothing
       | otherwise =
         let (c, n') = unsafePopChar n
          in Just (unsafeUnpackUpperLetter c, (n', idx + 1))
 
+-- | Render a possibly-absent script subtag in the middle of a tag,
+-- with an initial @-@
 renderScript :: MaybeSubtag -> TB.Builder
 renderScript = maybeSubtag "" $ \s -> TB.fromString $ '-' : List.unfoldr go (s, 0 :: Word8)
   where
@@ -284,7 +288,7 @@ extensionCharToChar ec
 unsafeSubtagCharToExtension :: SubtagChar -> ExtensionChar
 unsafeSubtagCharToExtension (SubtagChar n)
   | n < 58 = toC 48 n
-  | n < 119 = toC 87 n
+  | n < 120 = toC 87 n
   | otherwise = toC 88 n
   where
     toC x = toEnum . subtract x . fromEnum

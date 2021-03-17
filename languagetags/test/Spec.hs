@@ -6,15 +6,14 @@ import Data.Foldable (traverse_)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Test.Hspec
+import Test.Hspec.QuickCheck (modifyMaxSuccess)
+import qualified Text.LanguageTag.BCP47.SubtagSpec as SubtagSpec
 import Text.LanguageTag.BCP47.Syntax
+import qualified Text.LanguageTag.BCP47.SyntaxSpec as SyntaxSpec
 
 {- TODO:
 
 test:
-
-- Subtag.toSubtag should be an order homomorphism
-
-- case insensitivity in the parsing
 
 - canonicalization of a redundant tag considered as a normal tag
   should exactly match its preferred value in the associated record
@@ -23,8 +22,6 @@ test:
 - canonicalizeBCP47 and normalToExtlangForm should be idempotent
 
 - validateBCP47 . toSyntaxTag should be Right
-
-- parseBCP47 . renderBCP47 should be Right
 
 - the registry vectors should have length equal to the number of
   constructors in their associated types, and the lookup functions
@@ -48,84 +45,25 @@ test:
 - test all of the parsing and conversion functions (usual suspects,
   but also things like wrapSubtag - will want to go module-by-module)
 
-- unit tests of the subtag-related functions
-
-- parseSubtag . renderSubtagLower should be Just
-
-- packChar . unpackCharLower should be Just
-
-- parseSubtagMangled and packCharMangled should behave identically to
-  their non-mangled counterparts on known-valid subtags and otherwise
-  renderSubtagLower . parseSubtagMangled etc. should be the obvious
-  thing
-
 - tags with grandfathered tags as strict initial segments should be
   parsed properly (i.e. as normal tags and not at all for regular and
   irregular grandfathered tags, respectively)
 
-- random normal-looking tags and subtags should be parsed properly,
-  and random near-normal ones should not be
-
-- unit testing of error positions in parsing
-
 - think of things for tries (maybe just unit tests?)
 
-- toLower . renderBCP47 should be the same as intercalate "-"
-  . toSubtags for syntactic tags
-
-- unsafeNormalTag et al. should be correct (unit tests)
-
 - unit testing of validation (good and bad)
-
-- wrapSubtag . unwrapSubtag should be Just
-
 -}
 
-irregularTags :: [(Text, Grandfathered)]
-irregularTags =
-  [ ("en-GB-oed", EnGbOed),
-    ("i-ami", IAmi),
-    ("i-bnn", IBnn),
-    ("i-default", IDefault),
-    ("i-enochian", IEnochian),
-    ("i-hak", IHak),
-    ("i-klingon", IKlingon),
-    ("i-lux", ILux),
-    ("i-mingo", IMingo),
-    ("i-navajo", INavajo),
-    ("i-pwn", IPwn),
-    ("i-tao", ITao),
-    ("i-tay", ITay),
-    ("i-tsu", ITsu),
-    ("sgn-BE-FR", SgnBeFr),
-    ("sgn-BE-NL", SgnBeNl),
-    ("sgn-CH-DE", SgnChDe)
-  ]
-
-regularTags :: [(Text, Grandfathered)]
-regularTags =
-  [ ("art-lojban", ArtLojban),
-    ("cel-gaulish", CelGaulish),
-    ("no-bok", NoBok),
-    ("no-nyn", NoNyn),
-    ("zh-guoyu", ZhGuoyu),
-    ("zh-hakka", ZhHakka),
-    ("zh-min", ZhMin),
-    ("zh-min-nan", ZhMinNan),
-    ("zh-xiang", ZhXiang)
-  ]
+{-
+General spec convention: if one of the values fed to (===) is more
+trusted (more likely to be the correct value or something like that)
+then it goes on the right. Not all (===) invocations have such a
+value, of course.
+-}
 
 main :: IO ()
 main = hspec $
-  parallel $ do
-    describe "Syntax" $ do
-      describe "parses the irregular grandfathered tag" $ do
-        let test (l, t) =
-              it (T.unpack l) $
-                parseBCP47 l `shouldBe` Right (grandfatheredSyntax t)
-        traverse_ test irregularTags
-      describe "parses the regular grandfathered tag" $ do
-        let test (l, t) =
-              it (T.unpack l) $
-                parseBCP47 l `shouldBe` Right (grandfatheredSyntax t)
-        traverse_ test regularTags
+  modifyMaxSuccess (const 1000) $
+    parallel $ do
+      describe "Subtag" SubtagSpec.spec
+      describe "Syntax" SyntaxSpec.spec

@@ -86,4 +86,8 @@ test-suite test
   main-is: Spec.hs
   hs-source-dirs:
     test
-  build-depends: languagetags, base, text, containers, deepseq, hspec
+  build-depends: languagetags, base, text, containers, deepseq, hspec, QuickCheck
+  other-modules:
+    Test.Common
+    Text.LanguageTag.BCP47.SubtagSpec
+    Text.LanguageTag.BCP47.SyntaxSpec

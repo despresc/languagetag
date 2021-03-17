@@ -108,11 +108,20 @@ indexSubtag t idx
   | subtagLength t >= idx = Nothing
   | otherwise = Just $ unsafeIndexSubtag t idx
 
+-- read a subtag given its length and constituent characters
 readSubtag :: Word64 -> [SubtagChar] -> Subtag
-readSubtag len = Subtag . fst . List.foldl' go (len, 57)
+readSubtag len = fixup . List.foldl' go (len, 57, False, False)
   where
-    go :: (Word64, Int) -> SubtagChar -> (Word64, Int)
-    go (!acc, !idx) (SubtagChar !n) = (acc + Bit.shiftL (fromIntegral n) idx, idx - 7)
+    toSeen z w
+      | z = if w then Both else OnlyLetter
+      | otherwise = OnlyDigit
+    fixup (x, _, z, w) = recordSeen (toSeen z w) $ Subtag x
+    go (!acc, !idx, !seenLetter, !seenDigit) (SubtagChar !n) =
+      (acc + Bit.shiftL (fromIntegral n) idx, idx - 7, seenLetter', seenDigit')
+      where
+        (seenLetter', seenDigit')
+          | n <= 57 = (seenLetter, True)
+          | otherwise = (True, seenDigit)
 
 -- | Attempt to parse a text string as a subtag
 parseSubtag :: Text -> Maybe Subtag

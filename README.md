@@ -7,7 +7,10 @@ canonicalization, and other registry-related processing, it uses the
 `languagetags-gen` package in this repository to generate the relevant
 functions from a copy of the [IANA subtag
 registry](https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry)
-in `languagetags-gen/registry/bcp47`.
+in `languagetags-gen/registry/bcp47`. The date of the repository that
+is used can be found at the top of that file, or in the documentation
+for `Text.LanguageTag.BCP47.Registry.bcp47RegistryDate` in the
+`languagetags` package here.
 
 Since this library will need to update from time to time as the subtag
 registry itself updates, the following version-bumping scheme will
