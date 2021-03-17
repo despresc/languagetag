@@ -132,11 +132,14 @@ instance NFData SyntaxErrorType where
 -- | Convert a 'BCP47' tag into its component subtags
 toSubtags :: BCP47 -> NonEmpty Subtag
 toSubtags (NormalTag (Normal p e1 e2 e3 s r vs es ps)) =
-  p NE.:| (mapMaybe go [e1, e2, e3, s, r] <> vs <> es' <> ps)
+  p NE.:| (mapMaybe go [e1, e2, e3, s, r] <> vs <> es' <> ps')
   where
     go = maybeSubtag Nothing Just
     es' = flip concatMap es $ \(Extension c ts) ->
       extensionCharToSubtag c : NE.toList ts
+    ps'
+      | null ps = []
+      | otherwise = subtagX : ps
 toSubtags (PrivateUse x) = subtagX NE.:| NE.toList x
 toSubtags (Grandfathered g) = case g of
   ArtLojban -> Subtag 14108546179528654867 NE.:| [Subtag 15690354374758891542]
@@ -144,7 +147,7 @@ toSubtags (Grandfathered g) = case g of
   EnGbOed -> Subtag 14679482985414131730 NE.:| [Subtag 14954202562683731986, Subtag 16111381376313327635]
   IAmi -> Subtag 15132094747964866577 NE.:| [Subtag 14102819922971197459]
   IBnn -> Subtag 15132094747964866577 NE.:| [Subtag 14248104991419006995]
-  IDefault -> Subtag 15132094747964866577 NE.:| [Subtag 14680466211245977112]
+  IDefault -> Subtag 15132094747964866577 NE.:| [Subtag 14526138628724883479]
   IEnochian -> Subtag 15132094747964866577 NE.:| [Subtag 14680466211245977112]
   IHak -> Subtag 15132094747964866577 NE.:| [Subtag 15098133032806121491]
   IKlingon -> Subtag 15132094747964866577 NE.:| [Subtag 15542853518732230679]
@@ -152,8 +155,8 @@ toSubtags (Grandfathered g) = case g of
   IMingo -> Subtag 15132094747964866577 NE.:| [Subtag 15827749698417983509]
   INavajo -> Subtag 15132094747964866577 NE.:| [Subtag 15962927641447628822]
   IPwn -> Subtag 15132094747964866577 NE.:| [Subtag 16275850723642572819]
-  ITao -> Subtag 15132094747964866577 NE.:| [Subtag 16827638435018702867]
-  ITay -> Subtag 15132094747964866577 NE.:| [Subtag 16827550474088480787]
+  ITao -> Subtag 15132094747964866577 NE.:| [Subtag 16827550474088480787]
+  ITay -> Subtag 15132094747964866577 NE.:| [Subtag 16827638435018702867]
   ITsu -> Subtag 15132094747964866577 NE.:| [Subtag 16847869448969781267]
   NoBok -> Subtag 15977645578003677202 NE.:| [Subtag 14249204503046782995]
   NoNyn -> Subtag 15977645578003677202 NE.:| [Subtag 15989872147304546323]

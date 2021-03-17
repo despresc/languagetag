@@ -284,6 +284,14 @@ genGrandfatheredTagText =
 genTagText :: Gen Text
 genTagText = oneof [genNormalTagText, genPrivateUseTagText, genGrandfatheredTagText]
 
+-- | Generate near-well-formed tag text
+genTagishText :: Gen Text
+genTagishText = oneof [genTagText, g]
+  where
+    g = do
+      n <- chooseInt (0, 10)
+      T.intercalate "-" <$> vectorOf n genSubtagishText
+
 -- | Generate a normal well-formed tag
 genSynNormal :: Gen Syn.Normal
 genSynNormal = do

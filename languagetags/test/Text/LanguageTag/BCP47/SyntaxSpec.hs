@@ -2,8 +2,10 @@
 
 module Text.LanguageTag.BCP47.SyntaxSpec (spec) where
 
+import qualified Data.Char as Char
 import Data.Either (isRight)
 import Data.Foldable (traverse_)
+import qualified Data.List.NonEmpty as NE
 import Data.Text (Text)
 import qualified Data.Text as T
 import Test.Common
@@ -12,19 +14,19 @@ import Test.Hspec.QuickCheck
 import Test.QuickCheck
   ( forAll,
     forAllShrink,
+    suchThat,
     (===),
   )
 import Text.LanguageTag.BCP47.Registry (Grandfathered (..))
+import Text.LanguageTag.BCP47.Subtag (renderSubtagLower, unpackCharLower)
 import qualified Text.LanguageTag.BCP47.Syntax as Syn
+import Text.LanguageTag.Internal.BCP47.Subtag (SubtagChar (..))
+import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn
 
 {- TODO:
 
 correctness (quickcheck, unit when appropriate) of:
 
-- unsafeNormalTag and the rest
-- charToExtensionChar and such
-- toSubtags (e.g. T.toLower . renderBCP47 should be intercalate "-"
-  . fmap renderSubtagLower . toSubtags)
 - errors during parsing (positions, values)
 - tag-ish case insensitivity in parseBCP47
 -}
@@ -71,6 +73,9 @@ spec = do
     it "is case-sensitive on any well-formed tag" $
       forAllShrink genTagText shrinkTagText $ \t ->
         Syn.parseBCP47 t === Syn.parseBCP47 (T.toLower t)
+    it "is case-sensitive on near-well-formed tags" $
+      forAllShrink genTagishText shrinkTagishText $ \t ->
+        Syn.parseBCP47 t === Syn.parseBCP47 (T.toLower t)
     describe "parses the irregular grandfathered tag" $ do
       let test (l, t) =
             it (T.unpack l) $
@@ -88,3 +93,27 @@ spec = do
     prop "composes with parseBCP47 on the left correctly" $
       forAllShrink genTagText shrinkTagText $ \t ->
         (T.toLower . Syn.renderBCP47 <$> Syn.parseBCP47 t) === Right (T.toLower t)
+  describe "charToExtensionChar" $ do
+    prop "composes with extensionCharToChar on the right correctly" $
+      forAll (genSubtagChar `suchThat` (not . (`elem` ['x', 'X']))) $ \c ->
+        (Char.toLower . Syn.extensionCharToChar <$> Syn.charToExtensionChar c)
+          === Just (Char.toLower c)
+    prop "composes with extensionCharToChar on the left correctly" $
+      forAll genExtensionChar' $ \c ->
+        (Syn.charToExtensionChar $ Syn.extensionCharToChar c) === Just c
+  describe "extensionCharToSubtag" $ do
+    prop "returns the correct singleton subtag" $
+      forAll genExtensionChar' $ \c ->
+        let c' = T.singleton $ Syn.extensionCharToChar c
+            c'' = renderSubtagLower $ Syn.extensionCharToSubtag c
+         in c'' === c'
+  describe "unsafeSubtagCharToExtension" $ do
+    prop "returns the correct ExtensionChar" $
+      forAll (genSubtagSubtagChar `suchThat` (/= SubtagChar 120)) $ \c ->
+        let c' = Syn.unsafeSubtagCharToExtension c
+         in Syn.extensionCharToChar c' === unpackCharLower c
+  describe "toSubtags" $ do
+    prop "should compare correctly with renderBCP47" $
+      forAllShrink genSynTag shrinkSynTag $ \st ->
+        T.intercalate "-" (NE.toList $ fmap renderSubtagLower $ Syn.toSubtags st)
+          === T.toLower (Syn.renderBCP47 st)
