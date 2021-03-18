@@ -375,7 +375,7 @@ shrinkText = fmap T.pack . shrink . T.unpack
 shrinkSubtagText :: Text -> [Text]
 shrinkSubtagText t
   | T.null t = []
-  | otherwise = filter (not . T.null) $ fmap T.pack $ List.subsequences $ T.unpack t
+  | otherwise = filter (not . T.null) $ fmap T.pack $ init $ List.subsequences $ T.unpack t
 
 -- | Shrink a 'Subtag' value
 shrinkSubtag :: Subtag -> [Subtag]

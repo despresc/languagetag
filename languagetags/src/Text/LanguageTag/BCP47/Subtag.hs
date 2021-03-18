@@ -13,6 +13,7 @@ module Text.LanguageTag.BCP47.Subtag
     Subtag,
     parseSubtag,
     popSubtag,
+    popSubtag',
     containsLetter,
     containsOnlyLetters,
     containsDigit,
@@ -151,7 +152,11 @@ popSubtag initchar inp = case packCharDetail initchar of
   Nothing -> Nothing
   where
     go idx !l !sc !t
-      | idx == 8 = Just (recordSeen sc $ readSubtag idx (l []), t)
+      | idx == 8 = case T.uncons t of
+        Just (c, t')
+          | c == '-' || T.null t' -> Just (recordSeen sc $ readSubtag idx (l []), t)
+          | otherwise -> Nothing
+        Nothing -> Just (recordSeen sc $ readSubtag idx (l []), t)
       | otherwise = case T.uncons t of
         Just (c, t')
           | c == '-' -> Just (recordSeen sc $ readSubtag idx (l []), t)
@@ -159,6 +164,13 @@ popSubtag initchar inp = case packCharDetail initchar of
             Just (!w, !sc') -> go (idx + 1) (l . (w :)) (reportChar sc' sc) t'
             Nothing -> Nothing
         Nothing -> Just (recordSeen sc $ readSubtag idx (l []), t)
+
+-- | Attempt to parse an initial subtag in a text stream, returning
+-- the subtag and the rest of the stream if successful
+popSubtag' :: Text -> Maybe (Subtag, Text)
+popSubtag' t = do
+  (c, t') <- T.uncons t
+  popSubtag c t'
 
 -- | Read a tag from the given text value, truncating it or replacing
 -- it with the singleton "a" if necessary, and replacing any

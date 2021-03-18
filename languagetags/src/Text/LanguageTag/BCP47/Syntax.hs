@@ -56,11 +56,11 @@ import Text.LanguageTag.Internal.BCP47.Syntax
 - spin out the try* functions into their own functions?
 - benchmark a more straightforward implementation that does things
   like pre-splitting the input
-
 - clean up the structure of the error types and how they are emitted
- (e.g. Err 0 Cprimary ErrNeededTag can only occur when the start is
- "x" or "i", and ErrNeededTag can otherwise only occur after a
- singleton)
+ (e.g. Err 0 Cprimary ErrNeededSubtag can only occur when the start is
+ "x" or "i", and ErrNeededSubtag can otherwise only occur after a
+ singleton), also perhaps distinguish between unparseable tags and
+ merely inappropriate tags
 
 -}
 
@@ -111,15 +111,14 @@ instance NFData SyntaxError where
 data SyntaxErrorType
   = -- | empty input
     SyntaxErrorEmpty
-  | -- | another tag was expected
-    SyntaxErrorNeededTag
+  | -- | another subtag was expected
+    SyntaxErrorNeededSubtag
   | -- | expecting a subtag separator or the end of input
     SyntaxErrorSubtagEnd
   | -- | invalid tag
     SyntaxErrorBadSubtag
-  | -- | an @i-@ tag should be followed by exactly one
-    -- tag
-    SyntaxErrorIrregINum
+  | -- | an irregular grandfathered tag was followed by another subtag
+    SyntaxErrorIrregNum
   deriving (Eq, Ord, Show, Read)
 
 instance NFData SyntaxErrorType where
@@ -174,6 +173,9 @@ toSubtags (Grandfathered g) = case g of
 ----------------------------------------------------------------
 
 -- | Pop a tag from the input stream
+
+-- TODO: could refine our errors here by re-parsing on an error,
+-- e.g. point to the precise location of the error
 tagPop ::
   Char ->
   Text ->
@@ -186,6 +188,9 @@ tagPop initchar inp clast pos = case popSubtag initchar inp of
 
 -- returns the character immediately after the separator if there was
 -- one, and Nothing on end of input.
+
+-- FIXME: not totally sure that the error stuff here is necessary,
+-- since we should now catch such things in tagPop
 tagSep :: Component -> Int -> Text -> Either SyntaxError (Maybe (Char, Text))
 tagSep !clast !pos !inp = case T.uncons inp of
   Just (c, t)
@@ -224,7 +229,9 @@ parseBCP47 inp = case T.uncons inp of
   Just (c, t) -> catchIrregulars $ parseBCP47' c t
   Nothing -> Left $ SyntaxError 0 Cbeginning SyntaxErrorEmpty
   where
-    -- FIXME: sufficient for the moment
+    -- FIXME: sufficient for the moment, but might want to: 1. be more
+    -- efficient; 2. throw a special error when these tags occur as a
+    -- strict prefix of the input, as with the @i-@-type tags
     catchIrregulars (Right a) = Right a
     catchIrregulars (Left e)
       | T.length inp == 9 = testIrregs
@@ -256,7 +263,7 @@ parseBCP47' !initchar !inp = tagPop initchar inp Cbeginning 0 >>= parsePrimary
             msep <- tagSep Cprimary 0 t
             case msep of
               Just (c, t') -> parseIrregularI st c t'
-              Nothing -> Left $ SyntaxError 0 Cprimary SyntaxErrorNeededTag
+              Nothing -> Left $ SyntaxError 0 Cprimary SyntaxErrorNeededSubtag
       | subtagLength st >= 4 =
         mfinish
           (subtagLength st)
@@ -361,7 +368,7 @@ parseBCP47' !initchar !inp = tagPop initchar inp Cbeginning 0 >>= parsePrimary
         Just (c, t') -> do
           (st, t'') <- tagPop c t' Cprivateuse pos'
           parsePrivateUseTag con st Cprivateuse pos' t''
-        Nothing -> Left $ SyntaxError pos Cprivateuse SyntaxErrorNeededTag
+        Nothing -> Left $ SyntaxError pos Cprivateuse SyntaxErrorNeededSubtag
 
     parsePrivateUseTag con st _ pos t =
       mfinish (subtagLength st) Cprivateuse pos t (con . (st :)) parsePrivateUseTag
@@ -381,8 +388,8 @@ parseBCP47' !initchar !inp = tagPop initchar inp Cbeginning 0 >>= parsePrimary
                 t''
                 (con . (st NE.:|))
                 parseExtensionTag
-            else Left $ SyntaxError pos Cextension SyntaxErrorNeededTag
-        Nothing -> Left $ SyntaxError pos Cextension SyntaxErrorNeededTag
+            else Left $ SyntaxError pos Cextension SyntaxErrorNeededSubtag
+        Nothing -> Left $ SyntaxError pos Cextension SyntaxErrorNeededSubtag
 
     parseExtensionTag con st _ pos t
       | subtagLength st == 1 = trySingleton (con []) st Cextension pos t
@@ -392,7 +399,7 @@ parseBCP47' !initchar !inp = tagPop initchar inp Cbeginning 0 >>= parsePrimary
       | st /= subtagI = Left $ SyntaxError 0 Cbeginning SyntaxErrorBadSubtag
       | otherwise = case tagPop c t Cbeginning 0 of
         Right (st', t') -> case T.uncons t' of
-          Just _ -> Left $ SyntaxError 0 Cprimary SyntaxErrorIrregINum
+          Just _ -> Left $ SyntaxError 2 CirregI SyntaxErrorIrregNum
           Nothing -> recognizeIrregI st'
         Left e -> Left e
 
@@ -419,7 +426,7 @@ parsePrivate initpos inp = do
     Just (c, t) -> do
       (st, t') <- tagPop c t Cprivateuse initpos
       parsePrivateUseTag (st NE.:|) (initpos + fromIntegral (subtagLength st) + 1) t'
-    Nothing -> Left $ SyntaxError initpos Cprivateuse SyntaxErrorNeededTag
+    Nothing -> Left $ SyntaxError initpos Cprivateuse SyntaxErrorNeededSubtag
   where
     parsePrivateUseTag con pos t = do
       mc <- tagSep Cprivateuse pos t

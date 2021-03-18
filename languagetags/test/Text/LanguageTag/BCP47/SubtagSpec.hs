@@ -1,44 +1,45 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections #-}
 
 module Text.LanguageTag.BCP47.SubtagSpec (spec) where
 
 import qualified Data.Char as Char
+import qualified Data.List as List
 import Data.Maybe (isJust)
 import qualified Data.Text as T
 import Test.Common
 import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck
-  ( forAllShrink,
+  ( forAll,
+    forAllShrink,
     shrink,
     (===),
   )
 import Text.LanguageTag.BCP47.Subtag
-  ( packChar,
+  ( containsDigit,
+    containsLetter,
+    containsOnlyDigits,
+    containsOnlyLetters,
+    packChar,
     packCharMangled,
     parseSubtag,
     parseSubtagMangled,
+    popSubtag',
     renderSubtagLower,
+    singleton,
+    subtagHead,
+    subtagLength,
+    subtagLength',
     unpackCharLower,
+    unpackSubtag,
+    unsafeIndexSubtag,
+    unsafePopChar,
     unwrapChar,
     unwrapSubtag,
     wrapSubtag,
   )
-
-{- TODO:
-
-correctness (quickcheck, unit where appropriate) of:
-
-- subtagLength
-- subtagHead
-- indexSubtag, probably unsafeIndexSubtag too (should be zero for only
-  slightly out-of-bounds indices)
-- singleton
-- containsLetter et al.
-- popSubtag
-- unsafePopChar
-
--}
+import Text.LanguageTag.Internal.BCP47.Subtag (SubtagChar (..))
 
 spec :: Spec
 spec = do
@@ -104,3 +105,84 @@ spec = do
           postTreat c = if isAsciiAlphaNum c then Char.toLower c else 'a'
        in forAllShrink genSubtagishChar shrink $ \t ->
             unpackCharLower (packCharMangled t) === postTreat t
+  describe "subtagLength" $ do
+    prop "equals the text length of well-formed tags" $
+      forAllShrink genSubtagText shrinkSubtagText $ \t ->
+        (subtagLength' <$> parseSubtag t) === Just (T.length t)
+  describe "subtagHead" $ do
+    prop "equals the text head of well-formed tags" $
+      forAllShrink genSubtagText shrinkSubtagText $ \t ->
+        (unpackCharLower . subtagHead <$> parseSubtag t) === Just (Char.toLower $ T.head t)
+  describe "unsafeIndexSubtag" $ do
+    prop "equals the text index of well-formed tags" $
+      forAllShrink genSubtag shrinkSubtag $ \st ->
+        let t = renderSubtagLower st
+            idxs = [0 .. (T.length t - 1)]
+            badIdx =
+              List.find
+                ( \n ->
+                    T.index t n
+                      /= unpackCharLower (unsafeIndexSubtag st (fromIntegral n))
+                )
+                idxs
+         in badIdx === Nothing
+    prop "is zero for nearly in-bounds indices" $
+      forAllShrink genSubtag shrinkSubtag $ \st ->
+        let idxs = [subtagLength st .. 7]
+            badIdx = List.find ((/= SubtagChar 0) . unsafeIndexSubtag st) idxs
+         in badIdx === Nothing
+  describe "singleton" $ do
+    prop "generates subtags acceptable to wrapSubtag" $
+      forAllShrink genSubtagSubtagChar shrinkSubtagChar $ \c ->
+        wrapSubtag (unwrapSubtag $ singleton c) === Just (singleton c)
+    prop "has the correct head" $
+      forAllShrink genSubtagSubtagChar shrinkSubtagChar $ \c ->
+        subtagHead (singleton c) === c
+    prop "is length 1" $
+      forAllShrink genSubtagSubtagChar shrinkSubtagChar $ \c ->
+        subtagLength (singleton c) === 1
+  describe "containsLetter" $ do
+    let isLetter c = Char.isAsciiUpper c || Char.isAsciiLower c
+    prop "behaves like the Text implementation" $
+      forAllShrink genSubtagText shrinkSubtagText $ \t ->
+        (containsLetter <$> parseSubtag t) === Just (T.any isLetter t)
+  describe "containsOnlyLetters" $ do
+    let isLetter c = Char.isAsciiUpper c || Char.isAsciiLower c
+    prop "behaves like the Text implementation" $
+      forAllShrink genSubtagText shrinkSubtagText $ \t ->
+        (containsOnlyLetters <$> parseSubtag t) === Just (T.all isLetter t)
+  describe "containsDigit" $ do
+    prop "behaves like the Text implementation" $
+      forAllShrink genSubtagText shrinkSubtagText $ \t ->
+        (containsDigit <$> parseSubtag t) === Just (T.any Char.isDigit t)
+  describe "containsOnlyDigits" $ do
+    prop "behaves like the Text implementation" $
+      forAllShrink genSubtagText shrinkSubtagText $ \t ->
+        (containsOnlyDigits <$> parseSubtag t) === Just (T.all Char.isDigit t)
+  describe "popSubtag" $ do
+    prop "pops initial well-formed subtags" $ do
+      let gen = do
+            t <- genSubtagText
+            t' <- genSubtagishText
+            pure $ if T.null t' then t else t <> "-" <> t'
+          pop' t = case T.span (/= '-') t of
+            (start, rest)
+              | Just (c, _) <- T.uncons rest,
+                c /= '-' ->
+                Nothing
+              | otherwise -> (,rest) <$> parseSubtag start
+      forAll gen $ \t ->
+        popSubtag' t === pop' t
+  describe "unpackSubtag" $ do
+    prop "unpacks subtags correctly" $
+      forAllShrink genSubtag shrinkSubtag $ \st ->
+        T.pack (unpackCharLower <$> unpackSubtag st) === renderSubtagLower st
+  describe "unsafePopChar" $ do
+    prop "behaves like unpackSubtag" $
+      forAllShrink genSubtag shrinkSubtag $ \st ->
+        let chars = go st 0 id []
+            len = subtagLength st
+            go x n acc
+              | n == len = acc
+              | otherwise = let (c, x') = unsafePopChar x in go x' (n + 1) (acc . (c :))
+         in chars === unpackSubtag st

@@ -23,14 +23,6 @@ import qualified Text.LanguageTag.BCP47.Syntax as Syn
 import Text.LanguageTag.Internal.BCP47.Subtag (SubtagChar (..))
 import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn
 
-{- TODO:
-
-correctness (quickcheck, unit when appropriate) of:
-
-- errors during parsing (positions, values)
-- tag-ish case insensitivity in parseBCP47
--}
-
 irregularTags :: [(Text, Grandfathered)]
 irregularTags =
   [ ("en-GB-oed", EnGbOed),
@@ -65,6 +57,18 @@ regularTags =
     ("zh-xiang", ZhXiang)
   ]
 
+syntaxFailures :: [(Text, Syn.SyntaxError)]
+syntaxFailures =
+  [ ("", Syn.SyntaxError 0 Syn.Cbeginning Syn.SyntaxErrorEmpty),
+    ("i-nonsense", Syn.SyntaxError 2 Syn.CirregI Syn.SyntaxErrorBadSubtag),
+    ("i-bnn-more", Syn.SyntaxError 2 Syn.CirregI Syn.SyntaxErrorIrregNum),
+    ("cmn*", Syn.SyntaxError 0 Syn.Cbeginning Syn.SyntaxErrorBadSubtag),
+    ("cmn-more*", Syn.SyntaxError 4 Syn.Cprimary Syn.SyntaxErrorBadSubtag),
+    ("cmn-lotsoftag*", Syn.SyntaxError 4 Syn.Cprimary Syn.SyntaxErrorBadSubtag),
+    ("en-GB-oxendict-x", Syn.SyntaxError 15 Syn.Cprivateuse Syn.SyntaxErrorNeededSubtag),
+    ("zh-419-a", Syn.SyntaxError 7 Syn.Cextension Syn.SyntaxErrorNeededSubtag)
+  ]
+
 spec :: Spec
 spec = do
   describe "parseBCP47" $ do
@@ -76,6 +80,11 @@ spec = do
     it "is case-sensitive on near-well-formed tags" $
       forAllShrink genTagishText shrinkTagishText $ \t ->
         Syn.parseBCP47 t === Syn.parseBCP47 (T.toLower t)
+    describe "fails correctly on" $ do
+      let test (l, e) =
+            it (T.unpack l) $
+              Syn.parseBCP47 l `shouldBe` Left e
+      traverse_ test syntaxFailures
     describe "parses the irregular grandfathered tag" $ do
       let test (l, t) =
             it (T.unpack l) $
