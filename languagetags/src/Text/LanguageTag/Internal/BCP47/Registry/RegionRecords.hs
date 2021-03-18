@@ -4,7 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Text.LanguageTag.Internal.BCP47.Registry.RegionRecords
-  (lookupRegionDetails, validateRegion, regionToSubtag, lookupRegionRecord) where
+  (lookupRegionDetails, validateRegion, regionToSubtag, lookupRegionRecord, regionDetails) where
 
 import Prelude hiding (LT, GT)
 import Text.LanguageTag.Internal.BCP47.Registry.Region
@@ -14,7 +14,7 @@ import Data.Vector (Vector)
 import qualified Data.Vector as V
 import Text.LanguageTag.Internal.BCP47.Subtag (Subtag(..))
 
--- | The subtag and record information associated to the 'Region' type.
+-- | All of the record information associated to 'Region' subtags, together with their corresponding 'Subtag', occurring in the same order as that type's constructors
 regionDetails :: Vector (Subtag, RegionRecord)
 regionDetails = V.fromList
   [(Subtag 6972003231727616035, RegionRecord ("World" :| []) NotDeprecated)
@@ -366,7 +366,7 @@ lookupRegionDetails = V.unsafeIndex regionDetails . fromEnum
 
 -- | Validate the given 'Subtag' against the region records in the registry
 validateRegion :: Subtag -> Maybe Region
-validateRegion = fmap toEnum . flip (binSearchIndexOn fst) regionDetails
+validateRegion = fmap toEnum . flip (unsafeBinSearchIndexOn fst) regionDetails
 
 -- | Look up the 'Subtag' associated to the given 'Region'
 regionToSubtag :: Region -> Subtag

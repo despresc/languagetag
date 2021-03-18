@@ -63,6 +63,7 @@ library
     Text.LanguageTag.Internal.BCP47.Syntax
 
   other-modules:
+    Text.LanguageTag.Internal.BCP47.Registry
     Text.LanguageTag.Internal.BCP47.Registry.Date
     Text.LanguageTag.Internal.BCP47.Registry.Extlang
     Text.LanguageTag.Internal.BCP47.Registry.ExtlangRecords
@@ -86,9 +87,18 @@ test-suite test
   main-is: Spec.hs
   hs-source-dirs:
     test
-  build-depends: languagetags, base, text, containers, deepseq, hspec, QuickCheck
+  build-depends: languagetags, base, text, containers, deepseq, hspec, QuickCheck, vector
   ghc-options: -Wall
   other-modules:
     Test.Common
+    Text.LanguageTag.BCP47.CanonicalizationSpec
+    Text.LanguageTag.BCP47.Registry.ExtlangSpec
+    Text.LanguageTag.BCP47.Registry.GrandfatheredSpec
+    Text.LanguageTag.BCP47.Registry.LanguageSpec
+    Text.LanguageTag.BCP47.Registry.RedundantSpec
+    Text.LanguageTag.BCP47.Registry.RegionSpec
+    Text.LanguageTag.BCP47.Registry.ScriptSpec
+    Text.LanguageTag.BCP47.Registry.VariantSpec
+    Text.LanguageTag.BCP47.RegistrySpec
     Text.LanguageTag.BCP47.SubtagSpec
     Text.LanguageTag.BCP47.SyntaxSpec

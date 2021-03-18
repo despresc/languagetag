@@ -20,6 +20,8 @@ module Text.LanguageTag.BCP47.Subtag.Trie
     adjustTriePath,
     lookupTrie,
     lookupTrieLax,
+    trieToPaths,
+    stepToPaths,
   )
 where
 
@@ -70,6 +72,23 @@ pathTrie :: [([Subtag], a)] -> Trie a
 pathTrie = List.foldl' go nullTrie
   where
     go t (sts, a) = adjustTriePath sts (const $ Just a) t
+
+-- | Unpack a 'Trie' into its constituent paths. The ordering of the
+-- paths is not consistent.
+trieToPaths :: Trie a -> [([Subtag], a)]
+trieToPaths (Trie x m) = case x of
+  Just x' -> ([], x') : rest
+  Nothing -> rest
+  where
+    rest = concatMap go (HM.toList m)
+    go (s, t) = stepToPaths $ TrieStep s t
+
+-- | Unpack a 'TrieStep' into its constituent paths. The ordering of
+-- the paths is not consistent.
+stepToPaths :: TrieStep a -> [([Subtag], a)]
+stepToPaths (TrieStep s t) = go <$> trieToPaths t
+  where
+    go (p, a) = (s : p, a)
 
 -- | Construct a trie from its children, preferring the rightmost
 -- child if there are duplicates

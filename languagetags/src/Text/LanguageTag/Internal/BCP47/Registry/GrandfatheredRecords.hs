@@ -4,7 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Text.LanguageTag.Internal.BCP47.Registry.GrandfatheredRecords
-  (lookupGrandfatheredRecord) where
+  (lookupGrandfatheredRecord, grandfatheredDetails) where
 
 import Prelude hiding (LT, GT)
 import Text.LanguageTag.Internal.BCP47.Registry.Grandfathered
@@ -18,6 +18,7 @@ import Text.LanguageTag.Internal.BCP47.Registry.Language
 import Text.LanguageTag.Internal.BCP47.Registry.Region
 import Text.LanguageTag.Internal.BCP47.Registry.Variant
 
+-- | All of the records for 'Grandfathered' tags, occurring in the same order as that type's constructors
 grandfatheredDetails :: Vector RangeRecord
 grandfatheredDetails = V.fromList
   [RangeRecord ("Lojban" :| []) (DeprecatedPreferred $ Normal Jbo Nothing Nothing Nothing S.empty M.empty [])

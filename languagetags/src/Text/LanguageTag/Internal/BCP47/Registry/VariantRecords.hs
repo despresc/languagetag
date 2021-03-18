@@ -4,7 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Text.LanguageTag.Internal.BCP47.Registry.VariantRecords
-  (lookupVariantDetails, validateVariant, variantToSubtag, lookupVariantRecord) where
+  (lookupVariantDetails, validateVariant, variantToSubtag, lookupVariantRecord, variantDetails) where
 
 import Prelude hiding (LT, GT)
 import Text.LanguageTag.Internal.BCP47.Registry.Variant
@@ -19,7 +19,7 @@ import Text.LanguageTag.Internal.BCP47.Registry.Language
 import Text.LanguageTag.Internal.BCP47.Registry.Script
 import Text.LanguageTag.Internal.BCP47.Registry.Region
 
--- | The subtag and record information associated to the 'Variant' type.
+-- | All of the record information associated to 'Variant' subtags, together with their corresponding 'Subtag', occurring in the same order as that type's constructors
 variantDetails :: Vector (Subtag, VariantRecord)
 variantDetails = V.fromList
   [(Subtag 7122868793502725176, VariantRecord ("Late Middle French (to 1606)" :| []) NotDeprecated [Normal Frm Nothing Nothing Nothing (S.fromList []) M.empty []])
@@ -135,7 +135,7 @@ lookupVariantDetails = V.unsafeIndex variantDetails . fromEnum
 
 -- | Validate the given 'Subtag' against the variant records in the registry
 validateVariant :: Subtag -> Maybe Variant
-validateVariant = fmap toEnum . flip (binSearchIndexOn fst) variantDetails
+validateVariant = fmap toEnum . flip (unsafeBinSearchIndexOn fst) variantDetails
 
 -- | Look up the 'Subtag' associated to the given 'Variant'
 variantToSubtag :: Variant -> Subtag

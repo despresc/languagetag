@@ -665,7 +665,8 @@ renderRecordModuleWith tyname imps proj rend reg =
           [ lookupname1,
             lookupname2,
             lookupname3,
-            lookupname4
+            lookupname4,
+            detailTableName
           ]
         <> ") where",
       "",
@@ -694,7 +695,7 @@ renderRecordModuleWith tyname imps proj rend reg =
     detailTableEntries = ["  [" <> T.intercalate "\n  ," details <> "]"]
     detailTableName = T.toLower tyname <> "Details"
     theDetailTable =
-      [ "-- | The subtag and record information associated to the '" <> tyname <> "' type.",
+      [ "-- | All of the record information associated to '" <> tyname <> "' subtags, together with their corresponding 'Subtag', occurring in the same order as that type's constructors",
         detailTableName <> " :: Vector (Subtag, " <> tyname <> "Record)",
         detailTableName <> " = V.fromList"
       ]
@@ -710,7 +711,7 @@ renderRecordModuleWith tyname imps proj rend reg =
     lookup2 =
       [ "-- | Validate the given 'Subtag' against the " <> T.toLower tyname <> " records in the registry",
         lookupname2 <> " :: Subtag -> Maybe " <> tyname,
-        lookupname2 <> " = fmap toEnum . flip (binSearchIndexOn fst) " <> detailTableName
+        lookupname2 <> " = fmap toEnum . flip (unsafeBinSearchIndexOn fst) " <> detailTableName
       ]
     lookupname3 = T.toLower tyname <> "ToSubtag"
     lookup3 =
@@ -726,6 +727,11 @@ renderRecordModuleWith tyname imps proj rend reg =
       ]
 
 -- TODO: duplication, obviously, and rename this to renderRedundant...
+-- TODO: should rename redundantToValidTag to redundantToNormal,
+-- perhaps, and similarly with redundantToSyntaxTag, then can remove
+-- certain definitions in Registry.Redundant. Also consider exporting
+-- all of those internal modules and not exporting the details from
+-- the normal modules.
 renderRangeRecordModuleWith ::
   -- | the type name
   Text ->
@@ -746,7 +752,16 @@ renderRangeRecordModuleWith tyname imps proj rend reg =
       "{-# LANGUAGE OverloadedStrings #-}",
       "",
       "module Text.LanguageTag.Internal.BCP47.Registry." <> tyname <> "Records",
-      "  (" <> T.intercalate ", " [lookupname1, lookupname2, lookupname3, lookupname4] <> ") where",
+      "  ("
+        <> T.intercalate
+          ", "
+          [ lookupname1,
+            lookupname2,
+            lookupname3,
+            lookupname4,
+            detailTableName
+          ]
+        <> ") where",
       "",
       "import Prelude hiding (LT, GT)",
       "import Text.LanguageTag.Internal.BCP47.Registry." <> tyname,
@@ -802,7 +817,8 @@ renderRangeRecordModuleWith tyname imps proj rend reg =
         lookupname4 <> " = (\\(_, _, z) -> z) . " <> lookupname1
       ]
     detailsTable =
-      [ detailTableName <> " :: Vector (Normal, Syn.Normal, RangeRecord)",
+      [ "-- | All of the records for '" <> tyname <> "' tags, together with their corresponding valid and well-formed forms, occurring in the same order as that type's constructors",
+        detailTableName <> " :: Vector (Normal, Syn.Normal, RangeRecord)",
         detailTableName <> " = V.fromList"
       ]
         <> tableEntries
@@ -831,7 +847,7 @@ renderGrandfatheredRecordModule tyname imps proj rend reg =
       "{-# LANGUAGE OverloadedStrings #-}",
       "",
       "module Text.LanguageTag.Internal.BCP47.Registry.GrandfatheredRecords",
-      "  (lookupGrandfatheredRecord) where",
+      "  (lookupGrandfatheredRecord, grandfatheredDetails) where",
       "",
       "import Prelude hiding (LT, GT)",
       "import Text.LanguageTag.Internal.BCP47.Registry.Grandfathered",
@@ -863,7 +879,8 @@ renderGrandfatheredRecordModule tyname imps proj rend reg =
         lookupname1 <> " = V.unsafeIndex " <> detailTableName <> " . fromEnum"
       ]
     detailsTable =
-      [ detailTableName <> " :: Vector RangeRecord",
+      [ "-- | All of the records for '" <> tyname <> "' tags, occurring in the same order as that type's constructors",
+        detailTableName <> " :: Vector RangeRecord",
         detailTableName <> " = V.fromList"
       ]
         <> tableEntries

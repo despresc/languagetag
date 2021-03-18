@@ -16,6 +16,7 @@ module Text.LanguageTag.BCP47.Registry.Language
     -- * Language subtag records
     LanguageRecord (..),
     lookupLanguageRecord,
+    languageDetails,
   )
 where
 

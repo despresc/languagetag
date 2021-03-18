@@ -4,7 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Text.LanguageTag.Internal.BCP47.Registry.RedundantRecords
-  (lookupRedundantDetails, redundantToValidTag, redundantToSyntaxTag, lookupRedundantRecord) where
+  (lookupRedundantDetails, redundantToValidTag, redundantToSyntaxTag, lookupRedundantRecord, redundantDetails) where
 
 import Prelude hiding (LT, GT)
 import Text.LanguageTag.Internal.BCP47.Registry.Redundant
@@ -23,6 +23,7 @@ import Text.LanguageTag.Internal.BCP47.Registry.Extlang
 import Text.LanguageTag.Internal.BCP47.Registry.Variant
 import Text.LanguageTag.Internal.BCP47.Subtag (Subtag(..))
 
+-- | All of the records for 'Redundant' tags, together with their corresponding valid and well-formed forms, occurring in the same order as that type's constructors
 redundantDetails :: Vector (Normal, Syn.Normal, RangeRecord)
 redundantDetails = V.fromList
   [(Normal Az Nothing (Just Arab) Nothing (S.fromList []) M.empty [], Syn.Normal (Subtag 14116533031992819730) nullSubtag nullSubtag nullSubtag (justSubtag (Subtag 14108385788269953044)) nullSubtag [] [] [], RangeRecord ("Azerbaijani in Arabic script" :| []) NotDeprecated)

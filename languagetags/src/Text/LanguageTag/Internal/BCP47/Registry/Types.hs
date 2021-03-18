@@ -23,7 +23,7 @@ module Text.LanguageTag.Internal.BCP47.Registry.Types
     RangeRecord (..),
     Scope (..),
     Deprecation (..),
-    binSearchIndexOn,
+    unsafeBinSearchIndexOn,
   )
 where
 
@@ -70,11 +70,9 @@ import Text.LanguageTag.Internal.BCP47.Syntax (ExtensionChar (..))
 -- Note that there is also a fourth type of tag, the "redundant" tags,
 -- that are valid 'Normal' tags but for historical reasons are also
 -- registered in their entirety. These are represented as 'Normal'
--- tags; the fact that they are registered has no influence on their
--- treatment, since validating and canonicalizing them as if they were
--- not registered gives exactly the same results as validating and
--- canonicalizing them while taking into consideration their registry
--- information.
+-- tags here; the fact that they are so registered only affects how
+-- they are canonicalized, since they may be deprecated in a way that
+-- differs from the deprecation of their component subtags.
 data BCP47
   = NormalTag Normal
   | PrivateUseTag (NonEmpty Subtag)
@@ -158,11 +156,16 @@ data LanguageRecord = LanguageRecord
     languageMacrolanguage :: Maybe Language,
     languageScope :: Maybe Scope
   }
+  deriving (Eq, Ord)
 
 -- | An extended language subtag record. In these records, a preferred
 -- value always appears and is always equal to the subtag, so the
 -- 'extlangDeprecation' is a simple 'Bool' ('True' being "is
--- deprecated").
+-- deprecated"). Note also that these records are the only exception
+-- to the general rule that a preferred value (whether tag or subtag)
+-- will never be deprecated: these will have a deprecated
+-- 'extlangPreferredValue' exactly when 'extlangDeprecation' is
+-- 'True'.
 data ExtlangRecord = ExtlangRecord
   { extlangDescription :: NonEmpty Text,
     extlangDeprecation :: Bool,
@@ -172,6 +175,7 @@ data ExtlangRecord = ExtlangRecord
     extlangMacrolanguage :: Maybe Language,
     extlangScope :: Maybe Scope
   }
+  deriving (Eq, Ord)
 
 -- | A variant subtag record
 data VariantRecord = VariantRecord
@@ -179,12 +183,14 @@ data VariantRecord = VariantRecord
     variantDeprecation :: Deprecation Variant,
     variantPrefixes :: [Normal]
   }
+  deriving (Eq, Ord)
 
 -- | A script subtag record
 data ScriptRecord = ScriptRecord
   { scriptDescription :: NonEmpty Text,
     scriptDeprecation :: Deprecation Script
   }
+  deriving (Eq, Ord)
 
 -- | A region subtag record. Note that for deprecated region records,
 --  the associated preferred value may not represent the same meaning
@@ -193,6 +199,7 @@ data RegionRecord = RegionRecord
   { regionDescription :: NonEmpty Text,
     regionDeprecation :: Deprecation Region
   }
+  deriving (Eq, Ord)
 
 -- | A grandfathered or redundant subtag record. These records are
 -- distinguished from the others in that they define entire tags, and
@@ -203,6 +210,7 @@ data RangeRecord = RangeRecord
   { rangeDescription :: NonEmpty Text,
     rangeDeprecation :: Deprecation Normal
   }
+  deriving (Eq, Ord)
 
 -- | The scope of a language or extended language
 data Scope
@@ -210,20 +218,20 @@ data Scope
   | Collection
   | Special
   | PrivateUseScope
-  deriving (Show)
+  deriving (Eq, Ord, Show)
 
 -- | The deprecation status of a subtag
 data Deprecation a
   = NotDeprecated
   | DeprecatedSimple
   | DeprecatedPreferred a
-  deriving (Show)
+  deriving (Eq, Ord, Show)
 
 -- | Search for an element in a vector with the given key using the
 -- given projection function and return its index. The vector must be
 -- sorted with respect to the projection and must be non-empty.
-binSearchIndexOn :: Ord b => (a -> b) -> b -> Vector a -> Maybe Int
-binSearchIndexOn proj b v = go 0 (V.length v)
+unsafeBinSearchIndexOn :: Ord b => (a -> b) -> b -> Vector a -> Maybe Int
+unsafeBinSearchIndexOn proj b v = go 0 (V.length v)
   where
     -- n.b. we are searching for indices between low and high,
     -- inclusive of low and exclusive of high, and since low < high at
@@ -239,4 +247,4 @@ binSearchIndexOn proj b v = go 0 (V.length v)
       where
         idx = (low + high) `shiftR` 1
         a = V.unsafeIndex v idx
-{-# INLINE binSearchIndexOn #-}
+{-# INLINE unsafeBinSearchIndexOn #-}

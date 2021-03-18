@@ -13,6 +13,7 @@
 module Text.LanguageTag.BCP47.Canonicalization
   ( -- * Canonicalization
     canonicalizeBCP47,
+    canonicalizeNormal,
     canonicalizeLanguage,
     canonicalizeExtlang,
     canonicalizeRegion,
@@ -42,15 +43,20 @@ canonicalizeBCP47 x@(PrivateUseTag _) = x
 
 -- | Canonicalize a 'Normal' tag
 canonicalizeNormal :: Normal -> Normal
-canonicalizeNormal n =
-  n'
-    { language = canonicalizeLanguage $ language n',
-      script = canonicalizeScript <$> script n,
-      region = canonicalizeRegion <$> region n,
-      variants = S.map canonicalizeVariant $ variants n
-    }
+canonicalizeNormal n = case recognizeRedundantNormal n of
+  Nothing -> n''
+  Just r -> case rangeDeprecation $ lookupRedundantRecord r of
+    DeprecatedPreferred x -> x
+    _ -> n''
   where
     n' = canonicalizeExtlang n
+    n'' =
+      n'
+        { language = canonicalizeLanguage $ language n',
+          script = canonicalizeScript <$> script n,
+          region = canonicalizeRegion <$> region n,
+          variants = S.map canonicalizeVariant $ variants n
+        }
 
 -- | Canonicalize a 'Grandfathered' tag by replacing it with its
 -- preferred value, if it is deprecated
@@ -104,7 +110,6 @@ canonicalizeVariant l = case variantDeprecation $ lookupVariantRecord l of
   DeprecatedPreferred l' -> l'
   _ -> l
 
-
 -- | Transform a language tag into "extlang form", a variant of the
 -- canonical form in which extlang subtags are preserved or added
 -- wherever possible, so that, e.g., the tags @cmn@ and @zh-cmn@ will
@@ -114,21 +119,31 @@ canonicalizeVariant l = case variantDeprecation $ lookupVariantRecord l of
 -- language subtags @zh@ and @ar@, since these will often still use,
 -- e.g., @zh-HK@ or @zh@ for Cantonese documents instead of
 -- @yue@. Note that applications can canonicalize tags and still have
--- good matching behaviour by considering the macrolanguage
--- relationships between subtags, so that a request for @zh@ materials
--- will return, say, @cmn@ or @yue@ documents as expected.
+-- good matching behaviour by considering things like the
+-- macrolanguage relationships between subtags, so that a request for
+-- @zh@ materials will return, say, @cmn@ or @yue@ documents as
+-- expected.
+--
+-- Note that the standard permits 'Normal' tags to have an extended
+-- language subtag whose prefix conflicts with the tag's primary
+-- language subtag. In these cases no replacement is performed and,
+-- e.g., the tag @en-cmn@ will remain unchanged by this function.
 extlangFormBCP47 :: BCP47 -> BCP47
-extlangFormBCP47 (NormalTag n) = NormalTag $ normalToExtlangForm n
-extlangFormBCP47 x = canonicalizeBCP47 x
+extlangFormBCP47 x = case canonicalizeBCP47 x of
+  NormalTag y -> NormalTag $ normalToExtlangForm' y
+  _ -> x
 
 -- | Convert a 'Normal' tag to extlang form
 normalToExtlangForm :: Normal -> Normal
-normalToExtlangForm n = case validateExtlang $ languageToSubtag $ language n' of
-  Nothing -> n'
-  Just x ->
-    n'
-      { language = extlangPrefix $ lookupExtlangRecord x,
-        extlang = Just x
-      }
-  where
-    n' = canonicalizeNormal n
+normalToExtlangForm = normalToExtlangForm' . canonicalizeNormal
+
+-- | Convert a canonical 'Normal' tag to extlang form
+normalToExtlangForm' :: Normal -> Normal
+normalToExtlangForm' n = case validateExtlang $ languageToSubtag $ language n of
+  Just x
+    | Nothing <- extlang n ->
+      n
+        { language = extlangPrefix $ lookupExtlangRecord x,
+          extlang = Just x
+        }
+  _ -> n

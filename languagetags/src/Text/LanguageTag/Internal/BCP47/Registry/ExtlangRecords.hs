@@ -4,7 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Text.LanguageTag.Internal.BCP47.Registry.ExtlangRecords
-  (lookupExtlangDetails, validateExtlang, extlangToSubtag, lookupExtlangRecord) where
+  (lookupExtlangDetails, validateExtlang, extlangToSubtag, lookupExtlangRecord, extlangDetails) where
 
 import Prelude hiding (LT, GT)
 import Text.LanguageTag.Internal.BCP47.Registry.Extlang
@@ -15,7 +15,7 @@ import qualified Data.Vector as V
 import Text.LanguageTag.Internal.BCP47.Subtag (Subtag(..))
 import Text.LanguageTag.Internal.BCP47.Registry.Language
 
--- | The subtag and record information associated to the 'Extlang' type.
+-- | All of the record information associated to 'Extlang' subtags, together with their corresponding 'Subtag', occurring in the same order as that type's constructors
 extlangDetails :: Vector (Subtag, ExtlangRecord)
 extlangDetails = V.fromList
   [(Subtag 14089361900647219219, ExtlangRecord ("Algerian Saharan Arabic" :| []) False Aao Ar Nothing (Just Ar) Nothing)
@@ -270,7 +270,7 @@ lookupExtlangDetails = V.unsafeIndex extlangDetails . fromEnum
 
 -- | Validate the given 'Subtag' against the extlang records in the registry
 validateExtlang :: Subtag -> Maybe Extlang
-validateExtlang = fmap toEnum . flip (binSearchIndexOn fst) extlangDetails
+validateExtlang = fmap toEnum . flip (unsafeBinSearchIndexOn fst) extlangDetails
 
 -- | Look up the 'Subtag' associated to the given 'Extlang'
 extlangToSubtag :: Extlang -> Subtag

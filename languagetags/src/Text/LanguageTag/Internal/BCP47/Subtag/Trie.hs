@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveFoldable #-}
 
 -- |
 -- Description : Internal subtag trie definitions
@@ -13,11 +14,13 @@ module Text.LanguageTag.Internal.BCP47.Subtag.Trie where
 import Data.HashMap.Strict (HashMap)
 import Text.LanguageTag.Internal.BCP47.Subtag (Subtag)
 
--- | A trie indexed by 'Subtag'
+-- | A trie indexed by 'Subtag'. Note that the 'Foldable' methods do
+-- not fold over the paths in the 'Trie' in a consistent order.
 data Trie a = Trie !(Maybe a) !(HashMap Subtag (Trie a))
-  deriving (Functor)
+  deriving (Functor, Foldable)
 
 -- | A step in a trie path; a child of a trie node. Equivalent to
--- @('Subtag', 'Trie' a)@.
+-- @('Subtag', 'Trie' a)@. Note that the 'Foldable' methods do not
+-- fold over the paths in the 'TrieStep' in a consistent order.
 data TrieStep a = TrieStep !Subtag !(Trie a)
-  deriving (Functor)
+  deriving (Functor, Foldable)

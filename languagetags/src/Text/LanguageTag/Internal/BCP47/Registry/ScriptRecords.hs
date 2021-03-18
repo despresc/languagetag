@@ -4,7 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Text.LanguageTag.Internal.BCP47.Registry.ScriptRecords
-  (lookupScriptDetails, validateScript, scriptToSubtag, lookupScriptRecord) where
+  (lookupScriptDetails, validateScript, scriptToSubtag, lookupScriptRecord, scriptDetails) where
 
 import Prelude hiding (LT, GT)
 import Text.LanguageTag.Internal.BCP47.Registry.Script
@@ -14,7 +14,7 @@ import Data.Vector (Vector)
 import qualified Data.Vector as V
 import Text.LanguageTag.Internal.BCP47.Subtag (Subtag(..))
 
--- | The subtag and record information associated to the 'Script' type.
+-- | All of the record information associated to 'Script' subtags, together with their corresponding 'Subtag', occurring in the same order as that type's constructors
 scriptDetails :: Vector (Subtag, ScriptRecord)
 scriptDetails = V.fromList
   [(Subtag 14092720702511644692, ScriptRecord ("Adlam" :| []) NotDeprecated)
@@ -282,7 +282,7 @@ lookupScriptDetails = V.unsafeIndex scriptDetails . fromEnum
 
 -- | Validate the given 'Subtag' against the script records in the registry
 validateScript :: Subtag -> Maybe Script
-validateScript = fmap toEnum . flip (binSearchIndexOn fst) scriptDetails
+validateScript = fmap toEnum . flip (unsafeBinSearchIndexOn fst) scriptDetails
 
 -- | Look up the 'Subtag' associated to the given 'Script'
 scriptToSubtag :: Script -> Subtag

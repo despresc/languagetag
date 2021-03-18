@@ -1,15 +1,28 @@
--- Arbitrary instances and other generators
 {-# LANGUAGE OverloadedStrings #-}
 
+-- |
+-- Description : Common testing values
+-- Copyright   : 2021 Christian Despres
+-- License     : BSD-2-Clause
+-- Maintainer  : Christian Despres
 module Test.Common where
 
 import qualified Data.Char as Char
 import qualified Data.List as List
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
+import qualified Data.Map.Strict as M
 import Data.Maybe (mapMaybe)
+import qualified Data.Set as S
 import Data.Text (Text)
 import qualified Data.Text as T
+import Data.Vector (Vector)
+import qualified Data.Vector as V
+import Test.Hspec
+  ( Expectation,
+    HasCallStack,
+    shouldBe,
+  )
 import Test.QuickCheck
   ( Gen,
     arbitrary,
@@ -18,6 +31,7 @@ import Test.QuickCheck
     chooseEnum,
     chooseInt,
     elements,
+    liftArbitrary,
     liftShrink,
     oneof,
     shrink,
@@ -25,7 +39,18 @@ import Test.QuickCheck
     suchThatMap,
     vectorOf,
   )
-import Text.LanguageTag.BCP47.Registry (Grandfathered)
+import Text.LanguageTag.BCP47.Registry
+  ( BCP47 (..),
+    Deprecation (..),
+    Extlang,
+    Grandfathered,
+    Language,
+    Normal (..),
+    Region,
+    Script,
+    Variant,
+    toExtensionSubtag,
+  )
 import Text.LanguageTag.BCP47.Subtag
   ( MaybeSubtag,
     Subtag,
@@ -39,6 +64,9 @@ import Text.LanguageTag.BCP47.Subtag
     unpackCharLower,
   )
 import qualified Text.LanguageTag.BCP47.Syntax as Syn
+import Text.LanguageTag.Internal.BCP47.Registry.Types
+  ( ExtensionSubtag (..),
+  )
 import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn
 
 ----------------------------------------------------------------
@@ -174,6 +202,9 @@ genExtensionSubtagText = do
 -- | An extension subtag (other than the initial singleton)
 genExtensionSubtag :: Gen Subtag
 genExtensionSubtag = genExtensionSubtagText `suchThatMap` parseSubtag
+
+genExtensionSubtag' :: Gen ExtensionSubtag
+genExtensionSubtag' = ExtensionSubtag <$> genExtensionSubtag
 
 -- | Generate an entire extension section, with initial singleton
 genExtensionSectionTexts :: Gen [Text]
@@ -363,6 +394,54 @@ genSynTag =
       Syn.PrivateUse <$> genPrivateUseTag
     ]
 
+genValidLanguage :: Gen Language
+genValidLanguage = arbitraryBoundedEnum
+
+genValidExtlang :: Gen Extlang
+genValidExtlang = arbitraryBoundedEnum
+
+genValidScript :: Gen Script
+genValidScript = arbitraryBoundedEnum
+
+genValidRegion :: Gen Region
+genValidRegion = arbitraryBoundedEnum
+
+genValidVariant :: Gen Variant
+genValidVariant = arbitraryBoundedEnum
+
+genValidNormal :: Gen Normal
+genValidNormal = do
+  l <- genValidLanguage
+  e <- liftArbitrary genValidExtlang
+  s <- liftArbitrary genValidScript
+  r <- liftArbitrary genValidRegion
+  vs <- S.fromList <$> liftArbitrary genValidVariant
+  es <-
+    M.fromList
+      <$> liftArbitrary
+        ( (,) <$> genExtensionChar'
+            <*> (NE.fromList <$> liftArbitrary genExtensionSubtag' `suchThat` (not . null))
+        )
+  ps <- genPrivateUseSection
+  pure
+    Normal
+      { language = l,
+        extlang = e,
+        script = s,
+        region = r,
+        variants = vs,
+        extensions = es,
+        privateUse = ps
+      }
+
+genValidTag :: Gen BCP47
+genValidTag =
+  oneof
+    [ NormalTag <$> genValidNormal,
+      PrivateUseTag <$> genPrivateUseTag,
+      GrandfatheredTag <$> genGrandfathered
+    ]
+
 ----------------------------------------------------------------
 -- Shrinking
 ----------------------------------------------------------------
@@ -396,8 +475,9 @@ shrinkMaybeSubtag = maybeSubtag [] go
 -- A mix of more or less lawful shrinking
 shrinkTagishText :: Text -> [Text]
 shrinkTagishText t =
-  fmap (T.intercalate "-") (shrinkListWith shrinkText (T.split (== '-') t))
-    <> shrinkText t
+  filter (not . T.null) $
+    fmap (T.intercalate "-") (shrinkListWith shrinkText (T.split (== '-') t))
+      <> shrinkText t
 
 -- | Shrink a text tag
 
@@ -410,6 +490,7 @@ shrinkTagText = fmap (T.intercalate "-") . go . T.split (== '-')
         ("x" :) <$> filter (not . null) (shrinkListWith shrinkSubtagText xs)
     go _ = []
 
+-- | Shrink a syntactic extension
 shrinkSynExtension :: Syn.Extension -> [Syn.Extension]
 shrinkSynExtension (Syn.Extension c es) = Syn.Extension c <$> mapMaybe NE.nonEmpty shrinks
   where
@@ -422,13 +503,34 @@ shrinkSynExtension (Syn.Extension c es) = Syn.Extension c <$> mapMaybe NE.nonEmp
 shrinkSynNormal :: Syn.Normal -> [Syn.Normal]
 shrinkSynNormal = const []
 
+liftShrinkNE :: (a -> [a]) -> NonEmpty a -> [NonEmpty a]
+liftShrinkNE f = mapMaybe NE.nonEmpty . shrinkListWith f . NE.toList
+
 shrinkPrivateUseTag :: NonEmpty Subtag -> [NonEmpty Subtag]
-shrinkPrivateUseTag = mapMaybe NE.nonEmpty . shrinkListWith shrinkSubtag . NE.toList
+shrinkPrivateUseTag = liftShrinkNE shrinkSubtag
 
 shrinkSynTag :: Syn.BCP47 -> [Syn.BCP47]
 shrinkSynTag (Syn.NormalTag n) = Syn.NormalTag <$> shrinkSynNormal n
 shrinkSynTag (Syn.PrivateUse t) = Syn.PrivateUse <$> shrinkPrivateUseTag t
 shrinkSynTag (Syn.Grandfathered _) = []
+
+-- Very conservative until I feel like writing it properly
+shrinkValidTag :: BCP47 -> [BCP47]
+shrinkValidTag (NormalTag (Normal l e s r v es ps)) =
+  fmap NormalTag $
+    [Normal l e' s r v es ps | e' <- shrinkMaybe e]
+      <> [Normal l e s' r v es ps | s' <- shrinkMaybe s]
+      <> [Normal l e s r' v es ps | r' <- shrinkMaybe r]
+      <> [Normal l e s r v' es ps | v' <- S.fromList <$> liftShrink (const []) (S.toList v)]
+      <> [Normal l e s r v es' ps | es' <- shrinkValidExtensions es]
+      <> [Normal l e s r v es ps' | ps' <- liftShrink shrinkSubtag ps]
+  where
+    shrinkMaybe = liftShrink (const [])
+    shrinkE (c, xs) = (,) c <$> liftShrinkNE shrinkExtensionSubtag xs
+    shrinkValidExtensions = fmap M.fromList . shrinkListWith shrinkE . M.toList
+    shrinkExtensionSubtag (ExtensionSubtag t) = mapMaybe toExtensionSubtag $ shrinkSubtag t
+shrinkValidTag (PrivateUseTag t) = PrivateUseTag <$> shrinkPrivateUseTag t
+shrinkValidTag (GrandfatheredTag _) = []
 
 ----------------------------------------------------------------
 -- Utility
@@ -437,3 +539,63 @@ shrinkSynTag (Syn.Grandfathered _) = []
 shrinkListWith :: (a -> [a]) -> [a] -> [[a]]
 shrinkListWith _ [] = []
 shrinkListWith f l = liftShrink f l <> init (List.subsequences l)
+
+data DifferentElem a
+  = DifferentLeft a
+  | DifferentRight a
+  | DifferentBoth a a
+  deriving (Eq, Ord, Show)
+
+findFirstDiff :: Eq a => [a] -> [a] -> Maybe (DifferentElem a, [a], [a])
+findFirstDiff (x : xs) (y : ys)
+  | x == y = findFirstDiff xs ys
+  | otherwise = Just (DifferentBoth x y, xs, ys)
+findFirstDiff (x : xs) [] = Just (DifferentLeft x, xs, [])
+findFirstDiff [] (y : ys) = Just (DifferentRight y, [], ys)
+findFirstDiff [] [] = Nothing
+
+-- | @'badRound' f x@ returns 'Nothing' exactly when the given
+-- function returns 'Just' something equal to @x@, otherwise returning
+-- @'Just' x@
+badRound :: Eq a => (a -> Maybe a) -> a -> Maybe a
+badRound = badRoundWith (==)
+
+-- | Like badRound, but with a user-supplied predicate that is given
+-- the new and old values
+badRoundWith :: (a -> a -> Bool) -> (a -> Maybe a) -> a -> Maybe a
+badRoundWith p f x = case f x of
+  Just x'
+    | p x' x -> Nothing
+  _ -> Just x
+
+-- | Like 'badRoundWith', but with a transformation that never fails
+badRoundWith' :: (a -> a -> Bool) -> (a -> a) -> a -> Maybe a
+badRoundWith' p f = badRoundWith p (Just . f)
+
+-- | Like 'badRound', but with a transformation that never fails
+badRound' :: Eq a => (a -> a) -> a -> Maybe a
+badRound' = badRoundWith' (==)
+
+-- TODO: here and with other utilities, might want to check against
+-- the bad match value as well
+shouldNotMatch :: (HasCallStack, Show a, Eq a) => (b -> Maybe a) -> [b] -> Expectation
+shouldNotMatch f l = mapMaybe f l `shouldBe` []
+
+infix 1 `shouldNotMatch`
+
+shouldNotFind :: (HasCallStack, Show a, Eq a) => (a -> Bool) -> [a] -> Expectation
+shouldNotFind f l = List.filter f l `shouldBe` []
+
+infix 1 `shouldNotFind`
+
+maybePreferred :: Deprecation a -> Maybe a
+maybePreferred (DeprecatedPreferred a) = Just a
+maybePreferred _ = Nothing
+
+badSortOnPair :: Ord b => (a -> b) -> Vector a -> Maybe (a, a)
+badSortOnPair proj = go . V.toList
+  where
+    go (x : y : ys)
+      | proj x <= proj y = go (y : ys)
+      | otherwise = Just (x, y)
+    go _ = Nothing

@@ -17,6 +17,7 @@ module Text.LanguageTag.BCP47.Registry.Grandfathered
     -- * Grandfathered tag records
     RangeRecord (..),
     lookupGrandfatheredRecord,
+    grandfatheredDetails,
   )
 where
 

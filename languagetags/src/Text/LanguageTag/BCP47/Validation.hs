@@ -55,7 +55,7 @@ data ValidateError
   | ErrorDuplicateVariant Variant
   | ErrorExtension Subtag
   | ErrorDuplicateExtension Syn.ExtensionChar
-  deriving (Show)
+  deriving (Eq, Ord, Show)
 
 type VM a = Either ValidateError a
 

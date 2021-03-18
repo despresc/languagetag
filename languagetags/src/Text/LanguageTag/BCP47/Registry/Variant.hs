@@ -16,6 +16,7 @@ module Text.LanguageTag.BCP47.Registry.Variant
     -- * Variant subtag records
     VariantRecord (..),
     lookupVariantRecord,
+    variantDetails,
   )
 where
 

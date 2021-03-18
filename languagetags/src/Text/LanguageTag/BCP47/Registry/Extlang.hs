@@ -17,6 +17,7 @@ module Text.LanguageTag.BCP47.Registry.Extlang
     -- * Extended language subtag records
     ExtlangRecord (..),
     lookupExtlangRecord,
+    extlangDetails,
   )
 where
 

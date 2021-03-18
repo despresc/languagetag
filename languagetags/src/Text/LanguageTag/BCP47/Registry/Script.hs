@@ -16,6 +16,7 @@ module Text.LanguageTag.BCP47.Registry.Script
     -- * Script subtag records
     ScriptRecord (..),
     lookupScriptRecord,
+    scriptDetails,
   )
 where
 

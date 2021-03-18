@@ -19,6 +19,7 @@ module Text.LanguageTag.BCP47.Syntax
     renderBCP47,
     renderBCP47Builder,
     toSubtags,
+    parseBCP47FromSubtags,
 
     -- * Constructing tags directly
     -- $valueconstruction
@@ -167,6 +168,11 @@ toSubtags (Grandfathered g) = case g of
   ZhMin -> Subtag 17699146535566049298 NE.:| [Subtag 15827742560719208467]
   ZhMinNan -> Subtag 17699146535566049298 NE.:| [Subtag 15827742560719208467, Subtag 15962850549540323347]
   ZhXiang -> Subtag 17699146535566049298 NE.:| [Subtag 17412902894784479253]
+
+-- | Parse a 'BCP47' tag from a list of subtags by first rendering the
+-- list to a 'Text' tag then parsing that tag
+parseBCP47FromSubtags :: NonEmpty Subtag -> Either SyntaxError BCP47
+parseBCP47FromSubtags = parseBCP47 . T.intercalate "-" . NE.toList . fmap renderSubtagLower
 
 ----------------------------------------------------------------
 -- Parsing

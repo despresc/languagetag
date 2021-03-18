@@ -16,6 +16,7 @@ module Text.LanguageTag.BCP47.Registry.Region
     -- * Region subtag records
     RegionRecord (..),
     lookupRegionRecord,
+    regionDetails,
   )
 where
 

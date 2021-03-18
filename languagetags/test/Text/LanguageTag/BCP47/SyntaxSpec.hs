@@ -95,6 +95,16 @@ spec = do
             it (T.unpack l) $
               Syn.parseBCP47 l `shouldBe` Right (Syn.grandfatheredSyntax t)
       traverse_ test regularTags
+    prop "does not parse tags with strict irregular grandfathered prefixes" $
+      forAllShrink genTagishText shrinkTagishText $ \t ->
+        (isRight . Syn.parseBCP47 . (<> ("-" <> t)) . fst) `shouldNotFind` irregularTags
+    prop "parses tags with strict regular grandfathered prefixes correctly" $
+      forAllShrink genTagishText shrinkTagishText $ \t ->
+        let badParse (a, _) = case Syn.parseBCP47 $ a <> "-" <> t of
+              Right (Syn.NormalTag _) -> False
+              Right _ -> True
+              Left _ -> False
+         in badParse `shouldNotFind` regularTags
   describe "renderBCP47" $ do
     prop "composes with parseBCP47 on the right correctly" $
       forAllShrink genSynTag shrinkSynTag $ \st ->
@@ -126,3 +136,7 @@ spec = do
       forAllShrink genSynTag shrinkSynTag $ \st ->
         T.intercalate "-" (NE.toList $ fmap renderSubtagLower $ Syn.toSubtags st)
           === T.toLower (Syn.renderBCP47 st)
+  describe "parseBCP47FromSubtags" $ do
+    prop "composes with toSubtags correctly on the left" $
+      forAllShrink genSynTag shrinkSynTag $ \st ->
+        Syn.parseBCP47FromSubtags (Syn.toSubtags st) === Right st

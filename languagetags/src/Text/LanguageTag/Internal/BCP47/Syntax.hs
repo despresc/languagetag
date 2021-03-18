@@ -198,7 +198,7 @@ data Normal = Normal
     extensions :: ![Extension],
     privateUse :: ![Subtag]
   }
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, Show)
 
 instance Hashable Normal where
   hashWithSalt s (Normal p e1 e2 e3 sc r v e pv) =
@@ -312,7 +312,7 @@ data Extension = Extension
   { extSingleton :: !ExtensionChar,
     extTags :: !(NonEmpty Subtag)
   }
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, Show)
 
 instance NFData Extension where
   rnf (Extension _ x) = rnf x
