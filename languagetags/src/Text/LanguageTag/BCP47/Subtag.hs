@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 -- |
 -- Description : BCP47 subtags
@@ -13,7 +14,6 @@ module Text.LanguageTag.BCP47.Subtag
     Subtag,
     parseSubtag,
     popSubtag,
-    popSubtag',
     containsLetter,
     containsOnlyLetters,
     containsDigit,
@@ -53,6 +53,9 @@ module Text.LanguageTag.BCP47.Subtag
     unsafePopChar,
     parseSubtagMangled,
     packCharMangled,
+
+    -- * Errors
+    SyntaxError (..),
   )
 where
 
@@ -124,53 +127,59 @@ readSubtag len = fixup . List.foldl' go (len, 57, False, False)
           | n <= 57 = (seenLetter, True)
           | otherwise = (True, seenDigit)
 
--- | Attempt to parse a text string as a subtag
-parseSubtag :: Text -> Maybe Subtag
-parseSubtag inp
-  | Just (c, t) <- T.uncons inp,
-    T.length inp <= 8 =
-    wchars (fromIntegral $ T.length inp) c t
-  | otherwise = Nothing
-  where
-    fixup !len (!b, !l, !sc)
-      | b = Nothing
-      | otherwise = Just $ recordSeen sc $ readSubtag len $ l []
-    wchars !len !c !t = case packCharDetail c of
-      Just (w, sc) -> fixup len $ T.foldl' go (False, (w :), toSeenChar sc) t
-      Nothing -> Nothing
-    go (!b, !l, !sc) c = case packCharDetail c of
-      Just (w, sc') -> (b, l . (w :), reportChar sc' sc)
-      Nothing -> (True, l, sc)
+-- | A possible syntax error that may be detected during parsing
+data SyntaxError
+  = -- | input was empty
+    EmptyInput
+  | -- | tag continued for more than 8 characters
+    TagTooLong
+  | -- | a @-@ was found at the end of subtag
+    TrailingTerminator Subtag
+  | -- | gives the offending 'Char' and its offset
+    InvalidChar Int Char
+  deriving (Eq, Ord, Show)
 
--- | Given the initial character of a subtag and the remainder of a
--- 'Text' stream, attempt to parse the rest of the subtag, failing if
--- an invalid character is encountered and otherwise returning the
--- resulting 'Subtag' and the remainder of the stream.
-popSubtag :: Char -> Text -> Maybe (Subtag, Text)
-popSubtag initchar inp = case packCharDetail initchar of
-  Just (c, sc) -> go 1 (c :) (toSeenChar sc) inp
-  Nothing -> Nothing
+-- | Attempt to parse an entire text string as a 'Subtag'
+parseSubtag :: Text -> Either SyntaxError Subtag
+parseSubtag inp = case T.uncons inp of
+  Just (c, t) -> case packCharDetail c of
+    Just (w, sc) -> go 1 (w :) (toSeenChar sc) t
+    Nothing -> Left $ InvalidChar 0 c
+  Nothing -> Left EmptyInput
   where
-    go idx !l !sc !t
-      | idx == 8 = case T.uncons t of
-        Just (c, t')
-          | c == '-' || T.null t' -> Just (recordSeen sc $ readSubtag idx (l []), t)
-          | otherwise -> Nothing
-        Nothing -> Just (recordSeen sc $ readSubtag idx (l []), t)
-      | otherwise = case T.uncons t of
-        Just (c, t')
-          | c == '-' -> Just (recordSeen sc $ readSubtag idx (l []), t)
-          | otherwise -> case packCharDetail c of
-            Just (!w, !sc') -> go (idx + 1) (l . (w :)) (reportChar sc' sc) t'
-            Nothing -> Nothing
-        Nothing -> Just (recordSeen sc $ readSubtag idx (l []), t)
+    go !pos !l !sc t = case T.uncons t of
+      Just (c, t')
+        | pos < 8 -> case packCharDetail c of
+          Just (w, sc') -> go (pos + 1) (l . (w :)) (reportChar sc' sc) t'
+          Nothing
+            | c == '-',
+              T.null t' ->
+              Left $ TrailingTerminator $ recordSeen sc $ readSubtag (fromIntegral pos) $ l []
+            | otherwise -> Left $ InvalidChar pos c
+        | otherwise -> Left TagTooLong
+      Nothing -> Right $ recordSeen sc $ readSubtag (fromIntegral pos) $ l []
 
--- | Attempt to parse an initial subtag in a text stream, returning
--- the subtag and the rest of the stream if successful
-popSubtag' :: Text -> Maybe (Subtag, Text)
-popSubtag' t = do
-  (c, t') <- T.uncons t
-  popSubtag c t'
+-- | Attempt to parse a 'Subtag' from the input 'Text'
+-- stream. Consumes the trailing @-@ character and records its
+-- presence if it is there.
+popSubtag :: Text -> Either SyntaxError (Subtag, Text)
+popSubtag inp = case T.uncons inp of
+  Just (c, t) -> case packCharDetail c of
+    Just (w, sc) -> go 1 (w :) (toSeenChar sc) t
+    Nothing -> Left $ InvalidChar 0 c
+  Nothing -> Left EmptyInput
+  where
+    go !pos !l !sc t = case T.uncons t of
+      Just (c, t')
+        | pos > 8 -> Left TagTooLong
+        | c == '-' ->
+          if T.null t'
+            then Left $ TrailingTerminator $ recordSeen sc $ readSubtag (fromIntegral pos) $ l []
+            else Right (recordSeen sc $ readSubtag (fromIntegral pos) $ l [], t')
+        | otherwise -> case packCharDetail c of
+          Just (w, sc') -> go (pos + 1) (l . (w :)) (reportChar sc' sc) t'
+          Nothing -> Left $ InvalidChar pos c
+      Nothing -> Right (recordSeen sc $ readSubtag (fromIntegral pos) $ l [], "")
 
 -- | Read a tag from the given text value, truncating it or replacing
 -- it with the singleton "a" if necessary, and replacing any

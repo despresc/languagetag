@@ -966,8 +966,8 @@ renderModuleWith tyname tydescription docnote d sel rs =
 
 parseSubtag' :: Text -> Subtag
 parseSubtag' t = case parseSubtag t of
-  Nothing -> error $ T.unpack $ "couldn't parse subtag: " <> t
-  Just a -> a
+  Left _ -> error $ T.unpack $ "couldn't parse subtag: " <> t
+  Right a -> a
 
 -- Render a subtag, assuming that it is well-formed
 rendSubtag :: Text -> Text

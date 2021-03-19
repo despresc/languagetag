@@ -36,8 +36,8 @@ module Text.LanguageTag.BCP47.Syntax
 
     -- * Errors
     SyntaxError (..),
-    Component (..),
-    SyntaxErrorType (..),
+    Pos,
+    AtComponent (..),
   )
 where
 
@@ -48,82 +48,96 @@ import Data.Maybe (mapMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Word (Word8)
-import Text.LanguageTag.BCP47.Subtag
+import Text.LanguageTag.BCP47.Subtag hiding (SyntaxError (..))
+import qualified Text.LanguageTag.BCP47.Subtag as Sub
 import Text.LanguageTag.Internal.BCP47.Registry.Grandfathered
 import Text.LanguageTag.Internal.BCP47.Subtag (Subtag (..), SubtagChar (..))
 import Text.LanguageTag.Internal.BCP47.Syntax
 
 {- TODO:
 - spin out the try* functions into their own functions?
-- benchmark a more straightforward implementation that does things
-  like pre-splitting the input
-- clean up the structure of the error types and how they are emitted
- (e.g. Err 0 Cprimary ErrNeededSubtag can only occur when the start is
- "x" or "i", and ErrNeededSubtag can otherwise only occur after a
- singleton), also perhaps distinguish between unparseable tags and
- merely inappropriate tags
+
+- enhancement: actually attempt to parse and add the bad
+  TrailingTerminator subtag to the returned con (would probably
+  require some parser restructuring)
 
 -}
 
--- | The most recent successfully-parsed component
-data Component
+-- | The parser's current location in the tag, named after the most
+-- recent component that was successfully parsed, more or less. What
+-- it really indicates is what subtags the parser expects to occur
+-- next: 'AtPrimary' means that it expects anything from an extended
+-- language subtag to the start of the private use section, while
+-- 'AtPrivateUse' indicates that it expects only private use subtags.
+data AtComponent
   = -- | just started
-    Cbeginning
+    AtBeginning
   | -- | primary language subtag
-    Cprimary
+    AtPrimary
   | -- | first extended language subtag
-    Cextl1
+    AtExtl1
   | -- | second extended language subtag
-    Cextl2
+    AtExtl2
   | -- | the entire language subtag section
-    Clanguage
+    AtLanguage
   | -- | script subtag
-    Cscript
+    AtScript
   | -- | region subtag
-    Cregion
+    AtRegion
   | -- | variant subtag
-    Cvariant
+    AtVariant
   | -- | extension subtag
-    Cextension
+    AtExtension
   | -- | private use subtag
-    Cprivateuse
+    AtPrivateUse
   | -- | subtag right after an initial @i-@
-    CirregI
-  deriving (Eq, Ord, Show, Read)
+    AtIrregI
+  deriving (Eq, Ord, Show)
 
-instance NFData Component where
+instance NFData AtComponent where
   rnf = rwhnf
 
--- | An error that may occur during parsing
-data SyntaxError = SyntaxError
-  { -- | the start of the tag where the error occurred
-    errPos :: !Int,
-    -- | the section just before the erroneous tag
-    errComponent :: !Component,
-    -- | the error itself
-    errType :: !SyntaxErrorType
-  }
-  deriving (Eq, Ord, Show, Read)
+-- | A possible syntax error that may occur. The 'Pos' in the errors
+-- indicates where the error occurred, which is:
+--
+-- * for 'UnparseableSubtag', where the unparseable subtag started (if
+--   the tag was too long or did not end with @-@ or the end of input)
+--   or the position where an invalid character occurred
+--
+-- * for 'BadSubtag', the start of the inappropriate 'Subtag'
+--
+-- * for 'EmptySingleton', the start of the empty extension or private
+--   use section that was encountered
+data SyntaxError
+  = -- | encountered text that could not be parsed as a 'Subtag'
+    UnparseableSubtag Pos AtComponent (Maybe Char) (Maybe BCP47)
+  | -- | encountered a 'Subtag' that was ill-formed for its location
+    BadSubtag Pos AtComponent Subtag (Maybe BCP47)
+  | -- | input was empty
+    EmptyInput
+  | -- | a trailing @-@ terminator was found after the last subtag
+    TrailingTerminator Pos AtComponent Subtag (Maybe BCP47)
+  | -- | an empty extension (@Just extensionchar@) or private use
+    -- section (@Nothing@) was encountered
+    EmptySingleton Pos (Maybe ExtensionChar) (Maybe BCP47)
+  | -- | an irregular grandfathered tag was encountered that had more
+    -- input after it
+    IrregNum Grandfathered
+  | -- | No tag was found after an initial @i-@
+    EmptyIrregI
+  deriving (Eq, Ord, Show)
 
 instance NFData SyntaxError where
-  rnf = rwhnf
+  rnf (UnparseableSubtag x y z w) = rnf x `seq` rnf y `seq` rnf z `seq` rnf w
+  rnf (BadSubtag x y z w) = rnf x `seq` rnf y `seq` rnf z `seq` rnf w
+  rnf (TrailingTerminator x y z w) = rnf x `seq` rnf y `seq` rnf z `seq` rnf w
+  rnf EmptyInput = ()
+  rnf (EmptySingleton x y z) = rnf x `seq` rnf y `seq` rnf z
+  rnf EmptyIrregI = ()
+  rnf (IrregNum x) = rnf x
 
--- | The type of error that occurred during parsing
-data SyntaxErrorType
-  = -- | empty input
-    SyntaxErrorEmpty
-  | -- | another subtag was expected
-    SyntaxErrorNeededSubtag
-  | -- | expecting a subtag separator or the end of input
-    SyntaxErrorSubtagEnd
-  | -- | invalid tag
-    SyntaxErrorBadSubtag
-  | -- | an irregular grandfathered tag was followed by another subtag
-    SyntaxErrorIrregNum
-  deriving (Eq, Ord, Show, Read)
-
-instance NFData SyntaxErrorType where
-  rnf = rwhnf
+-- | A position in the input 'Text' stream
+type Pos = Int
 
 ----------------------------------------------------------------
 -- Rendering to subtags
@@ -178,51 +192,37 @@ parseBCP47FromSubtags = parseBCP47 . T.intercalate "-" . NE.toList . fmap render
 -- Parsing
 ----------------------------------------------------------------
 
--- | Pop a tag from the input stream
-
--- TODO: could refine our errors here by re-parsing on an error,
--- e.g. point to the precise location of the error
+-- | Pop a tag from the input stream, returning @Nothing@ if the
+-- stream was empty
 tagPop ::
-  Char ->
+  Maybe BCP47 ->
   Text ->
-  Component ->
+  AtComponent ->
   Int ->
-  Either SyntaxError (Subtag, Text)
-tagPop initchar inp clast pos = case popSubtag initchar inp of
-  Just (s, t) -> Right (s, t)
-  Nothing -> Left $ SyntaxError pos clast SyntaxErrorBadSubtag
-
--- returns the character immediately after the separator if there was
--- one, and Nothing on end of input.
-
--- FIXME: not totally sure that the error stuff here is necessary,
--- since we should now catch such things in tagPop
-tagSep :: Component -> Int -> Text -> Either SyntaxError (Maybe (Char, Text))
-tagSep !clast !pos !inp = case T.uncons inp of
-  Just (c, t)
-    | c == '-' -> case T.uncons t of
-      Just (c', t') -> Right $ Just (c', t')
-      Nothing -> Left $ SyntaxError pos clast SyntaxErrorSubtagEnd
-    | otherwise -> Left $ SyntaxError pos clast SyntaxErrorSubtagEnd
-  Nothing -> Right Nothing
+  Either SyntaxError (Maybe (Subtag, Text))
+tagPop mcon inp atlast pos = case popSubtag inp of
+  Right (st, t) -> Right $ Just (st, t)
+  Left Sub.EmptyInput -> Right Nothing
+  Left Sub.TagTooLong -> Left $ UnparseableSubtag pos atlast Nothing (finish <$> mcon)
+  Left (Sub.TrailingTerminator st) -> Left $ TrailingTerminator pos atlast st mcon
+  Left (Sub.InvalidChar n c) -> Left $ UnparseableSubtag (pos + n) atlast (Just c) mcon
 
 mfinish ::
   Finishing a =>
   Word8 ->
-  Component ->
+  AtComponent ->
   Int ->
   Text ->
   a ->
-  (a -> Subtag -> Component -> Int -> Text -> Either SyntaxError BCP47) ->
+  (a -> Subtag -> AtComponent -> Int -> Text -> Either SyntaxError BCP47) ->
   Either SyntaxError BCP47
-mfinish !len !clast !pos !inp !con !pr = do
+mfinish !len !atlast !pos !inp !con !pr = do
   let pos' = fromIntegral len + pos + 1
-  mc <- tagSep clast pos' inp
-  case mc of
-    Just (c, t) ->
-      tagPop c t clast pos' >>= \(sbs, t') ->
-        pr con sbs clast pos' t'
-    Nothing -> pure $ finish con
+  let con' = finish con
+  mst <- tagPop (Just con') inp atlast pos'
+  case mst of
+    Just (st, t) -> pr con st atlast pos' t
+    Nothing -> pure con'
 
 isDigit :: SubtagChar -> Bool
 isDigit c = w >= 48 && w <= 57
@@ -231,9 +231,11 @@ isDigit c = w >= 48 && w <= 57
 
 -- | Parse a BCP47 language tag
 parseBCP47 :: Text -> Either SyntaxError BCP47
-parseBCP47 inp = case T.uncons inp of
-  Just (c, t) -> catchIrregulars $ parseBCP47' c t
-  Nothing -> Left $ SyntaxError 0 Cbeginning SyntaxErrorEmpty
+parseBCP47 inp = do
+  mst <- tagPop Nothing inp AtBeginning 0
+  case mst of
+    Just (stg, t) -> catchIrregulars $ parseBCP47' stg t
+    Nothing -> Left EmptyInput
   where
     -- FIXME: sufficient for the moment, but might want to: 1. be more
     -- efficient; 2. throw a special error when these tags occur as a
@@ -254,33 +256,29 @@ parseBCP47 inp = case T.uncons inp of
             Right $ Grandfathered SgnChDe
           | otherwise = Left e
 
-parseBCP47' :: Char -> Text -> Either SyntaxError BCP47
-parseBCP47' !initchar !inp = tagPop initchar inp Cbeginning 0 >>= parsePrimary
+parseBCP47' :: Subtag -> Text -> Either SyntaxError BCP47
+parseBCP47' = parsePrimary
   where
     initcon l e1 e2 e3 s r v e p = NormalTag $ Normal l e1 e2 e3 s r v e p
 
     -- TODO: could be optimized a bit
-    parsePrimary (st, t)
-      | containsDigit st = Left $ SyntaxError 0 Cbeginning SyntaxErrorBadSubtag
+    parsePrimary !st !t
+      | containsDigit st = Left $ BadSubtag 0 AtBeginning st Nothing
       | subtagLength st == 1 =
         if subtagHead st == subtagCharx
-          then PrivateUse <$> parsePrivate 0 t
-          else do
-            msep <- tagSep Cprimary 0 t
-            case msep of
-              Just (c, t') -> parseIrregularI st c t'
-              Nothing -> Left $ SyntaxError 0 Cprimary SyntaxErrorNeededSubtag
+          then parsePrivateTag t
+          else parseIrregularI st t
       | subtagLength st >= 4 =
         mfinish
           (subtagLength st)
-          Cprimary
+          AtPrimary
           0
           t
           (initcon st nullSubtag nullSubtag nullSubtag)
           tryScript
-      | otherwise = mfinish (subtagLength st) Cprimary 0 t (initcon st) (tryGrandPrimary st)
+      | otherwise = mfinish (subtagLength st) AtPrimary 0 t (initcon st) (tryGrandPrimary st)
 
-    tryGrandPrimary st0 con st1 clast pos t =
+    tryGrandPrimary st0 con st1 atlast pos t =
       case (unwrapSubtag st0, unwrapSubtag st1) of
         (14108546179528654867, 15690354374758891542)
           | T.null t -> pure $ Grandfathered ArtLojban
@@ -296,151 +294,138 @@ parseBCP47' !initchar !inp = tagPop initchar inp Cbeginning 0 >>= parsePrimary
           | T.null t -> pure $ Grandfathered ZhHakka
         (17699146535566049298, 15827742560719208467) -> do
           let pos' = pos + fromIntegral (subtagLength st1) + 1
-          msep <- tagSep clast pos' t
-          case msep of
+          mst <- tagPop (Just $ Grandfathered ZhMin) t AtExtl1 pos'
+          case mst of
             Nothing -> pure $ Grandfathered ZhMin
-            Just (c, t') -> do
-              (st2, t'') <- tagPop c t' Cextl1 pos'
-              case unwrapSubtag st2 of
-                15962850549540323347
-                  | T.null t'' -> pure $ Grandfathered ZhMinNan
-                _ -> tryLext2 (con $ justSubtag st1) st2 Cextl1 pos' t''
+            Just (st2, t') -> case unwrapSubtag st2 of
+              15962850549540323347
+                | T.null t' -> pure $ Grandfathered ZhMinNan
+              _ -> tryLext2 (con $ justSubtag st1) st2 AtExtl1 pos' t'
         (17699146535566049298, 17412902894784479253)
           | T.null t -> pure $ Grandfathered ZhXiang
-        _ -> tryLext1 con st1 clast pos t
+        _ -> tryLext1 con st1 atlast pos t
 
-    tryLext1 !con st clast pos t
+    tryLext1 !con st atlast pos t
       | containsOnlyLetters st && subtagLength st == 3 =
-        mfinish (subtagLength st) Cextl1 pos t (con $ justSubtag st) tryLext2
-      | otherwise = tryScript (con nullSubtag nullSubtag nullSubtag) st clast pos t
+        mfinish (subtagLength st) AtExtl1 pos t (con $ justSubtag st) tryLext2
+      | otherwise = tryScript (con nullSubtag nullSubtag nullSubtag) st atlast pos t
 
-    tryLext2 !con st clast pos t
+    tryLext2 !con st atlast pos t
       | containsOnlyLetters st && subtagLength st == 3 =
-        mfinish (subtagLength st) Cextl2 pos t (con $ justSubtag st) tryLext3
-      | otherwise = tryScript (con nullSubtag nullSubtag) st clast pos t
+        mfinish (subtagLength st) AtExtl2 pos t (con $ justSubtag st) tryLext3
+      | otherwise = tryScript (con nullSubtag nullSubtag) st atlast pos t
 
-    tryLext3 !con st clast pos t
+    tryLext3 !con st atlast pos t
       | containsOnlyLetters st && subtagLength st == 3 =
-        mfinish (subtagLength st) Clanguage pos t (con $ justSubtag st) tryScript
-      | otherwise = tryScript (con nullSubtag) st clast pos t
+        mfinish (subtagLength st) AtLanguage pos t (con $ justSubtag st) tryScript
+      | otherwise = tryScript (con nullSubtag) st atlast pos t
 
-    tryScript !con st clast pos t
+    tryScript :: (MaybeSubtag -> MaybeSubtag -> [Subtag] -> [Extension] -> [Subtag] -> BCP47) -> Subtag -> AtComponent -> Int -> Text -> Either SyntaxError BCP47
+    tryScript !con st atlast pos t
       | subtagLength st == 4 && containsOnlyLetters st =
-        mfinish (subtagLength st) Cscript pos t (con $ justSubtag st) tryRegion
-      | otherwise = tryRegion (con nullSubtag) st clast pos t
+        mfinish (subtagLength st) AtScript pos t (con $ justSubtag st) tryRegion
+      | otherwise = tryRegion (con nullSubtag) st atlast pos t
 
-    tryRegion !con st clast pos t
+    tryRegion :: (MaybeSubtag -> [Subtag] -> [Extension] -> [Subtag] -> BCP47) -> Subtag -> AtComponent -> Int -> Text -> Either SyntaxError BCP47
+    tryRegion !con st atlast pos t
       | subtagLength st == 2 =
         if containsDigit st
-          then Left $ SyntaxError pos clast SyntaxErrorBadSubtag
-          else mfinish (subtagLength st) Cregion pos t (con $ justSubtag st) tryVariant
+          then Left $ BadSubtag pos atlast st (Just $ finish con)
+          else mfinish (subtagLength st) AtRegion pos t (con $ justSubtag st) tryVariant
       | subtagLength st == 3 =
         if containsLetter st
-          then Left $ SyntaxError pos clast SyntaxErrorBadSubtag
-          else mfinish (subtagLength st) Cregion pos t (con $ justSubtag st) tryVariant
-      | otherwise = tryVariant (con nullSubtag) st clast pos t
+          then Left $ BadSubtag pos atlast st (Just $ finish con)
+          else mfinish (subtagLength st) AtRegion pos t (con $ justSubtag st) tryVariant
+      | otherwise = tryVariant (con nullSubtag) st atlast pos t
 
-    tryVariant !con st clast pos t
+    tryVariant :: ([Subtag] -> [Extension] -> [Subtag] -> BCP47) -> Subtag -> AtComponent -> Int -> Text -> Either SyntaxError BCP47
+    tryVariant !con st atlast pos t
       | subtagLength st == 4 =
         if isDigit $ subtagHead st
-          then mfinish (subtagLength st) Cvariant pos t (con . (st :)) tryVariant
-          else Left $ SyntaxError pos clast SyntaxErrorBadSubtag
+          then mfinish (subtagLength st) AtVariant pos t (con . (st :)) tryVariant
+          else Left $ BadSubtag pos atlast st (Just $ finish con)
       | subtagLength st >= 5 =
-        mfinish (subtagLength st) Cvariant pos t (con . (st :)) tryVariant
-      | otherwise = trySingleton (con []) st clast pos t
+        mfinish (subtagLength st) AtVariant pos t (con . (st :)) tryVariant
+      | otherwise = trySingleton (con []) st atlast pos t
 
-    trySingleton con st clast pos t
-      | subtagLength st /= 1 = Left $ SyntaxError pos clast SyntaxErrorBadSubtag
+    trySingleton :: ([Extension] -> [Subtag] -> BCP47) -> Subtag -> AtComponent -> Int -> Text -> Either SyntaxError BCP47
+    trySingleton con st atlast pos t
+      | subtagLength st /= 1 = Left $ BadSubtag pos atlast st (Just $ finish con)
       | subtagHead st == subtagCharx =
         parsePrivateUse (con []) pos t
       | otherwise =
-        parseExtension
-          ( \ne ->
-              con
-                . ( Extension
-                      ( unsafeSubtagCharToExtension $ subtagHead st
-                      )
-                      ne
-                      :
-                  )
-          )
-          pos
-          t
+        let c = unsafeSubtagCharToExtension $ subtagHead st
+         in parseExtension c con pos t
 
     parsePrivateUse con pos t = do
       let pos' = pos + 2
-      ms <- tagSep Cprivateuse pos' t
-      case ms of
-        Just (c, t') -> do
-          (st, t'') <- tagPop c t' Cprivateuse pos'
-          parsePrivateUseTag con st Cprivateuse pos' t''
-        Nothing -> Left $ SyntaxError pos Cprivateuse SyntaxErrorNeededSubtag
+      mst <- tagPop (Just $ finish con) t AtPrivateUse pos'
+      case mst of
+        Just (st, t') -> parsePrivateUseTag con st AtPrivateUse pos' t'
+        Nothing -> Left $ EmptySingleton pos Nothing (Just $ finish con)
 
     parsePrivateUseTag con st _ pos t =
-      mfinish (subtagLength st) Cprivateuse pos t (con . (st :)) parsePrivateUseTag
+      mfinish (subtagLength st) AtPrivateUse pos t (con . (st :)) parsePrivateUseTag
 
-    parseExtension con pos t = do
+    parseExtension c con pos t = do
       let pos' = pos + 2
-      ms <- tagSep Cextension pos' t
-      case ms of
-        Just (c, t') -> do
-          (st, t'') <- tagPop c t' Cextension pos'
-          if subtagLength st >= 2
-            then
-              mfinish
-                (subtagLength st)
-                Cextension
-                pos'
-                t''
-                (con . (st NE.:|))
-                parseExtensionTag
-            else Left $ SyntaxError pos Cextension SyntaxErrorNeededSubtag
-        Nothing -> Left $ SyntaxError pos Cextension SyntaxErrorNeededSubtag
+      let con' ne = con . (Extension c ne :)
+      mst <- tagPop (Just $ finish con) t AtExtension pos'
+      case mst of
+        Just (st, t')
+          | subtagLength st >= 2 ->
+            mfinish (subtagLength st) AtExtension pos' t' (con' . (st NE.:|)) parseExtensionTag
+          | otherwise -> Left $ EmptySingleton pos (Just c) (Just $ finish con)
+        Nothing -> Left $ EmptySingleton pos (Just c) (Just $ finish con)
 
     parseExtensionTag con st _ pos t
-      | subtagLength st == 1 = trySingleton (con []) st Cextension pos t
-      | otherwise = mfinish (subtagLength st) Cextension pos t (con . (st :)) parseExtensionTag
+      | subtagLength st == 1 = trySingleton (con []) st AtExtension pos t
+      | otherwise = mfinish (subtagLength st) AtExtension pos t (con . (st :)) parseExtensionTag
 
-    parseIrregularI st c t
-      | st /= subtagI = Left $ SyntaxError 0 Cbeginning SyntaxErrorBadSubtag
-      | otherwise = case tagPop c t Cbeginning 0 of
-        Right (st', t') -> case T.uncons t' of
-          Just _ -> Left $ SyntaxError 2 CirregI SyntaxErrorIrregNum
-          Nothing -> recognizeIrregI st'
-        Left e -> Left e
+    parseIrregularI st t
+      | st /= subtagI = Left $ BadSubtag 0 AtBeginning st Nothing
+      | otherwise = do
+        mst <- tagPop Nothing t AtIrregI 2
+        case mst of
+          Just (st', t') -> case recognizeIrregI st' of
+            Just g
+              | T.null t' -> Right $ Grandfathered g
+              | otherwise -> Left $ IrregNum g
+            Nothing -> Left $ BadSubtag 2 AtIrregI st' Nothing
+          Nothing -> Left EmptyIrregI
 
     recognizeIrregI n = case unwrapSubtag n of
-      14102819922971197459 -> Right $ Grandfathered IAmi
-      14248104991419006995 -> Right $ Grandfathered IBnn
-      14526138628724883479 -> Right $ Grandfathered IDefault
-      14680466211245977112 -> Right $ Grandfathered IEnochian
-      15098133032806121491 -> Right $ Grandfathered IHak
-      15542853518732230679 -> Right $ Grandfathered IKlingon
-      15697226132455686163 -> Right $ Grandfathered ILux
-      15827749698417983509 -> Right $ Grandfathered IMingo
-      15962927641447628822 -> Right $ Grandfathered INavajo
-      16275850723642572819 -> Right $ Grandfathered IPwn
-      16827550474088480787 -> Right $ Grandfathered ITao
-      16827638435018702867 -> Right $ Grandfathered ITay
-      16847869448969781267 -> Right $ Grandfathered ITsu
-      _ -> Left $ SyntaxError 2 CirregI SyntaxErrorBadSubtag
+      14102819922971197459 -> Just IAmi
+      14248104991419006995 -> Just IBnn
+      14526138628724883479 -> Just IDefault
+      14680466211245977112 -> Just IEnochian
+      15098133032806121491 -> Just IHak
+      15542853518732230679 -> Just IKlingon
+      15697226132455686163 -> Just ILux
+      15827749698417983509 -> Just IMingo
+      15962927641447628822 -> Just INavajo
+      16275850723642572819 -> Just IPwn
+      16827550474088480787 -> Just ITao
+      16827638435018702867 -> Just ITay
+      16847869448969781267 -> Just ITsu
+      _ -> Nothing
 
-parsePrivate :: Int -> Text -> Either SyntaxError (NE.NonEmpty Subtag)
-parsePrivate initpos inp = do
-  ms <- tagSep Cprivateuse initpos inp
-  case ms of
-    Just (c, t) -> do
-      (st, t') <- tagPop c t Cprivateuse initpos
-      parsePrivateUseTag (st NE.:|) (initpos + fromIntegral (subtagLength st) + 1) t'
-    Nothing -> Left $ SyntaxError initpos Cprivateuse SyntaxErrorNeededSubtag
+-- | Parse an entire private use tag
+parsePrivateTag :: Text -> Either SyntaxError BCP47
+parsePrivateTag inp = do
+  mst <- tagPop Nothing inp AtPrivateUse 2
+  case mst of
+    Just (st, t) ->
+      parsePrivateUseTag (PrivateUse . (st NE.:|)) (2 + fromIntegral (subtagLength st) + 1) t
+    Nothing -> Left $ EmptySingleton 0 Nothing Nothing
   where
     parsePrivateUseTag con pos t = do
-      mc <- tagSep Cprivateuse pos t
-      case mc of
-        Just (c, t') -> do
-          (st, t'') <- tagPop c t' Cprivateuse pos
-          parsePrivateUseTag (con . (st :)) (pos + fromIntegral (subtagLength st) + 1) t''
-        Nothing -> pure $ con []
+      let con' = con []
+      mst <- tagPop (Just con') t AtPrivateUse pos
+      case mst of
+        Just (st, t') ->
+          parsePrivateUseTag (con . (st :)) (pos + fromIntegral (subtagLength st) + 1) t'
+        Nothing -> pure con'
 
 -- $valueconstruction
 --

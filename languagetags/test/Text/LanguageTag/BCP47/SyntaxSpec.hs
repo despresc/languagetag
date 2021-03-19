@@ -17,8 +17,12 @@ import Test.QuickCheck
     suchThat,
     (===),
   )
-import Text.LanguageTag.BCP47.Registry (Grandfathered (..))
-import Text.LanguageTag.BCP47.Subtag (renderSubtagLower, unpackCharLower)
+import Text.LanguageTag.BCP47.Registry (ExtensionChar (..), Grandfathered (..))
+import Text.LanguageTag.BCP47.Subtag
+  ( parseSubtag,
+    renderSubtagLower,
+    unpackCharLower,
+  )
 import qualified Text.LanguageTag.BCP47.Syntax as Syn
 import Text.LanguageTag.Internal.BCP47.Subtag (SubtagChar (..))
 import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn
@@ -59,15 +63,25 @@ regularTags =
 
 syntaxFailures :: [(Text, Syn.SyntaxError)]
 syntaxFailures =
-  [ ("", Syn.SyntaxError 0 Syn.Cbeginning Syn.SyntaxErrorEmpty),
-    ("i-nonsense", Syn.SyntaxError 2 Syn.CirregI Syn.SyntaxErrorBadSubtag),
-    ("i-bnn-more", Syn.SyntaxError 2 Syn.CirregI Syn.SyntaxErrorIrregNum),
-    ("cmn*", Syn.SyntaxError 0 Syn.Cbeginning Syn.SyntaxErrorBadSubtag),
-    ("cmn-more*", Syn.SyntaxError 4 Syn.Cprimary Syn.SyntaxErrorBadSubtag),
-    ("cmn-lotsoftag*", Syn.SyntaxError 4 Syn.Cprimary Syn.SyntaxErrorBadSubtag),
-    ("en-GB-oxendict-x", Syn.SyntaxError 15 Syn.Cprivateuse Syn.SyntaxErrorNeededSubtag),
-    ("zh-419-a", Syn.SyntaxError 7 Syn.Cextension Syn.SyntaxErrorNeededSubtag)
+  [ ("", Syn.EmptyInput),
+    ("i-nonsense", Syn.BadSubtag 2 Syn.AtIrregI (subExplode "nonsense") Nothing),
+    ("i-bnn-more", Syn.IrregNum IBnn),
+    ("cmn*", Syn.UnparseableSubtag 3 Syn.AtBeginning (Just '*') Nothing),
+    ("cmn-more*", Syn.UnparseableSubtag 8 Syn.AtPrimary (Just '*') (Just $ synExplode "cmn")),
+    ("cmn-lotsoftag*", Syn.UnparseableSubtag 4 Syn.AtPrimary Nothing (Just $ synExplode "cmn")),
+    ("en-GB-oxendict-x", Syn.EmptySingleton 15 Nothing (Just $ synExplode "en-GB-oxendict")),
+    ("zh-419-a", Syn.EmptySingleton 7 (Just ExtA) (Just $ synExplode "zh-419"))
   ]
+  where
+    -- TODO: ideally would have a better solution here - TH? or
+    -- convert to the Mangled functions
+    synExplode = orExplode Syn.parseBCP47
+    subExplode = orExplode parseSubtag
+
+    orExplode :: HasCallStack => (Text -> Either b c) -> Text -> c
+    orExplode f a = case f a of
+      Left _ -> error $ "couldn't parse" <> T.unpack a
+      Right x -> x
 
 spec :: Spec
 spec = do
@@ -77,9 +91,12 @@ spec = do
     it "is case-sensitive on any well-formed tag" $
       forAllShrink genTagText shrinkTagText $ \t ->
         Syn.parseBCP47 t === Syn.parseBCP47 (T.toLower t)
-    it "is case-sensitive on near-well-formed tags" $
+    it "is case-sensitive on near-well-formed tags" $ do
+      let fixErr (Left (Syn.UnparseableSubtag p a (Just c) t)) =
+            Left $ Syn.UnparseableSubtag p a (Just $ Char.toLower c) t
+          fixErr x = x
       forAllShrink genTagishText shrinkTagishText $ \t ->
-        Syn.parseBCP47 t === Syn.parseBCP47 (T.toLower t)
+        fixErr (Syn.parseBCP47 t) === Syn.parseBCP47 (T.toLower t)
     describe "fails correctly on" $ do
       let test (l, e) =
             it (T.unpack l) $
