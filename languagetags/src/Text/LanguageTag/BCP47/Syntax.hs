@@ -100,17 +100,18 @@ instance NFData AtComponent where
 -- | A possible syntax error that may occur. The 'Pos' in the errors
 -- indicates where the error occurred, which is:
 --
--- * for 'UnparseableSubtag', where the unparseable subtag started (if
---   the tag was too long or did not end with @-@ or the end of input)
---   or the position where an invalid character occurred
+-- * for 'UnparsableSubtag', the start of the ill-formed 'Subtag',
+--   and, if applicable, the position of the invalid character inside
+--   that subtag
 --
 -- * for 'BadSubtag', the start of the inappropriate 'Subtag'
 --
 -- * for 'EmptySingleton', the start of the empty extension or private
 --   use section that was encountered
 data SyntaxError
-  = -- | encountered text that could not be parsed as a 'Subtag'
-    UnparseableSubtag Pos AtComponent (Maybe Char) (Maybe BCP47)
+  = -- | encountered text that could not be parsed as a 'Subtag' (too
+    -- long, or encountered a bad 'Char')
+    UnparsableSubtag Pos AtComponent (Maybe (Pos, Char)) (Maybe BCP47)
   | -- | encountered a 'Subtag' that was ill-formed for its location
     BadSubtag Pos AtComponent Subtag (Maybe BCP47)
   | -- | input was empty
@@ -128,7 +129,7 @@ data SyntaxError
   deriving (Eq, Ord, Show)
 
 instance NFData SyntaxError where
-  rnf (UnparseableSubtag x y z w) = rnf x `seq` rnf y `seq` rnf z `seq` rnf w
+  rnf (UnparsableSubtag x y z w) = rnf x `seq` rnf y `seq` rnf z `seq` rnf w
   rnf (BadSubtag x y z w) = rnf x `seq` rnf y `seq` rnf z `seq` rnf w
   rnf (TrailingTerminator x y z w) = rnf x `seq` rnf y `seq` rnf z `seq` rnf w
   rnf EmptyInput = ()
@@ -203,9 +204,9 @@ tagPop ::
 tagPop mcon inp atlast pos = case popSubtag inp of
   Right (st, t) -> Right $ Just (st, t)
   Left Sub.EmptyInput -> Right Nothing
-  Left Sub.TagTooLong -> Left $ UnparseableSubtag pos atlast Nothing (finish <$> mcon)
+  Left Sub.TagTooLong -> Left $ UnparsableSubtag pos atlast Nothing (finish <$> mcon)
   Left (Sub.TrailingTerminator st) -> Left $ TrailingTerminator pos atlast st mcon
-  Left (Sub.InvalidChar n c) -> Left $ UnparseableSubtag (pos + n) atlast (Just c) mcon
+  Left (Sub.InvalidChar n c) -> Left $ UnparsableSubtag pos atlast (Just (pos + n, c)) mcon
 
 mfinish ::
   Finishing a =>

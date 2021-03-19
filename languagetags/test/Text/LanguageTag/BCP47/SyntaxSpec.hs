@@ -66,9 +66,9 @@ syntaxFailures =
   [ ("", Syn.EmptyInput),
     ("i-nonsense", Syn.BadSubtag 2 Syn.AtIrregI (subExplode "nonsense") Nothing),
     ("i-bnn-more", Syn.IrregNum IBnn),
-    ("cmn*", Syn.UnparseableSubtag 3 Syn.AtBeginning (Just '*') Nothing),
-    ("cmn-more*", Syn.UnparseableSubtag 8 Syn.AtPrimary (Just '*') (Just $ synExplode "cmn")),
-    ("cmn-lotsoftag*", Syn.UnparseableSubtag 4 Syn.AtPrimary Nothing (Just $ synExplode "cmn")),
+    ("cmn*", Syn.UnparsableSubtag 0 Syn.AtBeginning (Just (3, '*')) Nothing),
+    ("cmn-more*", Syn.UnparsableSubtag 4 Syn.AtPrimary (Just (8, '*')) (Just $ synExplode "cmn")),
+    ("cmn-lotsoftag*", Syn.UnparsableSubtag 4 Syn.AtPrimary Nothing (Just $ synExplode "cmn")),
     ("en-GB-oxendict-x", Syn.EmptySingleton 15 Nothing (Just $ synExplode "en-GB-oxendict")),
     ("zh-419-a", Syn.EmptySingleton 7 (Just ExtA) (Just $ synExplode "zh-419"))
   ]
@@ -92,8 +92,8 @@ spec = do
       forAllShrink genTagText shrinkTagText $ \t ->
         Syn.parseBCP47 t === Syn.parseBCP47 (T.toLower t)
     it "is case-sensitive on near-well-formed tags" $ do
-      let fixErr (Left (Syn.UnparseableSubtag p a (Just c) t)) =
-            Left $ Syn.UnparseableSubtag p a (Just $ Char.toLower c) t
+      let fixErr (Left (Syn.UnparsableSubtag p a (Just (n, c)) t)) =
+            Left $ Syn.UnparsableSubtag p a (Just (n, Char.toLower c)) t
           fixErr x = x
       forAllShrink genTagishText shrinkTagishText $ \t ->
         fixErr (Syn.parseBCP47 t) === Syn.parseBCP47 (T.toLower t)
