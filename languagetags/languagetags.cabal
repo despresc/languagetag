@@ -39,10 +39,12 @@ library
     unordered-containers,
     deepseq,
     time,
-    vector
+    vector,
+    template-haskell
   ghc-options: -Wall
   exposed-modules:
     Text.LanguageTag.BCP47.Canonicalization
+    Text.LanguageTag.BCP47.Quasi
     Text.LanguageTag.BCP47.Registry
     Text.LanguageTag.BCP47.Registry.Extlang
     Text.LanguageTag.BCP47.Registry.Grandfathered

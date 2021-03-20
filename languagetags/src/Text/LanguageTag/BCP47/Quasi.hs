@@ -1,0 +1,298 @@
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE DeriveLift #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskellQuotes #-}
+
+-- |
+-- Description : Splices for static subtags and tags
+-- Copyright   : 2021 Christian Despres
+-- License     : BSD-2-Clause
+-- Maintainer  : Christian Despres
+--
+-- This module defines splices that allow for compile-time definitions
+-- of the various BCP47 language tag types.
+module Text.LanguageTag.BCP47.Quasi
+  ( subtag,
+    syntag,
+    validtag,
+    canontag,
+  )
+where
+
+import Data.List.NonEmpty (NonEmpty)
+import qualified Data.List.NonEmpty as NE
+import qualified Data.Map.Strict as M
+import qualified Data.Set as S
+import qualified Data.Text as T
+import Data.Word (Word64)
+import Language.Haskell.TH (Exp (..), Lit (..), Pat (..))
+import Language.Haskell.TH.Quote
+import Language.Haskell.TH.Syntax
+  ( Name (..),
+    OccName (..),
+  )
+import Text.LanguageTag.BCP47.Canonicalization (canonicalizeBCP47)
+import Text.LanguageTag.BCP47.Registry
+  ( BCP47 (..),
+    Extlang (..),
+    Language (..),
+    Normal (..),
+    Region (..),
+    Script (..),
+    Variant (..),
+  )
+import Text.LanguageTag.BCP47.Subtag (parseSubtag)
+import qualified Text.LanguageTag.BCP47.Syntax as Syn
+import Text.LanguageTag.BCP47.Validation (validateBCP47)
+import Text.LanguageTag.Internal.BCP47.Registry.Types (ExtensionSubtag (..))
+import Text.LanguageTag.Internal.BCP47.Subtag (MaybeSubtag (..), Subtag (..))
+import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn
+
+{- TODO: better errors!
+-}
+
+-- Hack to lift enum constructors
+mkEx :: Name -> String -> Name
+mkEx (Name _ f) s = Name (OccName s) f
+
+mkExS :: Show a => Name -> a -> Name
+mkExS n = mkEx n . show
+
+neE :: (a -> Exp) -> NonEmpty a -> Exp
+neE f (x NE.:| xs) =
+  appl
+    (ConE '(NE.:|))
+    [f x, ListE $ f <$> xs]
+
+neP :: (a -> Pat) -> NonEmpty a -> Pat
+neP f (x NE.:| xs) =
+  ConP
+    '(NE.:|)
+    [f x, ListP $ f <$> xs]
+
+appl :: Exp -> [Exp] -> Exp
+appl e (x : xs) = appl (AppE e x) xs
+appl e [] = e
+
+wordL :: Word64 -> Lit
+wordL = IntegerL . fromIntegral
+
+subtagE :: Subtag -> Exp
+subtagE (Subtag a) = AppE (ConE 'Subtag) (LitE $ wordL a)
+
+subtagP :: Subtag -> Pat
+subtagP (Subtag a) = ConP 'Subtag [LitP $ wordL a]
+
+msubtagE :: MaybeSubtag -> Exp
+msubtagE (MaybeSubtag (Subtag a)) =
+  AppE (ConE 'MaybeSubtag) $
+    AppE (ConE 'Subtag) (LitE $ wordL a)
+
+grandE :: Syn.Grandfathered -> Exp
+grandE = ConE . mkExS 'Syn.ArtLojban
+
+grandP :: Syn.Grandfathered -> Pat
+grandP g = ConP (mkExS 'Syn.ArtLojban g) []
+
+msubtagP :: MaybeSubtag -> Pat
+msubtagP (MaybeSubtag (Subtag a)) =
+  ConP
+    'MaybeSubtag
+    [ConP 'Subtag [LitP $ wordL a]]
+
+extCharE :: Syn.ExtensionChar -> Exp
+extCharE = ConE . mkExS 'Syn.ExtA
+
+extCharP :: Syn.ExtensionChar -> Pat
+extCharP x = ConP (mkExS 'Syn.ExtA x) []
+
+extE :: Syn.Extension -> Exp
+extE (Syn.Extension x y) =
+  appl
+    (ConE 'Syn.Extension)
+    [ extCharE x,
+      neE subtagE y
+    ]
+
+syntagE :: Syn.BCP47 -> Exp
+syntagE (Syn.NormalTag (Syn.Normal p e1 e2 e3 s r v es ps)) =
+  AppE (ConE 'Syn.NormalTag) $
+    appl
+      (ConE 'Syn.Normal)
+      [ subtagE p,
+        msubtagE e1,
+        msubtagE e2,
+        msubtagE e3,
+        msubtagE s,
+        msubtagE r,
+        ListE $ subtagE <$> v,
+        ListE $ extE <$> es,
+        ListE $ subtagE <$> ps
+      ]
+syntagE (Syn.PrivateUse x) =
+  AppE (ConE 'Syn.PrivateUse) $ neE subtagE x
+syntagE (Syn.Grandfathered g) =
+  AppE (ConE 'Syn.Grandfathered) $ grandE g
+
+syntagP :: Syn.BCP47 -> Pat
+syntagP (Syn.NormalTag (Syn.Normal p e1 e2 e3 s r v es ps)) =
+  ConP
+    'Syn.NormalTag
+    [ ConP
+        'Syn.Normal
+        [ subtagP p,
+          msubtagP e1,
+          msubtagP e2,
+          msubtagP e3,
+          msubtagP s,
+          msubtagP r,
+          ListP $ subtagP <$> v,
+          ListP $ extP <$> es,
+          ListP $ subtagP <$> ps
+        ]
+    ]
+  where
+    extP (Syn.Extension x y) =
+      ConP
+        'Syn.Extension
+        [extCharP x, neP subtagP y]
+syntagP (Syn.PrivateUse x) = ConP 'Syn.PrivateUse [neP subtagP x]
+syntagP (Syn.Grandfathered g) = ConP 'Syn.Grandfathered [grandP g]
+
+validtagE :: BCP47 -> Exp
+validtagE (NormalTag (Normal l e s r v es ps)) =
+  AppE (ConE 'NormalTag) $
+    appl
+      (ConE 'Normal)
+      [ ConE $ mkExS 'Aa l,
+        mE 'ExtAao e,
+        mE 'Adlm s,
+        mE 'Reg001 r,
+        AppE
+          (VarE 'S.fromList)
+          (ListE $ varE <$> S.toList v),
+        AppE
+          (VarE 'M.fromList)
+          (ListE $ extE' <$> M.toList es),
+        ListE $ subtagE <$> ps
+      ]
+  where
+    mE _ Nothing = ConE 'Nothing
+    mE x (Just y) =
+      AppE
+        (ConE 'Just)
+        (ConE $ mkExS x y)
+    varE = ConE . mkExS 'Var1606nict
+    extSubtagE (ExtensionSubtag x) =
+      AppE
+        (ConE 'ExtensionSubtag)
+        (subtagE x)
+    extE' (x, y) = TupE [extCharE x, neE extSubtagE y]
+validtagE (PrivateUseTag x) = AppE (ConE 'PrivateUseTag) (neE subtagE x)
+validtagE (GrandfatheredTag g) = AppE (ConE 'GrandfatheredTag) (grandE g)
+
+-- | Create a 'Subtag' value from a raw subtag string. The text in the
+-- quasi-quote should be between one and eight ASCII alphanumeric
+-- characters. Example:
+--
+-- >>> :set -XQuasiQuotes
+-- >>> [subtag|sOm3sUb|]
+-- "som3sub"
+--
+-- The 'subtag' quasi-quoter can be used in expressions and patterns.
+subtag :: QuasiQuoter
+subtag =
+  QuasiQuoter
+    { quoteExp = qe,
+      quotePat = qp,
+      quoteType = fail "cannot be used in a type context",
+      quoteDec = fail "cannot be used in a declaration context"
+    }
+  where
+    qe s = case parseSubtag (T.pack s) of
+      Left _ -> fail "bad subtag"
+      Right x -> pure $ subtagE x
+    qp s = case parseSubtag (T.pack s) of
+      Left _ -> fail "bad subtag"
+      Right x -> pure $ subtagP x
+
+-- | Create a merely well-formed 'Syn.BCP47' value from a raw tag
+-- string. Example:
+--
+-- >>> :set -XQuasiQuotes
+-- >>> [syntag|eN-Gb-oxEndict|]
+-- "en-GB-oxendict"
+--
+-- The 'syntag' quasi-quoter can be used in expressions and patterns.
+syntag :: QuasiQuoter
+syntag =
+  QuasiQuoter
+    { quoteExp = qe,
+      quotePat = qp,
+      quoteType = fail "cannot be used in a type context",
+      quoteDec = fail "cannot be used in a declaration context"
+    }
+  where
+    qe s = case Syn.parseBCP47 (T.pack s) of
+      Left _ -> fail "bad syntag"
+      Right x -> pure $ syntagE x
+    qp s = case Syn.parseBCP47 (T.pack s) of
+      Left _ -> fail "bad syntag"
+      Right x -> pure $ syntagP x
+
+-- | Create a valid (but not canonicalized) 'BCP47' value from a raw
+-- subtag string. Examples:
+--
+-- >>> :set -XQuasiQuotes
+-- >>> renderBCP47 [validtag|yue-hant|]
+-- yue-Hant
+-- >>> renderBCP47 [validtag|eN-Gb-OED|]
+-- en-GB-oed
+-- >>> renderBCP47 [validtag|sgn-br|]
+-- "sgn-BR"
+--
+-- The 'validtag' quasi-quoter can only be used as an expression.
+validtag :: QuasiQuoter
+validtag =
+  QuasiQuoter
+    { quoteExp = qe,
+      quotePat = fail "cannot be used in a pattern context",
+      quoteType = fail "cannot be used in a type context",
+      quoteDec = fail "cannot be used in a declaration context"
+    }
+  where
+    qe s = case Syn.parseBCP47 (T.pack s) of
+      Left _ -> fail "bad validtag"
+      Right x -> case validateBCP47 x of
+        Left _ -> fail "bad validatag"
+        Right x' -> pure $ validtagE x'
+
+-- | Create a valid (but not canonicalized) 'BCP47' value from a raw
+-- subtag string. Examples:
+--
+-- >>> :set -XQuasiQuotes
+-- >>> :set -XQuasiQuotes
+-- >>> renderBCP47 [canontag|yue-hant|]
+-- yue-Hant
+-- >>> renderBCP47 [canontag|eN-Gb-OED|]
+-- en-GB-oxendict
+-- >>> renderBCP47 [canontag|sgn-br|]
+-- "bzs"
+--
+-- The 'canontag' quasi-quoter can only be used as an expression.
+canontag :: QuasiQuoter
+canontag =
+  QuasiQuoter
+    { quoteExp = qe,
+      quotePat = fail "cannot be used in a pattern context",
+      quoteType = fail "cannot be used in a type context",
+      quoteDec = fail "cannot be used in a declaration context"
+    }
+  where
+    qe s = case Syn.parseBCP47 (T.pack s) of
+      Left _ -> fail "bad validtag"
+      Right x -> case validateBCP47 x of
+        Left _ -> fail "bad validatag"
+        Right x' -> pure $ validtagE $ canonicalizeBCP47 x'

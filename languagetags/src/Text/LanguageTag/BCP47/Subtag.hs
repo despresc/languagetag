@@ -19,8 +19,6 @@ module Text.LanguageTag.BCP47.Subtag
     containsDigit,
     containsOnlyDigits,
     unpackSubtag,
-    unwrapSubtag,
-    wrapSubtag,
     renderSubtagLower,
     subtagLength,
     subtagLength',
@@ -38,7 +36,6 @@ module Text.LanguageTag.BCP47.Subtag
     SubtagChar,
     packChar,
     unpackCharLower,
-    unwrapChar,
 
     -- * Additional rendering functions
     renderSubtagUpper,
@@ -46,6 +43,11 @@ module Text.LanguageTag.BCP47.Subtag
     renderSubtagBuilderLower,
     renderSubtagBuilderUpper,
     renderSubtagBuilderTitle,
+
+    -- * Low-level conversions
+    unwrapSubtag,
+    wrapSubtag,
+    unwrapChar,
 
     -- * Unsafe functions
     unsafeUnpackUpperLetter,
