@@ -10,7 +10,7 @@
 --
 -- This module provides the 'parseBCP47' function to parse well-formed
 -- (but not necessarily valid) BCP47 language tags as of the current
--- 2009 version. A copy of this standard is available at
+-- 2009 version of the standard, a copy of which is available at
 -- <https://tools.ietf.org/html/bcp47>.
 module Text.LanguageTag.BCP47.Syntax
   ( -- * Parsing and rendering tags
@@ -23,16 +23,8 @@ module Text.LanguageTag.BCP47.Syntax
 
     -- * Constructing tags directly
     -- $valueconstruction
-
-    -- ** Normal and private use tags
-    unsafeNormalTag,
-    unsafeFullNormalTag,
-    unsafePrivateTag,
-
-    -- ** Grandfathered tags
-    -- $grandfathered
     grandfatheredSyntax,
-    module Text.LanguageTag.Internal.BCP47.Registry.Grandfathered,
+    Grandfathered (..),
 
     -- * Errors
     SyntaxError (..),
@@ -48,20 +40,11 @@ import Data.Maybe (mapMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Word (Word8)
+import Text.LanguageTag.BCP47.Registry.Grandfathered
 import Text.LanguageTag.BCP47.Subtag hiding (SyntaxError (..))
 import qualified Text.LanguageTag.BCP47.Subtag as Sub
-import Text.LanguageTag.Internal.BCP47.Registry.Grandfathered
 import Text.LanguageTag.Internal.BCP47.Subtag (Subtag (..), SubtagChar (..))
 import Text.LanguageTag.Internal.BCP47.Syntax
-
-{- TODO:
-- spin out the try* functions into their own functions?
-
-- enhancement: actually attempt to parse and add the bad
-  TrailingTerminator subtag to the returned con (would probably
-  require some parser restructuring)
-
--}
 
 -- | The parser's current location in the tag, named after the most
 -- recent component that was successfully parsed, more or less. What
@@ -106,6 +89,8 @@ instance NFData AtComponent where
 --
 -- * for 'BadSubtag', the start of the inappropriate 'Subtag'
 --
+-- * for 'EmptySubtag', the position of the @-@
+--
 -- * for 'EmptySingleton', the start of the empty extension or private
 --   use section that was encountered
 data SyntaxError
@@ -116,8 +101,10 @@ data SyntaxError
     BadSubtag Pos AtComponent Subtag (Maybe BCP47)
   | -- | input was empty
     EmptyInput
-  | -- | a trailing @-@ terminator was found after the last subtag
-    TrailingTerminator Pos AtComponent Subtag (Maybe BCP47)
+  | -- | an empty subtag was found
+    EmptySubtag Pos AtComponent (Maybe BCP47)
+  | -- | a trailing @-@ terminator was found after a well-formed tag
+    TrailingTerminator BCP47
   | -- | an empty extension (@Just extensionchar@) or private use
     -- section (@Nothing@) was encountered
     EmptySingleton Pos (Maybe ExtensionChar) (Maybe BCP47)
@@ -131,8 +118,9 @@ data SyntaxError
 instance NFData SyntaxError where
   rnf (UnparsableSubtag x y z w) = rnf x `seq` rnf y `seq` rnf z `seq` rnf w
   rnf (BadSubtag x y z w) = rnf x `seq` rnf y `seq` rnf z `seq` rnf w
-  rnf (TrailingTerminator x y z w) = rnf x `seq` rnf y `seq` rnf z `seq` rnf w
+  rnf (TrailingTerminator x) = rnf x
   rnf EmptyInput = ()
+  rnf (EmptySubtag x y z) = rnf x `seq` rnf y `seq` rnf z
   rnf (EmptySingleton x y z) = rnf x `seq` rnf y `seq` rnf z
   rnf EmptyIrregI = ()
   rnf (IrregNum x) = rnf x
@@ -193,21 +181,36 @@ parseBCP47FromSubtags = parseBCP47 . T.intercalate "-" . NE.toList . fmap render
 -- Parsing
 ----------------------------------------------------------------
 
--- | Pop a tag from the input stream, returning @Nothing@ if the
--- stream was empty
+-- | Attempt to pop a subtag from the text stream, either returning
+-- the given default value if the stream was empty, or passing the
+-- subtag and remaining stream to the given continuation. Also handles
+-- trailing terminator errors properly.
 tagPop ::
-  Maybe BCP47 ->
   Text ->
   AtComponent ->
   Int ->
-  Either SyntaxError (Maybe (Subtag, Text))
-tagPop mcon inp atlast pos = case popSubtag inp of
-  Right (st, t) -> Right $ Just (st, t)
-  Left Sub.EmptyInput -> Right Nothing
-  Left Sub.TagTooLong -> Left $ UnparsableSubtag pos atlast Nothing (finish <$> mcon)
-  Left (Sub.TrailingTerminator st) -> Left $ TrailingTerminator pos atlast st mcon
+  Either SyntaxError BCP47 ->
+  (Subtag -> Text -> Either SyntaxError BCP47) ->
+  Either SyntaxError BCP47
+tagPop inp atlast pos end more = case popSubtag inp of
+  Right (st, t) -> more st t
+  Left (Sub.TrailingTerminator st) -> case more st "" of
+    Left e -> Left e
+    Right a -> Left $ TrailingTerminator a
+  Left Sub.EmptyInput -> end
+  Left Sub.EmptySubtag -> Left $ EmptySubtag pos atlast mcon
+  Left Sub.TagTooLong -> Left $ UnparsableSubtag pos atlast Nothing $ mcon
   Left (Sub.InvalidChar n c) -> Left $ UnparsableSubtag pos atlast (Just (pos + n, c)) mcon
+  where
+    collapseLeft (Left _) = Nothing
+    collapseLeft (Right a) = Just a
+    mcon = collapseLeft end
+{-# INLINE tagPop #-}
 
+-- | Given the length, component type, and position of the previous
+-- tag, either successfully pop a subtag from the stream and continue
+-- parsing with the passed constructor, or return the finished
+-- constructor, or return a subtag-parsing-related error.
 mfinish ::
   Finishing a =>
   Word8 ->
@@ -220,10 +223,8 @@ mfinish ::
 mfinish !len !atlast !pos !inp !con !pr = do
   let pos' = fromIntegral len + pos + 1
   let con' = finish con
-  mst <- tagPop (Just con') inp atlast pos'
-  case mst of
-    Just (st, t) -> pr con st atlast pos' t
-    Nothing -> pure con'
+  tagPop inp atlast pos' (Right con') $ \st t -> pr con st atlast pos' t
+{-# INLINE mfinish #-}
 
 isDigit :: SubtagChar -> Bool
 isDigit c = w >= 48 && w <= 57
@@ -232,29 +233,30 @@ isDigit c = w >= 48 && w <= 57
 
 -- | Parse a BCP47 language tag
 parseBCP47 :: Text -> Either SyntaxError BCP47
-parseBCP47 inp = do
-  mst <- tagPop Nothing inp AtBeginning 0
-  case mst of
-    Just (stg, t) -> catchIrregulars $ parseBCP47' stg t
-    Nothing -> Left EmptyInput
+parseBCP47 inp =
+  tagPop inp AtBeginning 0 (Left EmptyInput) $ \st t -> catchIrregulars $ parseBCP47' st t
   where
-    -- FIXME: sufficient for the moment, but might want to: 1. be more
-    -- efficient; 2. throw a special error when these tags occur as a
-    -- strict prefix of the input, as with the @i-@-type tags
+    -- FIXME: sufficient for the moment, but might want to be more
+    -- efficient
     catchIrregulars (Right a) = Right a
-    catchIrregulars (Left e)
-      | T.length inp == 9 = testIrregs
-      | otherwise = Left e
+    catchIrregulars (Left e) = testIrregs (T.toLower inp)
       where
-        testIrregs
-          | T.toLower inp == "en-gb-oed" =
-            Right $ Grandfathered EnGbOed
-          | T.toLower inp == "sgn-be-fr" =
-            Right $ Grandfathered SgnBeFr
-          | T.toLower inp == "sgn-be-nl" =
-            Right $ Grandfathered SgnBeNl
-          | T.toLower inp == "sgn-ch-de" =
-            Right $ Grandfathered SgnChDe
+        throwGrand t x
+          | T.null t = Right $ Grandfathered x
+          | Just ('-', t') <- T.uncons t =
+            if T.null t'
+              then Left $ TrailingTerminator $ Grandfathered x
+              else Left $ IrregNum x
+          | otherwise = Left e
+        testIrregs t
+          | Just x <- T.stripPrefix "en-gb-oed" t =
+            throwGrand x EnGbOed
+          | Just x <- T.stripPrefix "sgn-be-fr" t =
+            throwGrand x SgnBeFr
+          | Just x <- T.stripPrefix "sgn-be-nl" t =
+            throwGrand x SgnBeNl
+          | Just x <- T.stripPrefix "sgn-ch-de" t =
+            throwGrand x SgnChDe
           | otherwise = Left e
 
 parseBCP47' :: Subtag -> Text -> Either SyntaxError BCP47
@@ -295,10 +297,8 @@ parseBCP47' = parsePrimary
           | T.null t -> pure $ Grandfathered ZhHakka
         (17699146535566049298, 15827742560719208467) -> do
           let pos' = pos + fromIntegral (subtagLength st1) + 1
-          mst <- tagPop (Just $ Grandfathered ZhMin) t AtExtl1 pos'
-          case mst of
-            Nothing -> pure $ Grandfathered ZhMin
-            Just (st2, t') -> case unwrapSubtag st2 of
+          tagPop t AtExtl1 pos' (Right $ Grandfathered ZhMin) $ \st2 t' ->
+            case unwrapSubtag st2 of
               15962850549540323347
                 | T.null t' -> pure $ Grandfathered ZhMinNan
               _ -> tryLext2 (con $ justSubtag st1) st2 AtExtl1 pos' t'
@@ -321,13 +321,11 @@ parseBCP47' = parsePrimary
         mfinish (subtagLength st) AtLanguage pos t (con $ justSubtag st) tryScript
       | otherwise = tryScript (con nullSubtag) st atlast pos t
 
-    tryScript :: (MaybeSubtag -> MaybeSubtag -> [Subtag] -> [Extension] -> [Subtag] -> BCP47) -> Subtag -> AtComponent -> Int -> Text -> Either SyntaxError BCP47
     tryScript !con st atlast pos t
       | subtagLength st == 4 && containsOnlyLetters st =
         mfinish (subtagLength st) AtScript pos t (con $ justSubtag st) tryRegion
       | otherwise = tryRegion (con nullSubtag) st atlast pos t
 
-    tryRegion :: (MaybeSubtag -> [Subtag] -> [Extension] -> [Subtag] -> BCP47) -> Subtag -> AtComponent -> Int -> Text -> Either SyntaxError BCP47
     tryRegion !con st atlast pos t
       | subtagLength st == 2 =
         if containsDigit st
@@ -339,7 +337,6 @@ parseBCP47' = parsePrimary
           else mfinish (subtagLength st) AtRegion pos t (con $ justSubtag st) tryVariant
       | otherwise = tryVariant (con nullSubtag) st atlast pos t
 
-    tryVariant :: ([Subtag] -> [Extension] -> [Subtag] -> BCP47) -> Subtag -> AtComponent -> Int -> Text -> Either SyntaxError BCP47
     tryVariant !con st atlast pos t
       | subtagLength st == 4 =
         if isDigit $ subtagHead st
@@ -349,7 +346,6 @@ parseBCP47' = parsePrimary
         mfinish (subtagLength st) AtVariant pos t (con . (st :)) tryVariant
       | otherwise = trySingleton (con []) st atlast pos t
 
-    trySingleton :: ([Extension] -> [Subtag] -> BCP47) -> Subtag -> AtComponent -> Int -> Text -> Either SyntaxError BCP47
     trySingleton con st atlast pos t
       | subtagLength st /= 1 = Left $ BadSubtag pos atlast st (Just $ finish con)
       | subtagHead st == subtagCharx =
@@ -360,24 +356,22 @@ parseBCP47' = parsePrimary
 
     parsePrivateUse con pos t = do
       let pos' = pos + 2
-      mst <- tagPop (Just $ finish con) t AtPrivateUse pos'
-      case mst of
-        Just (st, t') -> parsePrivateUseTag con st AtPrivateUse pos' t'
-        Nothing -> Left $ EmptySingleton pos Nothing (Just $ finish con)
+      let emptyerr = Left $ EmptySingleton pos Nothing $ Just $ finish con
+      tagPop t AtPrivateUse pos emptyerr $ \st t' ->
+        parsePrivateUseTag con st AtPrivateUse pos' t'
 
     parsePrivateUseTag con st _ pos t =
       mfinish (subtagLength st) AtPrivateUse pos t (con . (st :)) parsePrivateUseTag
 
-    parseExtension c con pos t = do
-      let pos' = pos + 2
-      let con' ne = con . (Extension c ne :)
-      mst <- tagPop (Just $ finish con) t AtExtension pos'
-      case mst of
-        Just (st, t')
-          | subtagLength st >= 2 ->
+    parseExtension c con pos t = tagPop t AtExtension pos' emptyerr go
+      where
+        emptyerr = Left $ EmptySingleton pos (Just c) $ Just $ finish con
+        pos' = pos + 2
+        con' ne = con . (Extension c ne :)
+        go st t'
+          | subtagLength st >= 2 =
             mfinish (subtagLength st) AtExtension pos' t' (con' . (st NE.:|)) parseExtensionTag
-          | otherwise -> Left $ EmptySingleton pos (Just c) (Just $ finish con)
-        Nothing -> Left $ EmptySingleton pos (Just c) (Just $ finish con)
+          | otherwise = emptyerr
 
     parseExtensionTag con st _ pos t
       | subtagLength st == 1 = trySingleton (con []) st AtExtension pos t
@@ -385,15 +379,12 @@ parseBCP47' = parsePrimary
 
     parseIrregularI st t
       | st /= subtagI = Left $ BadSubtag 0 AtBeginning st Nothing
-      | otherwise = do
-        mst <- tagPop Nothing t AtIrregI 2
-        case mst of
-          Just (st', t') -> case recognizeIrregI st' of
-            Just g
-              | T.null t' -> Right $ Grandfathered g
-              | otherwise -> Left $ IrregNum g
-            Nothing -> Left $ BadSubtag 2 AtIrregI st' Nothing
-          Nothing -> Left EmptyIrregI
+      | otherwise = tagPop t AtIrregI 2 (Left EmptyIrregI) $ \st' t' ->
+        case recognizeIrregI st' of
+          Just g
+            | T.null t' -> Right $ Grandfathered g
+            | otherwise -> Left $ IrregNum g
+          Nothing -> Left $ BadSubtag 2 AtIrregI st' Nothing
 
     recognizeIrregI n = case unwrapSubtag n of
       14102819922971197459 -> Just IAmi
@@ -414,53 +405,24 @@ parseBCP47' = parsePrimary
 -- | Parse an entire private use tag
 parsePrivateTag :: Text -> Either SyntaxError BCP47
 parsePrivateTag inp = do
-  mst <- tagPop Nothing inp AtPrivateUse 2
-  case mst of
-    Just (st, t) ->
-      parsePrivateUseTag (PrivateUse . (st NE.:|)) (2 + fromIntegral (subtagLength st) + 1) t
-    Nothing -> Left $ EmptySingleton 0 Nothing Nothing
+  tagPop inp AtPrivateUse 2 (Left $ EmptySingleton 0 Nothing Nothing) $ \st t ->
+    parsePrivateUseTag (PrivateUse . (st NE.:|)) (2 + fromIntegral (subtagLength st) + 1) t
   where
-    parsePrivateUseTag con pos t = do
-      let con' = con []
-      mst <- tagPop (Just con') t AtPrivateUse pos
-      case mst of
-        Just (st, t') ->
-          parsePrivateUseTag (con . (st :)) (pos + fromIntegral (subtagLength st) + 1) t'
-        Nothing -> pure con'
+    parsePrivateUseTag con pos t =
+      tagPop t AtPrivateUse pos (Right $ con []) $ \st t' ->
+        parsePrivateUseTag (con . (st :)) (pos + fromIntegral (subtagLength st) + 1) t'
 
 -- $valueconstruction
 --
 -- Other than the 'parseBCP47' function, tags can also be constructed
--- using 'unsafeNormalTag' and 'unsafePrivateTag' if they are known to
--- be well-formed, as well as 'grandfatheredSyntax'.
-
--- $grandfathered
---
--- In a prior standard it was possible to register entire tags, not
--- simply subtags. Of those tags, the ones that could not be
--- represented via registered subtags were explicitly grandfathered
--- into the current standard via the grammar of the tags itself. All
--- of them are valid, but most are deprecated; see the documentation
--- for
--- 'Text.LanguageTag.Internal.BCP47.Registry.Grandfathered.Grandfathered'
--- for up-to-date details.
-
--- | Embed a 'Text.LanguageTag.BCP47.Registry.Grandfathered' language
--- tag in the 'BCP47' type
-grandfatheredSyntax :: Grandfathered -> BCP47
-grandfatheredSyntax = Grandfathered
-{-# INLINE grandfatheredSyntax #-}
-
--- $regular
---
--- Grandfathered tags that conform to the normal language tag grammar,
--- but have one or more subtags that do not appear in the registry, or
--- appear with different semantics.
-
--- $irregular
---
--- Grandfathered tags that do not conform to the normal language tag
--- grammar.
+-- directly using 'grandfatheredSyntax', since all of the
+-- 'Text.LanguageTag.BCP47.Registry.Grandfathered' tags are
+-- automatically well-formed. These tags are the result of a prior
+-- standard allowing the registration of entire tags, not simply
+-- subtags; of those tags, the ones that could not be represented via
+-- registered subtags were explicitly grandfathered into the current
+-- standard via the grammar of the tags itself. All of them are valid,
+-- but most are deprecated.
 
 ----------------------------------------------------------------
 -- Tag constants

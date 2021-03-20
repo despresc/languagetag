@@ -51,18 +51,16 @@ module Text.LanguageTag.BCP47.Subtag
     unsafeUnpackUpperLetter,
     unsafeIndexSubtag,
     unsafePopChar,
-    parseSubtagMangled,
-    packCharMangled,
 
     -- * Errors
     SyntaxError (..),
   )
 where
 
+import Control.DeepSeq (NFData (..))
 import qualified Data.Bits as Bit
 import qualified Data.ByteString.Internal as BI
 import qualified Data.List as List
-import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
@@ -131,42 +129,44 @@ readSubtag len = fixup . List.foldl' go (len, 57, False, False)
 data SyntaxError
   = -- | input was empty
     EmptyInput
+  | -- | a @-@ was found at the beginning of the subtag
+    EmptySubtag
   | -- | tag continued for more than 8 characters
     TagTooLong
-  | -- | a @-@ was found at the end of subtag
+  | -- | a @-@ was found at the end of an otherwise well-formed subtag
     TrailingTerminator Subtag
   | -- | gives the offending 'Char' and its offset
     InvalidChar Int Char
   deriving (Eq, Ord, Show)
 
+instance NFData SyntaxError where
+  rnf EmptyInput = ()
+  rnf EmptySubtag = ()
+  rnf TagTooLong = ()
+  rnf (TrailingTerminator s) = rnf s
+  rnf (InvalidChar n c) = rnf n `seq` rnf c
+
 -- | Attempt to parse an entire text string as a 'Subtag'
+
+-- Observe that popSubtag only ever succeeds on the inputs <subtag><eof>
+-- and <subtag> '-' <char>+.
 parseSubtag :: Text -> Either SyntaxError Subtag
-parseSubtag inp = case T.uncons inp of
-  Just (c, t) -> case packCharDetail c of
-    Just (w, sc) -> go 1 (w :) (toSeenChar sc) t
-    Nothing -> Left $ InvalidChar 0 c
-  Nothing -> Left EmptyInput
-  where
-    go !pos !l !sc t = case T.uncons t of
-      Just (c, t')
-        | pos < 8 -> case packCharDetail c of
-          Just (w, sc') -> go (pos + 1) (l . (w :)) (reportChar sc' sc) t'
-          Nothing
-            | c == '-',
-              T.null t' ->
-              Left $ TrailingTerminator $ recordSeen sc $ readSubtag (fromIntegral pos) $ l []
-            | otherwise -> Left $ InvalidChar pos c
-        | otherwise -> Left TagTooLong
-      Nothing -> Right $ recordSeen sc $ readSubtag (fromIntegral pos) $ l []
+parseSubtag t = case popSubtag t of
+  Left e -> Left e
+  Right (s, t')
+    | T.null t' -> Right s
+    | otherwise -> Left $ InvalidChar (subtagLength' s) '-'
 
 -- | Attempt to parse a 'Subtag' from the input 'Text'
--- stream. Consumes the trailing @-@ character and records its
--- presence if it is there.
+-- stream. Consumes the trailing @-@ character if it exists and is not
+-- followed by the end of input.
 popSubtag :: Text -> Either SyntaxError (Subtag, Text)
 popSubtag inp = case T.uncons inp of
   Just (c, t) -> case packCharDetail c of
     Just (w, sc) -> go 1 (w :) (toSeenChar sc) t
-    Nothing -> Left $ InvalidChar 0 c
+    Nothing
+      | c == '-' -> Left EmptySubtag
+      | otherwise -> Left $ InvalidChar 0 c
   Nothing -> Left EmptyInput
   where
     go !pos !l !sc t = case T.uncons t of
@@ -180,19 +180,6 @@ popSubtag inp = case T.uncons inp of
           Just (w, sc') -> go (pos + 1) (l . (w :)) (reportChar sc' sc) t'
           Nothing -> Left $ InvalidChar pos c
       Nothing -> Right (recordSeen sc $ readSubtag (fromIntegral pos) $ l [], "")
-
--- | Read a tag from the given text value, truncating it or replacing
--- it with the singleton "a" if necessary, and replacing any
--- characters other than ASCII digits or letters with @\'a\'@.
-parseSubtagMangled :: Text -> Subtag
-parseSubtagMangled t = readSubtag (fromIntegral len) (wchars [])
-  where
-    tlen = T.length t
-    (t', len)
-      | tlen == 0 = (T.singleton 'a', 1)
-      | otherwise = (T.take 8 t, min 8 tlen)
-    wchars = T.foldl' go id t'
-    go l c = l . (packCharMangled c :)
 
 ----------------------------------------------------------------
 -- Subtag characters
@@ -227,11 +214,6 @@ packCharDetail = onChar Nothing low high dig
     low w = Just (SubtagChar w, False)
     high w = Just (SubtagChar $ w + 32, False)
     dig w = Just (SubtagChar w, True)
-
--- | Like 'packChar', but replaces any invalid character with the
--- letter @a@
-packCharMangled :: Char -> SubtagChar
-packCharMangled = fromMaybe (SubtagChar 97) . packChar
 
 -- | Pack a normal 'Char' into a 'SubtagChar'.
 packChar :: Char -> Maybe SubtagChar

@@ -27,6 +27,13 @@ import qualified Text.LanguageTag.BCP47.Syntax as Syn
 import Text.LanguageTag.Internal.BCP47.Subtag (SubtagChar (..))
 import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn
 
+{-
+TODO:
+
+- add more ill-formed subtag parsing property/unit tests now that the
+  error type is richer
+-}
+
 irregularTags :: [(Text, Grandfathered)]
 irregularTags =
   [ ("en-GB-oed", EnGbOed),
@@ -67,14 +74,16 @@ syntaxFailures =
     ("i-nonsense", Syn.BadSubtag 2 Syn.AtIrregI (subExplode "nonsense") Nothing),
     ("i-bnn-more", Syn.IrregNum IBnn),
     ("cmn*", Syn.UnparsableSubtag 0 Syn.AtBeginning (Just (3, '*')) Nothing),
+    ("en-GB-oed-", Syn.TrailingTerminator $ Syn.Grandfathered EnGbOed),
+    ("zh-min-nan*", Syn.UnparsableSubtag 7 Syn.AtExtl1 (Just (10, '*')) (Just $ Syn.Grandfathered ZhMin)),
     ("cmn-more*", Syn.UnparsableSubtag 4 Syn.AtPrimary (Just (8, '*')) (Just $ synExplode "cmn")),
+    ("cmn--", Syn.EmptySubtag 4 Syn.AtPrimary (Just $ synExplode "cmn")),
     ("cmn-lotsoftag*", Syn.UnparsableSubtag 4 Syn.AtPrimary Nothing (Just $ synExplode "cmn")),
     ("en-GB-oxendict-x", Syn.EmptySingleton 15 Nothing (Just $ synExplode "en-GB-oxendict")),
     ("zh-419-a", Syn.EmptySingleton 7 (Just ExtA) (Just $ synExplode "zh-419"))
   ]
   where
-    -- TODO: ideally would have a better solution here - TH? or
-    -- convert to the Mangled functions
+    -- TODO: ideally would have a better solution here - TH?
     synExplode = orExplode Syn.parseBCP47
     subExplode = orExplode parseSubtag
 
@@ -86,12 +95,12 @@ syntaxFailures =
 spec :: Spec
 spec = do
   describe "parseBCP47" $ do
-    it "parses any well-formed tag" $
+    prop "parses any well-formed tag" $
       forAllShrink genTagText shrinkTagText $ isRight . Syn.parseBCP47
-    it "is case-sensitive on any well-formed tag" $
+    prop "is case-sensitive on any well-formed tag" $
       forAllShrink genTagText shrinkTagText $ \t ->
         Syn.parseBCP47 t === Syn.parseBCP47 (T.toLower t)
-    it "is case-sensitive on near-well-formed tags" $ do
+    prop "is case-sensitive on near-well-formed tags" $ do
       let fixErr (Left (Syn.UnparsableSubtag p a (Just (n, c)) t)) =
             Left $ Syn.UnparsableSubtag p a (Just (n, Char.toLower c)) t
           fixErr x = x
@@ -115,6 +124,11 @@ spec = do
     prop "does not parse tags with strict irregular grandfathered prefixes" $
       forAllShrink genTagishText shrinkTagishText $ \t ->
         (isRight . Syn.parseBCP47 . (<> ("-" <> t)) . fst) `shouldNotFind` irregularTags
+    prop "fails to parse trailing terminator tags properly" $ do
+      let fixBad (Left (Syn.TrailingTerminator x)) = Just x
+          fixBad _ = Nothing
+      forAllShrink genTagText shrinkTagText $ \t ->
+        fixBad (Syn.parseBCP47 $ t <> "-") === collapseLeft (Syn.parseBCP47 t)
     prop "parses tags with strict regular grandfathered prefixes correctly" $
       forAllShrink genTagishText shrinkTagishText $ \t ->
         let badParse (a, _) = case Syn.parseBCP47 $ a <> "-" <> t of

@@ -112,6 +112,13 @@ genSubtagText = do
   len <- chooseInt (1, 8)
   T.pack <$> vectorOf len genSubtagChar
 
+-- | An initial subtag followed by either nothing or a @-@ followed by other characters
+genPopSubtagText :: Gen Text
+genPopSubtagText = do
+  t <- genSubtagText
+  t' <- genSubtagishText
+  pure $ if T.null t' then t else T.intercalate "-" [t, t']
+
 -- | A valid subtag character or some invalid character, biased
 -- towards ASCII characters, and valid subtag characters in particular
 genSubtagishChar :: Gen Char
@@ -455,6 +462,17 @@ shrinkSubtagText :: Text -> [Text]
 shrinkSubtagText t
   | T.null t = []
   | otherwise = filter (not . T.null) $ fmap T.pack $ init $ List.subsequences $ T.unpack t
+
+-- | Shrink 'Text' values of the form @subtag@ or @subtag-morechars@
+shrinkPopSubtagText :: Text -> [Text]
+shrinkPopSubtagText t =
+  [combine start rest' | rest' <- shrinkText rest]
+    <> [combine start' rest | start' <- shrinkSubtagText start]
+  where
+    (start, rest) = T.break (== '-') t
+    combine x y
+      | T.null y = x
+      | otherwise = T.intercalate "-" [x, y]
 
 -- | Shrink a 'Subtag' value
 shrinkSubtag :: Subtag -> [Subtag]

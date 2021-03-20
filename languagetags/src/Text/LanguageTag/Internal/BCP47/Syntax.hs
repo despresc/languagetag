@@ -18,9 +18,6 @@ module Text.LanguageTag.Internal.BCP47.Syntax
     renderBCP47,
     renderBCP47Builder,
     Normal (..),
-    unsafeNormalTag,
-    unsafeFullNormalTag,
-    unsafePrivateTag,
     Extension (..),
     ExtensionChar (..),
     charToExtensionChar,
@@ -35,9 +32,7 @@ import qualified Data.ByteString.Internal as BI
 import Data.Hashable (Hashable (..), hashUsing)
 import qualified Data.List as List
 import Data.List.NonEmpty (NonEmpty)
-import Data.Maybe (fromMaybe)
 import Data.Text (Text)
-import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Builder as TB
 import Data.Word (Word8)
@@ -320,147 +315,3 @@ instance NFData Extension where
 instance Hashable Extension where
   hashWithSalt s (Extension c t) =
     s `hashWithSalt` c `hashWithSalt` t
-
-----------------------------------------------------------------
--- Value construction
-----------------------------------------------------------------
-
--- $valueconstruction
-
--- | Construct a normal tag from its components. This function uses
--- 'parseSubtagMangled' and 'packCharMangled' to construct the subtags
--- from the given components, in effect, so the warnings that
--- accompany those functions also apply here. This function will also
--- not check if the input is a grandfathered language tag, and will
--- not check if the subtags are appropriate for their sections. See
--- <https://tools.ietf.org/html/bcp47#section-2.1> for the exact
--- grammar. A summary of the rules to follow to ensure that the input
--- is well-formed, with /letter/ meaning ASCII alphabetic character
--- and /digit/ meaning ASCII numeric character:
---
--- * Primary language: between two and eight letters.
---
--- * Extended language: exactly three letters. If the primary language
---   is four letters or longer then the extended language must be
---   empty.
---
--- * Script: exactly four letters.
---
--- * Region: either exactly two letters or exactly three digits.
---
--- * Variant: between four and eight letters or digits. If the variant
---   has length four then it must begin with a digit.
---
--- * Extension sections: the character must be a digit or a letter
---   other than @x@ or @X@ and the 'Text' values must be between two
---   and eight digits or letters long.
---
--- * Private use subtags: between one and eight digits or letters.
---
--- All types of subtags but the primary language subtag are optional;
--- the empty text value @""@ should be used for subtags that are
--- absent. All 'Text' values in the lists should be non-empty. Also
--- note that a 'BCP47' tag is case-insensitive, so the subtag @en@ and
--- the subtag @EN@ will result in the same value.
---
--- Examples of well-formed normal tags:
---
--- >>> unsafeNormalTag "en" "" "" "US" [] [] []
--- "en-US"
--- >>> unsafeNormalTag "cmn" "" "" "" [] [] []
--- "cmn"
--- >>> unsafeNormalTag "zh" "" "Hant" "HK" [] [] []
--- "zh-Hant-HK"
--- >>> unsafeNormalTag "es" "" "" "419" [] [] []
--- "es-419"
---
--- And a tag with all the parts labelled:
---
--- @
--- "fr-frm-Armi-AU-1606nict-a-strange-x-tag"
--- -- primary language  "fr"
--- -- extended language "frm"
--- -- script            \"Armi\"
--- -- region            \"AU\"
--- -- variants          ["1606nict"]
--- -- extensions        [(\'a\', "strange" :| [])]
--- -- private use       ["tag"]
--- @
---
--- (which mean something like: the Australian dialect of the Middle
--- French that is roughly exemplified by Jean Nicot's 1606 dictionary,
--- written in the Imperial Aramaic script, also including certain
--- extensions and private use subtags).
-unsafeNormalTag ::
-  -- | primary language
-  Text ->
-  -- | extended language
-  Text ->
-  -- | script
-  Text ->
-  -- | region
-  Text ->
-  -- | variant subtags
-  [Text] ->
-  -- | extension sections
-  [(Char, NonEmpty Text)] ->
-  -- | private use subtags
-  [Text] ->
-  BCP47
-unsafeNormalTag l me = unsafeFullNormalTag l me "" ""
-
--- | Construct a full normal tag from its components. You probably
--- want 'unsafeNormalTag' instead of this function, since the third
--- extended language will always absent in valid tags, and the only
--- valid tag with a second extended language is the regular
--- grandfathered (and deprecated) tag @zh-min-nan@, which should be
--- constructed with 'ZhMinNan'. The warnings for 'unsafeNormalTag'
--- also apply to this function.
-unsafeFullNormalTag ::
-  -- | primary language
-  Text ->
-  -- | extended language
-  Text ->
-  -- | a second extended language
-  Text ->
-  -- | a third extended language
-  Text ->
-  -- | script
-  Text ->
-  -- | region
-  Text ->
-  -- | variant subtags
-  [Text] ->
-  -- | extension sections
-  [(Char, NonEmpty Text)] ->
-  -- | private use subtags
-  [Text] ->
-  BCP47
-unsafeFullNormalTag l me me2 me3 ms mr vs es pus =
-  NormalTag $
-    Normal
-      { primlang = parseSubtagMangled l,
-        extlang1 = mmangled me,
-        extlang2 = mmangled me2,
-        extlang3 = mmangled me3,
-        script = mmangled ms,
-        region = mmangled mr,
-        variants = parseSubtagMangled <$> vs,
-        extensions = toExtension <$> es,
-        privateUse = parseSubtagMangled <$> pus
-      }
-  where
-    toExtension (c, ext) = Extension (fromMaybe ExtA $ charToExtensionChar c) (parseSubtagMangled <$> ext)
-    mmangled t
-      | T.null t = nullSubtag
-      | otherwise = justSubtag $ parseSubtagMangled t
-{-# INLINE unsafeFullNormalTag #-}
-
--- | A private use tag starts with @x-@, which is followed by one or
--- more private use subtags, each of which is between one and eight
--- digits or letters long. This function constructs such a tag given
--- those private use subtags. This function uses 'parseSubtagMangled',
--- and so the warnings for that function apply here as well.
-unsafePrivateTag :: NonEmpty Text -> BCP47
-unsafePrivateTag = PrivateUse . fmap parseSubtagMangled
-{-# INLINE unsafePrivateTag #-}
