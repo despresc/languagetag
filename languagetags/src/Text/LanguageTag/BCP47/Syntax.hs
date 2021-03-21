@@ -30,11 +30,16 @@ module Text.LanguageTag.BCP47.Syntax
     SyntaxError (..),
     Pos,
     AtComponent (..),
+    SubtagCategory (..),
+    atComponentDescription,
+    expectedCategories,
+    subtagCategoryName,
+    subtagCategorySyntax,
   )
 where
 
 import Control.DeepSeq (NFData (..), rwhnf)
-import Data.List.NonEmpty (NonEmpty)
+import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import Data.Maybe (mapMaybe)
 import Data.Text (Text)
@@ -46,88 +51,6 @@ import qualified Text.LanguageTag.BCP47.Subtag as Sub
 import Text.LanguageTag.Internal.BCP47.Subtag (Subtag (..), SubtagChar (..))
 import Text.LanguageTag.Internal.BCP47.Syntax
 
--- | The parser's current location in the tag, named after the most
--- recent component that was successfully parsed, more or less. What
--- it really indicates is what subtags the parser expects to occur
--- next: 'AtPrimary' means that it expects anything from an extended
--- language subtag to the start of the private use section, while
--- 'AtPrivateUse' indicates that it expects only private use subtags.
-data AtComponent
-  = -- | just started
-    AtBeginning
-  | -- | primary language subtag
-    AtPrimary
-  | -- | first extended language subtag
-    AtExtl1
-  | -- | second extended language subtag
-    AtExtl2
-  | -- | the entire language subtag section
-    AtLanguage
-  | -- | script subtag
-    AtScript
-  | -- | region subtag
-    AtRegion
-  | -- | variant subtag
-    AtVariant
-  | -- | extension subtag
-    AtExtension
-  | -- | private use subtag
-    AtPrivateUse
-  | -- | subtag right after an initial @i-@
-    AtIrregI
-  deriving (Eq, Ord, Show)
-
-instance NFData AtComponent where
-  rnf = rwhnf
-
--- | A possible syntax error that may occur. The 'Pos' in the errors
--- indicates where the error occurred, which is:
---
--- * for 'UnparsableSubtag', the start of the ill-formed 'Subtag',
---   and, if applicable, the position of the invalid character inside
---   that subtag
---
--- * for 'BadSubtag', the start of the inappropriate 'Subtag'
---
--- * for 'EmptySubtag', the position of the @-@
---
--- * for 'EmptySingleton', the start of the empty extension or private
---   use section that was encountered
-data SyntaxError
-  = -- | encountered text that could not be parsed as a 'Subtag' (too
-    -- long, or encountered a bad 'Char')
-    UnparsableSubtag Pos AtComponent (Maybe (Pos, Char)) (Maybe BCP47)
-  | -- | encountered a 'Subtag' that was ill-formed for its location
-    BadSubtag Pos AtComponent Subtag (Maybe BCP47)
-  | -- | input was empty
-    EmptyInput
-  | -- | an empty subtag was found
-    EmptySubtag Pos AtComponent (Maybe BCP47)
-  | -- | a trailing @-@ terminator was found after a well-formed tag
-    TrailingTerminator BCP47
-  | -- | an empty extension (@Just extensionchar@) or private use
-    -- section (@Nothing@) was encountered
-    EmptySingleton Pos (Maybe ExtensionChar) (Maybe BCP47)
-  | -- | an irregular grandfathered tag was encountered that had more
-    -- input after it
-    IrregNum Grandfathered
-  | -- | No tag was found after an initial @i-@
-    EmptyIrregI
-  deriving (Eq, Ord, Show)
-
-instance NFData SyntaxError where
-  rnf (UnparsableSubtag x y z w) = rnf x `seq` rnf y `seq` rnf z `seq` rnf w
-  rnf (BadSubtag x y z w) = rnf x `seq` rnf y `seq` rnf z `seq` rnf w
-  rnf (TrailingTerminator x) = rnf x
-  rnf EmptyInput = ()
-  rnf (EmptySubtag x y z) = rnf x `seq` rnf y `seq` rnf z
-  rnf (EmptySingleton x y z) = rnf x `seq` rnf y `seq` rnf z
-  rnf EmptyIrregI = ()
-  rnf (IrregNum x) = rnf x
-
--- | A position in the input 'Text' stream
-type Pos = Int
-
 ----------------------------------------------------------------
 -- Rendering to subtags
 ----------------------------------------------------------------
@@ -135,7 +58,7 @@ type Pos = Int
 -- | Convert a 'BCP47' tag into its component subtags
 toSubtags :: BCP47 -> NonEmpty Subtag
 toSubtags (NormalTag (Normal p e1 e2 e3 s r vs es ps)) =
-  p NE.:| (mapMaybe go [e1, e2, e3, s, r] <> vs <> es' <> ps')
+  p :| (mapMaybe go [e1, e2, e3, s, r] <> vs <> es' <> ps')
   where
     go = maybeSubtag Nothing Just
     es' = flip concatMap es $ \(Extension c ts) ->
@@ -143,34 +66,34 @@ toSubtags (NormalTag (Normal p e1 e2 e3 s r vs es ps)) =
     ps'
       | null ps = []
       | otherwise = subtagX : ps
-toSubtags (PrivateUse x) = subtagX NE.:| NE.toList x
+toSubtags (PrivateUse x) = subtagX :| NE.toList x
 toSubtags (Grandfathered g) = case g of
-  ArtLojban -> Subtag 14108546179528654867 NE.:| [Subtag 15690354374758891542]
-  CelGaulish -> Subtag 14382069488147234835 NE.:| [Subtag 14954113284221173783]
-  EnGbOed -> Subtag 14679482985414131730 NE.:| [Subtag 14954202562683731986, Subtag 16111381376313327635]
-  IAmi -> Subtag 15132094747964866577 NE.:| [Subtag 14102819922971197459]
-  IBnn -> Subtag 15132094747964866577 NE.:| [Subtag 14248104991419006995]
-  IDefault -> Subtag 15132094747964866577 NE.:| [Subtag 14526138628724883479]
-  IEnochian -> Subtag 15132094747964866577 NE.:| [Subtag 14680466211245977112]
-  IHak -> Subtag 15132094747964866577 NE.:| [Subtag 15098133032806121491]
-  IKlingon -> Subtag 15132094747964866577 NE.:| [Subtag 15542853518732230679]
-  ILux -> Subtag 15132094747964866577 NE.:| [Subtag 15697226132455686163]
-  IMingo -> Subtag 15132094747964866577 NE.:| [Subtag 15827749698417983509]
-  INavajo -> Subtag 15132094747964866577 NE.:| [Subtag 15962927641447628822]
-  IPwn -> Subtag 15132094747964866577 NE.:| [Subtag 16275850723642572819]
-  ITao -> Subtag 15132094747964866577 NE.:| [Subtag 16827550474088480787]
-  ITay -> Subtag 15132094747964866577 NE.:| [Subtag 16827638435018702867]
-  ITsu -> Subtag 15132094747964866577 NE.:| [Subtag 16847869448969781267]
-  NoBok -> Subtag 15977645578003677202 NE.:| [Subtag 14249204503046782995]
-  NoNyn -> Subtag 15977645578003677202 NE.:| [Subtag 15989872147304546323]
-  SgnBeFr -> Subtag 16690181889360658451 NE.:| [Subtag 14237004322024980498, Subtag 14828101773117358098]
-  SgnBeNl -> Subtag 16690181889360658451 NE.:| [Subtag 14237004322024980498, Subtag 15974267878283149330]
-  SgnChDe -> Subtag 16690181889360658451 NE.:| [Subtag 14384497209821364242, Subtag 14525234698176692242]
-  ZhGuoyu -> Subtag 17699146535566049298 NE.:| [Subtag 14976579405109788693]
-  ZhHakka -> Subtag 17699146535566049298 NE.:| [Subtag 15098140437866610709]
-  ZhMin -> Subtag 17699146535566049298 NE.:| [Subtag 15827742560719208467]
-  ZhMinNan -> Subtag 17699146535566049298 NE.:| [Subtag 15827742560719208467, Subtag 15962850549540323347]
-  ZhXiang -> Subtag 17699146535566049298 NE.:| [Subtag 17412902894784479253]
+  ArtLojban -> Subtag 14108546179528654867 :| [Subtag 15690354374758891542]
+  CelGaulish -> Subtag 14382069488147234835 :| [Subtag 14954113284221173783]
+  EnGbOed -> Subtag 14679482985414131730 :| [Subtag 14954202562683731986, Subtag 16111381376313327635]
+  IAmi -> Subtag 15132094747964866577 :| [Subtag 14102819922971197459]
+  IBnn -> Subtag 15132094747964866577 :| [Subtag 14248104991419006995]
+  IDefault -> Subtag 15132094747964866577 :| [Subtag 14526138628724883479]
+  IEnochian -> Subtag 15132094747964866577 :| [Subtag 14680466211245977112]
+  IHak -> Subtag 15132094747964866577 :| [Subtag 15098133032806121491]
+  IKlingon -> Subtag 15132094747964866577 :| [Subtag 15542853518732230679]
+  ILux -> Subtag 15132094747964866577 :| [Subtag 15697226132455686163]
+  IMingo -> Subtag 15132094747964866577 :| [Subtag 15827749698417983509]
+  INavajo -> Subtag 15132094747964866577 :| [Subtag 15962927641447628822]
+  IPwn -> Subtag 15132094747964866577 :| [Subtag 16275850723642572819]
+  ITao -> Subtag 15132094747964866577 :| [Subtag 16827550474088480787]
+  ITay -> Subtag 15132094747964866577 :| [Subtag 16827638435018702867]
+  ITsu -> Subtag 15132094747964866577 :| [Subtag 16847869448969781267]
+  NoBok -> Subtag 15977645578003677202 :| [Subtag 14249204503046782995]
+  NoNyn -> Subtag 15977645578003677202 :| [Subtag 15989872147304546323]
+  SgnBeFr -> Subtag 16690181889360658451 :| [Subtag 14237004322024980498, Subtag 14828101773117358098]
+  SgnBeNl -> Subtag 16690181889360658451 :| [Subtag 14237004322024980498, Subtag 15974267878283149330]
+  SgnChDe -> Subtag 16690181889360658451 :| [Subtag 14384497209821364242, Subtag 14525234698176692242]
+  ZhGuoyu -> Subtag 17699146535566049298 :| [Subtag 14976579405109788693]
+  ZhHakka -> Subtag 17699146535566049298 :| [Subtag 15098140437866610709]
+  ZhMin -> Subtag 17699146535566049298 :| [Subtag 15827742560719208467]
+  ZhMinNan -> Subtag 17699146535566049298 :| [Subtag 15827742560719208467, Subtag 15962850549540323347]
+  ZhXiang -> Subtag 17699146535566049298 :| [Subtag 17412902894784479253]
 
 -- | Parse a 'BCP47' tag from a list of subtags by first rendering the
 -- list to a 'Text' tag then parsing that tag
@@ -274,12 +197,12 @@ parseBCP47' = parsePrimary
       | subtagLength st >= 4 =
         mfinish
           (subtagLength st)
-          AtPrimary
+          AtPrimaryLong
           0
           t
           (initcon st nullSubtag nullSubtag nullSubtag)
           tryScript
-      | otherwise = mfinish (subtagLength st) AtPrimary 0 t (initcon st) (tryGrandPrimary st)
+      | otherwise = mfinish (subtagLength st) AtPrimaryShort 0 t (initcon st) (tryGrandPrimary st)
 
     tryGrandPrimary st0 con st1 atlast pos t =
       case (unwrapSubtag st0, unwrapSubtag st1) of
@@ -318,7 +241,7 @@ parseBCP47' = parsePrimary
 
     tryLext3 !con st atlast pos t
       | containsOnlyLetters st && subtagLength st == 3 =
-        mfinish (subtagLength st) AtLanguage pos t (con $ justSubtag st) tryScript
+        mfinish (subtagLength st) AtExtl3 pos t (con $ justSubtag st) tryScript
       | otherwise = tryScript (con nullSubtag) st atlast pos t
 
     tryScript !con st atlast pos t
@@ -370,7 +293,7 @@ parseBCP47' = parsePrimary
         con' ne = con . (Extension c ne :)
         go st t'
           | subtagLength st >= 2 =
-            mfinish (subtagLength st) AtExtension pos' t' (con' . (st NE.:|)) parseExtensionTag
+            mfinish (subtagLength st) AtExtension pos' t' (con' . (st :|)) parseExtensionTag
           | otherwise = emptyerr
 
     parseExtensionTag con st _ pos t
@@ -406,7 +329,7 @@ parseBCP47' = parsePrimary
 parsePrivateTag :: Text -> Either SyntaxError BCP47
 parsePrivateTag inp = do
   tagPop inp AtPrivateUse 2 (Left $ EmptySingleton 0 Nothing Nothing) $ \st t ->
-    parsePrivateUseTag (PrivateUse . (st NE.:|)) (2 + fromIntegral (subtagLength st) + 1) t
+    parsePrivateUseTag (PrivateUse . (st :|)) (2 + fromIntegral (subtagLength st) + 1) t
   where
     parsePrivateUseTag con pos t =
       tagPop t AtPrivateUse pos (Right $ con []) $ \st t' ->
@@ -452,3 +375,198 @@ instance Finishing a => Finishing ([b] -> a) where
 
 instance Finishing BCP47 where
   finish = id
+
+----------------------------------------------------------------
+-- Errors
+----------------------------------------------------------------
+
+-- | The parser's current location in the tag, named after the most
+-- recent component that was successfully parsed, more or less. What
+-- it really indicates is what subtags the parser expects to occur
+-- next: 'AtPrimaryShort' means that it expects anything from an
+-- extended language subtag to the start of the private use section,
+-- while 'AtPrivateUse' indicates that it expects only private use
+-- subtags.
+--
+-- The positions corresponding to a singleton subtag (the start of an
+-- extension or private use section) are not represented because only
+-- an 'EmptySingleton' error can happen at those positions.
+data AtComponent
+  = -- | just started
+    AtBeginning
+  | -- | primary language subtag of length at least four
+    AtPrimaryLong
+  | -- | primary language subtag of length at most three
+    AtPrimaryShort
+  | -- | first extended language subtag
+    AtExtl1
+  | -- | second extended language subtag
+    AtExtl2
+  | -- | second extended language subtag
+    AtExtl3
+  | -- | script subtag
+    AtScript
+  | -- | region subtag
+    AtRegion
+  | -- | variant subtag
+    AtVariant
+  | -- | extension subtag
+    AtExtension
+  | -- | private use subtag
+    AtPrivateUse
+  | -- | subtag right after an initial @i-@
+    AtIrregI
+  deriving (Eq, Ord, Show)
+
+instance NFData AtComponent where
+  rnf = rwhnf
+
+-- | A possible syntax error that may occur. The 'Pos' in the errors
+-- indicates where the error occurred, which is:
+--
+-- * for 'UnparsableSubtag', the start of the ill-formed 'Subtag',
+--   and, if applicable, the position of the invalid character inside
+--   that subtag
+--
+-- * for 'BadSubtag', the start of the inappropriate 'Subtag'
+--
+-- * for 'EmptySubtag', the position of the @-@
+--
+-- * for 'EmptySingleton', the start of the empty extension or private
+--   use section that was encountered
+data SyntaxError
+  = -- | encountered text that could not be parsed as a 'Subtag' (too
+    -- long, or encountered a bad 'Char')
+    UnparsableSubtag Pos AtComponent (Maybe (Pos, Char)) (Maybe BCP47)
+  | -- | encountered a 'Subtag' that was ill-formed for its location
+    BadSubtag Pos AtComponent Subtag (Maybe BCP47)
+  | -- | input was empty
+    EmptyInput
+  | -- | an empty subtag was found
+    EmptySubtag Pos AtComponent (Maybe BCP47)
+  | -- | a trailing @-@ terminator was found after a well-formed tag
+    TrailingTerminator BCP47
+  | -- | an empty extension (@Just extensionchar@) or private use
+    -- section (@Nothing@) was encountered
+    EmptySingleton Pos (Maybe ExtensionChar) (Maybe BCP47)
+  | -- | an irregular grandfathered tag was encountered that had more
+    -- input after it
+    IrregNum Grandfathered
+  | -- | No tag was found after an initial @i-@
+    EmptyIrregI
+  deriving (Eq, Ord, Show)
+
+instance NFData SyntaxError where
+  rnf (UnparsableSubtag x y z w) = rnf x `seq` rnf y `seq` rnf z `seq` rnf w
+  rnf (BadSubtag x y z w) = rnf x `seq` rnf y `seq` rnf z `seq` rnf w
+  rnf (TrailingTerminator x) = rnf x
+  rnf EmptyInput = ()
+  rnf (EmptySubtag x y z) = rnf x `seq` rnf y `seq` rnf z
+  rnf (EmptySingleton x y z) = rnf x `seq` rnf y `seq` rnf z
+  rnf EmptyIrregI = ()
+  rnf (IrregNum x) = rnf x
+
+-- | A position in the input 'Text' stream
+type Pos = Int
+
+-- | The possible syntactic categories that a 'Subtag' within a
+-- 'BCP47' tag may fall under.
+data SubtagCategory
+  = -- | primary language subtag
+    PrimaryLanguage
+  | -- | extended language subtag
+    ExtendedLanguage
+  | -- | script subtag
+    Script
+  | -- | region subtag
+    Region
+  | -- | variant subtag
+    Variant
+  | -- | singleton subtag (start of an extension or private use
+    -- section)
+    Singleton
+  | -- | extension section subtag
+    ExtensionSubtag
+  | -- | singleton subtag @x@ or @X@
+    PrivateUseSingleton
+  | -- | private use section subtag
+    PrivateUseSubtag
+  | -- | singleton subtag @i@ or @I@
+    GrandfatheredIStart
+  | -- | one of the subtags that can follow an initial @i@ in a
+    -- 'Text.LanguageTag.BCP47.Registry.Grandfathered' tag
+    GrandfatheredIFollower
+  deriving (Eq, Ord, Show, Enum, Bounded)
+
+instance NFData SubtagCategory where
+  rnf = rwhnf
+
+-- | A description of what was just parsed for each 'AtComponent'
+atComponentDescription :: AtComponent -> Text
+atComponentDescription AtBeginning = "beginning of the tag"
+atComponentDescription AtPrimaryShort = "short primary language subtag"
+atComponentDescription AtExtl1 = "first extended language subtag"
+atComponentDescription AtExtl2 = "second extended language subtag"
+atComponentDescription AtExtl3 = "third extended language subtag"
+atComponentDescription AtPrimaryLong = "long primary language subtag"
+atComponentDescription AtScript = "script subtag"
+atComponentDescription AtRegion = "region subtag"
+atComponentDescription AtVariant = "variant subtag"
+atComponentDescription AtExtension = "extension subtag"
+atComponentDescription AtPrivateUse = "private use subtag"
+atComponentDescription AtIrregI = "grandfathered \"i\" subtag"
+
+-- | The categories of subtag that are expected at any position within
+-- a tag, for use with 'BadSubtag' errors
+expectedCategories :: AtComponent -> NonEmpty SubtagCategory
+expectedCategories AtBeginning =
+  PrimaryLanguage :| [GrandfatheredIStart, PrivateUseSingleton]
+expectedCategories AtPrimaryShort =
+  ExtendedLanguage :| [Script, Region, Variant, Singleton]
+expectedCategories AtExtl1 =
+  ExtendedLanguage :| [Script, Region, Variant, Singleton]
+expectedCategories AtExtl2 =
+  ExtendedLanguage :| [Script, Region, Variant, Singleton]
+expectedCategories AtExtl3 =
+  Script :| [Region, Variant, Singleton]
+expectedCategories AtPrimaryLong =
+  Script :| [Region, Variant, Singleton]
+expectedCategories AtScript =
+  Region :| [Variant, Singleton]
+expectedCategories AtRegion =
+  Variant :| [Singleton]
+expectedCategories AtVariant =
+  Variant :| [Singleton]
+expectedCategories AtExtension =
+  ExtensionSubtag :| [Singleton]
+expectedCategories AtPrivateUse = PrivateUseSubtag :| []
+expectedCategories AtIrregI = GrandfatheredIFollower :| []
+
+-- | The names of each 'SubtagCategory', for use as an expectation
+subtagCategoryName :: SubtagCategory -> Text
+subtagCategoryName PrimaryLanguage = "primary language subtag"
+subtagCategoryName ExtendedLanguage = "extended language subtag"
+subtagCategoryName Script = "script subtag"
+subtagCategoryName Region = "region subtag"
+subtagCategoryName Variant = "variant subtag"
+subtagCategoryName Singleton = "start of extension or private use section"
+subtagCategoryName ExtensionSubtag = "extension subtag"
+subtagCategoryName PrivateUseSingleton = "start of private use section"
+subtagCategoryName PrivateUseSubtag = "private use subtag"
+subtagCategoryName GrandfatheredIStart = "start of irregular grandfathered tag"
+subtagCategoryName GrandfatheredIFollower = "end of irregular grandfathered tag"
+
+-- | A brief description of the syntax of each 'SubtagCategory'
+subtagCategorySyntax :: SubtagCategory -> Text
+subtagCategorySyntax PrimaryLanguage = "two to eight letters"
+subtagCategorySyntax ExtendedLanguage = "three letters"
+subtagCategorySyntax Script = "four letters"
+subtagCategorySyntax Region = "two letters or three digits"
+subtagCategorySyntax Variant = "four to eight letters or characters, starting with a digit if four"
+subtagCategorySyntax Singleton = "single letter or digit"
+subtagCategorySyntax ExtensionSubtag = "two to eight letters or digits"
+subtagCategorySyntax PrivateUseSingleton = "x or X"
+subtagCategorySyntax PrivateUseSubtag = "any subtag"
+subtagCategorySyntax GrandfatheredIStart = "i or I"
+subtagCategorySyntax GrandfatheredIFollower =
+  "ami, bnn, default, enochian, hak, klingon, lux, mingo, navajo, pwn, tao, tay, or tsu"

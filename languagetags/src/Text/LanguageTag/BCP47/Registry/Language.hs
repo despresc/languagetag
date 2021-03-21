@@ -11,6 +11,8 @@
 module Text.LanguageTag.BCP47.Registry.Language
   ( -- * Language subtags
     Language (..),
+    renderLanguage,
+    renderLanguageBuilder,
     languageToSubtag,
 
     -- * Language subtag records
@@ -20,7 +22,18 @@ module Text.LanguageTag.BCP47.Registry.Language
   )
 where
 
+import Data.Text (Text)
+import qualified Data.Text.Lazy.Builder as TB
+import qualified Text.LanguageTag.BCP47.Subtag as Sub
 import Text.LanguageTag.Internal.BCP47.Registry.Language
 import Text.LanguageTag.Internal.BCP47.Registry.LanguageRecords
 import Text.LanguageTag.Internal.BCP47.Registry.Orphans ()
 import Text.LanguageTag.Internal.BCP47.Registry.Types
+
+-- | Render a 'Language' subtag to a strict text value
+renderLanguage :: Language -> Text
+renderLanguage = Sub.renderSubtagLower . languageToSubtag
+
+-- | Render a 'Language' subtag to a lazy text builder
+renderLanguageBuilder :: Language -> TB.Builder
+renderLanguageBuilder = Sub.renderSubtagBuilderLower . languageToSubtag

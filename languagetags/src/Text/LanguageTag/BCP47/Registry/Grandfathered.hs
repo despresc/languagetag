@@ -12,6 +12,8 @@
 module Text.LanguageTag.BCP47.Registry.Grandfathered
   ( -- * Grandfathered tags
     Grandfathered (..),
+    renderGrandfathered,
+    renderGrandfatheredBuilder,
     grandfatheredSyntax,
 
     -- * Grandfathered tag records
@@ -21,6 +23,8 @@ module Text.LanguageTag.BCP47.Registry.Grandfathered
   )
 where
 
+import Data.Text (Text)
+import qualified Data.Text.Lazy.Builder as TB
 import Text.LanguageTag.Internal.BCP47.Registry.Grandfathered
 import Text.LanguageTag.Internal.BCP47.Registry.GrandfatheredRecords
 import Text.LanguageTag.Internal.BCP47.Registry.Types
@@ -30,3 +34,11 @@ import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn
 grandfatheredSyntax :: Grandfathered -> Syn.BCP47
 grandfatheredSyntax = Syn.Grandfathered
 {-# INLINE grandfatheredSyntax #-}
+
+-- | Render a 'Grandfathered' tag to a strict text value
+renderGrandfathered :: Grandfathered -> Text
+renderGrandfathered = Syn.renderBCP47 . grandfatheredSyntax
+
+-- | Render a 'Grandfathered' tag to a lazy text builder
+renderGrandfatheredBuilder :: Grandfathered -> TB.Builder
+renderGrandfatheredBuilder = Syn.renderBCP47Builder . grandfatheredSyntax

@@ -13,6 +13,8 @@ module Text.LanguageTag.BCP47.Registry.Redundant
     Redundant (..),
     recognizeRedundantNormal,
     recognizeRedundantTag,
+    renderRedundant,
+    renderRedundantBuilder,
     redundantToSyntaxTag,
     redundantToNormalTag,
     redundantToValidTag,
@@ -28,6 +30,8 @@ module Text.LanguageTag.BCP47.Registry.Redundant
 where
 
 import qualified Data.List.NonEmpty as NE
+import Data.Text (Text)
+import qualified Data.Text.Lazy.Builder as TB
 import Text.LanguageTag.BCP47.Subtag.Trie
   ( Trie,
     lookupTrie,
@@ -46,6 +50,14 @@ import qualified Text.LanguageTag.Internal.BCP47.Registry.RedundantRecords as In
 import Text.LanguageTag.Internal.BCP47.Registry.Types
 import Text.LanguageTag.Internal.BCP47.Subtag (Subtag (..))
 import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn
+
+-- | Render a 'Redundant' tag to a strict text value
+renderRedundant :: Redundant -> Text
+renderRedundant = Syn.renderBCP47 . redundantToSyntaxTag
+
+-- | Render a 'Redundant' tag to a strict text value
+renderRedundantBuilder :: Redundant -> TB.Builder
+renderRedundantBuilder = Syn.renderBCP47Builder . redundantToSyntaxTag
 
 -- | Convert a 'Redundant' tag to a merely well-formed 'Syn.BCP47' tag
 redundantToSyntaxTag :: Redundant -> Syn.BCP47

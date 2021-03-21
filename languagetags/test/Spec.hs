@@ -10,6 +10,7 @@ module Main where
 import Test.Hspec
 import Test.Hspec.QuickCheck (modifyMaxSuccess)
 import qualified Text.LanguageTag.BCP47.CanonicalizationSpec as CanonicalizationSpec
+import qualified Text.LanguageTag.BCP47.QuasiSpec as QuasiSpec
 import qualified Text.LanguageTag.BCP47.Registry.ExtlangSpec as ExtlangSpec
 import qualified Text.LanguageTag.BCP47.Registry.GrandfatheredSpec as GrandfatheredSpec
 import qualified Text.LanguageTag.BCP47.Registry.LanguageSpec as LanguageSpec
@@ -59,3 +60,4 @@ main = hspec $
         describe "Redundant" RedundantSpec.spec
         describe "Grandfathered" GrandfatheredSpec.spec
       describe "Canonicalization" CanonicalizationSpec.spec
+      describe "Quasi" QuasiSpec.spec

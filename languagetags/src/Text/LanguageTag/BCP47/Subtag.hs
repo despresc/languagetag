@@ -48,6 +48,7 @@ module Text.LanguageTag.BCP47.Subtag
     unwrapSubtag,
     wrapSubtag,
     unwrapChar,
+    wrapChar,
 
     -- * Unsafe functions
     unsafeUnpackUpperLetter,
@@ -190,6 +191,16 @@ popSubtag inp = case T.uncons inp of
 -- | Return the internal representation of a 'SubtagChar'
 unwrapChar :: SubtagChar -> Word8
 unwrapChar (SubtagChar w) = w
+
+-- | Convert the internal representation of a 'SubtagChar' back to a
+-- 'SubtagChar'.
+wrapChar :: Word8 -> Maybe SubtagChar
+wrapChar w
+  | w > 122 = Nothing
+  | w < 48 = Nothing
+  | w <= 57 = Just $ SubtagChar w
+  | w >= 97 = Just $ SubtagChar w
+  | otherwise = Nothing
 
 onChar ::
   r ->

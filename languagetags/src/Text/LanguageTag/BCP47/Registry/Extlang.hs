@@ -12,6 +12,8 @@
 module Text.LanguageTag.BCP47.Registry.Extlang
   ( -- * Extended language subtags
     Extlang (..),
+    renderExtlang,
+    renderExtlangBuilder,
     extlangToSubtag,
 
     -- * Extended language subtag records
@@ -21,7 +23,18 @@ module Text.LanguageTag.BCP47.Registry.Extlang
   )
 where
 
+import Data.Text (Text)
+import qualified Data.Text.Lazy.Builder as TB
+import qualified Text.LanguageTag.BCP47.Subtag as Sub
 import Text.LanguageTag.Internal.BCP47.Registry.Extlang
 import Text.LanguageTag.Internal.BCP47.Registry.ExtlangRecords
 import Text.LanguageTag.Internal.BCP47.Registry.Orphans ()
 import Text.LanguageTag.Internal.BCP47.Registry.Types
+
+-- | Render an 'Extlang' subtag to a strict text value
+renderExtlang :: Extlang -> Text
+renderExtlang = Sub.renderSubtagLower . extlangToSubtag
+
+-- | Render an 'Extlang' subtag to a lazy text builder
+renderExtlangBuilder :: Extlang -> TB.Builder
+renderExtlangBuilder = Sub.renderSubtagBuilderLower . extlangToSubtag

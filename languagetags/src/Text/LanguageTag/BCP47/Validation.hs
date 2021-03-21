@@ -15,7 +15,7 @@
 module Text.LanguageTag.BCP47.Validation
   ( -- * Tag validation
     validateBCP47,
-    ValidateError (..),
+    ValidationError (..),
 
     -- * Subtag validation
     validateLanguage,
@@ -45,30 +45,29 @@ import Text.LanguageTag.Internal.BCP47.Registry.VariantRecords
 import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn
 
 -- | A possible error during validation
-data ValidateError
-  = ErrorLanguage Subtag
-  | ErrorExtlang Subtag
-  | ErrorExcessExtlang Subtag
-  | ErrorScript Subtag
-  | ErrorRegion Subtag
-  | ErrorVariant Subtag
-  | ErrorDuplicateVariant Variant
-  | ErrorExtension Subtag
-  | ErrorDuplicateExtension Syn.ExtensionChar
+data ValidationError
+  = InvalidLanguage Subtag
+  | InvalidExtlang Subtag
+  | ExcessExtlang Subtag
+  | InvalidScript Subtag
+  | InvalidRegion Subtag
+  | InvalidVariant Subtag
+  | DuplicateVariant Variant
+  | DuplicateExtensionSection Syn.ExtensionChar
   deriving (Eq, Ord, Show)
 
-type VM a = Either ValidateError a
+type VM a = Either ValidationError a
 
-throw :: ValidateError -> VM a
+throw :: ValidationError -> VM a
 throw = Left
 
-validate :: (Subtag -> ValidateError) -> (Subtag -> Maybe a) -> Subtag -> VM a
+validate :: (Subtag -> ValidationError) -> (Subtag -> Maybe a) -> Subtag -> VM a
 validate ve f s = case f s of
   Nothing -> throw $ ve s
   Just x -> pure x
 
 maybeValidate ::
-  (Subtag -> ValidateError) ->
+  (Subtag -> ValidationError) ->
   (Subtag -> Maybe a) ->
   MaybeSubtag ->
   VM (Maybe a)
@@ -80,19 +79,19 @@ maybeValidate cmp f = maybeSubtag (pure Nothing) (fmap Just . validate cmp f)
 -- subtags. Any
 -- 'Text.LanguageTag.BCP47.Registry.Grandfathered.Grandfathered' tag
 -- will be valid as well.
-validateBCP47 :: Syn.BCP47 -> Either ValidateError Reg.BCP47
+validateBCP47 :: Syn.BCP47 -> Either ValidationError Reg.BCP47
 validateBCP47 = validateBCP47'
 
 -- TODO: should probably write the lax version of this
 validateBCP47' :: Syn.BCP47 -> VM Reg.BCP47
 validateBCP47' (Syn.NormalTag (Syn.Normal pl e1 e2 e3 s r vs es ps)) = case validateLanguage pl of
-  Nothing -> throw $ ErrorLanguage pl
+  Nothing -> throw $ InvalidLanguage pl
   Just valpl -> do
-    vale1 <- maybeValidate ErrorExtlang validateExtlang e1
+    vale1 <- maybeValidate InvalidExtlang validateExtlang e1
     guardNull e2
     guardNull e3
-    vals <- maybeValidate ErrorScript validateScript s
-    valr <- maybeValidate ErrorRegion validateRegion r
+    vals <- maybeValidate InvalidScript validateScript s
+    valr <- maybeValidate InvalidRegion validateRegion r
     valvs <- List.foldl' addVariant (pure mempty) vs
     vales <- List.foldl' addExtension (pure mempty) es
     pure $
@@ -107,20 +106,20 @@ validateBCP47' (Syn.NormalTag (Syn.Normal pl e1 e2 e3 s r vs es ps)) = case vali
             privateUse = ps
           }
   where
-    guardNull = maybeSubtag (pure ()) $ throw . ErrorExcessExtlang
+    guardNull = maybeSubtag (pure ()) $ throw . ExcessExtlang
     addVariant st v = do
       st' <- st
-      v' <- validate ErrorVariant validateVariant v
+      v' <- validate InvalidVariant validateVariant v
       S.alterF (insertVariant v') v' st'
     insertVariant v b
-      | b = throw $ ErrorDuplicateVariant v
+      | b = throw $ DuplicateVariant v
       | otherwise = pure True
     addExtension m e = do
       m' <- m
       let c = Syn.extSingleton e
       M.alterF (insertExtension c $ Syn.extTags e) c m'
     insertExtension _ ts Nothing = pure $ Just $ ExtensionSubtag <$> ts
-    insertExtension c _ (Just _) = throw $ ErrorDuplicateExtension c
+    insertExtension c _ (Just _) = throw $ DuplicateExtensionSection c
 validateBCP47' (Syn.PrivateUse x) = pure $ PrivateUseTag x
 validateBCP47' (Syn.Grandfathered x) = pure $ GrandfatheredTag x
 

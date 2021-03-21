@@ -11,6 +11,8 @@
 module Text.LanguageTag.BCP47.Registry.Region
   ( -- * Region subtags
     Region (..),
+    renderRegion,
+    renderRegionBuilder,
     regionToSubtag,
 
     -- * Region subtag records
@@ -20,7 +22,18 @@ module Text.LanguageTag.BCP47.Registry.Region
   )
 where
 
+import Data.Text (Text)
+import qualified Data.Text.Lazy.Builder as TB
+import qualified Text.LanguageTag.BCP47.Subtag as Sub
 import Text.LanguageTag.Internal.BCP47.Registry.Orphans ()
 import Text.LanguageTag.Internal.BCP47.Registry.Region
 import Text.LanguageTag.Internal.BCP47.Registry.RegionRecords
 import Text.LanguageTag.Internal.BCP47.Registry.Types
+
+-- | Render a 'Region' subtag to a strict text value
+renderRegion :: Region -> Text
+renderRegion = Sub.renderSubtagLower . regionToSubtag
+
+-- | Render a 'Region' subtag to a lazy text builder
+renderRegionBuilder :: Region -> TB.Builder
+renderRegionBuilder = Sub.renderSubtagBuilderLower . regionToSubtag

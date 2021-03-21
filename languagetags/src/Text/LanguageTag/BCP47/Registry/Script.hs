@@ -11,6 +11,8 @@
 module Text.LanguageTag.BCP47.Registry.Script
   ( -- * Script subtags
     Script (..),
+    renderScript,
+    renderScriptBuilder,
     scriptToSubtag,
 
     -- * Script subtag records
@@ -20,7 +22,18 @@ module Text.LanguageTag.BCP47.Registry.Script
   )
 where
 
+import Data.Text (Text)
+import qualified Data.Text.Lazy.Builder as TB
+import qualified Text.LanguageTag.BCP47.Subtag as Sub
 import Text.LanguageTag.Internal.BCP47.Registry.Orphans ()
 import Text.LanguageTag.Internal.BCP47.Registry.Script
 import Text.LanguageTag.Internal.BCP47.Registry.ScriptRecords
 import Text.LanguageTag.Internal.BCP47.Registry.Types
+
+-- | Render a 'Script' subtag to a strict text value
+renderScript :: Script -> Text
+renderScript = Sub.renderSubtagLower . scriptToSubtag
+
+-- | Render a 'Script' subtag to a lazy text builder
+renderScriptBuilder :: Script -> TB.Builder
+renderScriptBuilder = Sub.renderSubtagBuilderLower . scriptToSubtag

@@ -25,6 +25,7 @@ import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
+import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Word (Word64)
 import Language.Haskell.TH (Exp (..), Lit (..), Pat (..))
@@ -42,10 +43,12 @@ import Text.LanguageTag.BCP47.Registry
     Region (..),
     Script (..),
     Variant (..),
+    renderVariant,
   )
 import Text.LanguageTag.BCP47.Subtag (parseSubtag)
+import qualified Text.LanguageTag.BCP47.Subtag as Sub
 import qualified Text.LanguageTag.BCP47.Syntax as Syn
-import Text.LanguageTag.BCP47.Validation (validateBCP47)
+import Text.LanguageTag.BCP47.Validation (ValidationError (..), validateBCP47)
 import Text.LanguageTag.Internal.BCP47.Registry.Types (ExtensionSubtag (..))
 import Text.LanguageTag.Internal.BCP47.Subtag (MaybeSubtag (..), Subtag (..))
 import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn
@@ -211,8 +214,19 @@ subtag =
       quoteDec = fail "cannot be used in a declaration context"
     }
   where
+    prettyErrorSuggestion Sub.EmptyInput =
+      "subtags must contain at least one character"
+    prettyErrorSuggestion Sub.EmptySubtag =
+      "subtags have at least one character before ending"
+    prettyErrorSuggestion Sub.TagTooLong =
+      "subtags must be at most eight characters long"
+    prettyErrorSuggestion (Sub.TrailingTerminator _) =
+      "lone subtags cannot end in a dash character"
+    prettyErrorSuggestion (Sub.InvalidChar _ c) =
+      "the invalid character '" <> T.singleton c
+        <> "' was encountered - subtags must contain only ASCII letters and numbers"
     qe s = case parseSubtag (T.pack s) of
-      Left _ -> fail "bad subtag"
+      Left e -> fail $ "invalid subtag: " <> T.unpack (prettyErrorSuggestion e)
       Right x -> pure $ subtagE x
     qp s = case parseSubtag (T.pack s) of
       Left _ -> fail "bad subtag"
@@ -236,10 +250,10 @@ syntag =
     }
   where
     qe s = case Syn.parseBCP47 (T.pack s) of
-      Left _ -> fail "bad syntag"
+      Left e -> fail $ syntaxErr' s e
       Right x -> pure $ syntagE x
     qp s = case Syn.parseBCP47 (T.pack s) of
-      Left _ -> fail "bad syntag"
+      Left e -> fail $ syntaxErr' s e
       Right x -> pure $ syntagP x
 
 -- | Create a valid (but not canonicalized) 'BCP47' value from a raw
@@ -264,9 +278,9 @@ validtag =
     }
   where
     qe s = case Syn.parseBCP47 (T.pack s) of
-      Left _ -> fail "bad validtag"
+      Left e -> fail $ syntaxErr' s e
       Right x -> case validateBCP47 x of
-        Left _ -> fail "bad validatag"
+        Left e -> fail $ validErr' e
         Right x' -> pure $ validtagE x'
 
 -- | Create a valid (but not canonicalized) 'BCP47' value from a raw
@@ -292,7 +306,73 @@ canontag =
     }
   where
     qe s = case Syn.parseBCP47 (T.pack s) of
-      Left _ -> fail "bad validtag"
+      Left e -> fail $ syntaxErr' s e
       Right x -> case validateBCP47 x of
-        Left _ -> fail "bad validatag"
+        Left e -> fail $ validErr' e
         Right x' -> pure $ validtagE $ canonicalizeBCP47 x'
+
+----------------------------------------------------------------
+-- Nicer errors
+----------------------------------------------------------------
+
+syntaxErr :: Text -> Syn.SyntaxError -> Text
+syntaxErr inp (Syn.UnparsableSubtag pos _ mpc _) =
+  case mpc of
+    Nothing -> "subtag starting with \"" <> badExample <> "\" was too long"
+    Just (_, c) ->
+      T.concat
+        [ "subtag \"",
+          badExample,
+          "\" contains the invalid character '",
+          T.singleton c,
+          "'"
+        ]
+  where
+    badExample = T.take 8 $ T.takeWhile (/= '-') $ T.drop pos inp
+syntaxErr _ (Syn.BadSubtag _ atlast st _) =
+  "after " <> Syn.atComponentDescription atlast
+    <> ", expected one of: "
+    <> T.intercalate
+      ", "
+      (NE.toList $ Syn.subtagCategoryName <$> Syn.expectedCategories atlast)
+    <> "; got \""
+    <> Sub.renderSubtagLower st
+    <> "\"."
+syntaxErr _ Syn.EmptyInput = "input must be non-empty"
+syntaxErr _ Syn.EmptySubtag {} = "all subtags must be non-empty"
+syntaxErr _ Syn.TrailingTerminator {} = "a tag cannot end in a dash character"
+syntaxErr _ (Syn.EmptySingleton _ mc _) = case mc of
+  Nothing -> "the private use section after the subtag \"x\" must be non-empty"
+  (Just c) ->
+    "the extension section after the subtag \"" <> T.singleton (Syn.extensionCharToChar c)
+      <> "\" must be non-empty"
+syntaxErr _ (Syn.IrregNum g) =
+  "the irregular grandfathered tag " <> Syn.renderBCP47 (Syn.Grandfathered g)
+    <> " cannot be followed by further text"
+syntaxErr _ Syn.EmptyIrregI =
+  "the irregular grandfathered subtag \"i\" must be followed by one of the subtags: "
+    <> Syn.subtagCategorySyntax Syn.GrandfatheredIFollower
+
+syntaxErr' :: String -> Syn.SyntaxError -> String
+syntaxErr' s e = T.unpack $ "ill-formed tag: " <> syntaxErr (T.pack s) e
+
+validErr :: ValidationError -> Text
+validErr e = case e of
+  InvalidLanguage st -> stm "primary language" st
+  InvalidExtlang st -> stm "extended language" st
+  ExcessExtlang st ->
+    "a second extended language subtag \"" <> Sub.renderSubtagLower st <> "\" - there can be only one extended language subtag"
+  InvalidScript st -> stm "script" st
+  InvalidRegion st -> stm "region" st
+  InvalidVariant st -> stm "variant" st
+  DuplicateVariant v ->
+    "duplicate variant subtags \"" <> renderVariant v <> "\""
+  DuplicateExtensionSection sc ->
+    "duplicate extension sections starting with the singleton \""
+      <> T.singleton (Syn.extensionCharToChar sc)
+      <> "\""
+  where
+    stm x y = "unregistered " <> x <> " subtag \"" <> Sub.renderSubtagLower y <> "\""
+
+validErr' :: ValidationError -> String
+validErr' e = T.unpack $ "invalid tag: encountered " <> validErr e

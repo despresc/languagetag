@@ -33,7 +33,6 @@ import Text.LanguageTag.BCP47.Subtag
     unpackSubtag,
     unsafeIndexSubtag,
     unsafePopChar,
-    unwrapChar,
     unwrapSubtag,
     wrapSubtag,
   )

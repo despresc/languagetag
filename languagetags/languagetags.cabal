@@ -94,6 +94,7 @@ test-suite test
   other-modules:
     Test.Common
     Text.LanguageTag.BCP47.CanonicalizationSpec
+    Text.LanguageTag.BCP47.QuasiSpec
     Text.LanguageTag.BCP47.Registry.ExtlangSpec
     Text.LanguageTag.BCP47.Registry.GrandfatheredSpec
     Text.LanguageTag.BCP47.Registry.LanguageSpec

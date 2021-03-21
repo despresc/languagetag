@@ -11,6 +11,8 @@
 module Text.LanguageTag.BCP47.Registry.Variant
   ( -- * Variant subtags
     Variant (..),
+    renderVariant,
+    renderVariantBuilder,
     variantToSubtag,
 
     -- * Variant subtag records
@@ -20,7 +22,18 @@ module Text.LanguageTag.BCP47.Registry.Variant
   )
 where
 
+import Data.Text (Text)
+import qualified Data.Text.Lazy.Builder as TB
+import qualified Text.LanguageTag.BCP47.Subtag as Sub
 import Text.LanguageTag.Internal.BCP47.Registry.Orphans ()
 import Text.LanguageTag.Internal.BCP47.Registry.Types
 import Text.LanguageTag.Internal.BCP47.Registry.Variant
 import Text.LanguageTag.Internal.BCP47.Registry.VariantRecords
+
+-- | Render a 'Variant' subtag to a strict text value
+renderVariant :: Variant -> Text
+renderVariant = Sub.renderSubtagLower . variantToSubtag
+
+-- | Render a 'Variant' subtag to a lazy text builder
+renderVariantBuilder :: Variant -> TB.Builder
+renderVariantBuilder = Sub.renderSubtagBuilderLower . variantToSubtag

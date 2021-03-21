@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 module Text.LanguageTag.BCP47.SyntaxSpec (spec) where
 
@@ -17,10 +18,10 @@ import Test.QuickCheck
     suchThat,
     (===),
   )
+import Text.LanguageTag.BCP47.Quasi
 import Text.LanguageTag.BCP47.Registry (ExtensionChar (..), Grandfathered (..))
 import Text.LanguageTag.BCP47.Subtag
-  ( parseSubtag,
-    renderSubtagLower,
+  ( renderSubtagLower,
     unpackCharLower,
   )
 import qualified Text.LanguageTag.BCP47.Syntax as Syn
@@ -71,26 +72,17 @@ regularTags =
 syntaxFailures :: [(Text, Syn.SyntaxError)]
 syntaxFailures =
   [ ("", Syn.EmptyInput),
-    ("i-nonsense", Syn.BadSubtag 2 Syn.AtIrregI (subExplode "nonsense") Nothing),
+    ("i-nonsense", Syn.BadSubtag 2 Syn.AtIrregI [subtag|nonsense|] Nothing),
     ("i-bnn-more", Syn.IrregNum IBnn),
     ("cmn*", Syn.UnparsableSubtag 0 Syn.AtBeginning (Just (3, '*')) Nothing),
-    ("en-GB-oed-", Syn.TrailingTerminator $ Syn.Grandfathered EnGbOed),
-    ("zh-min-nan*", Syn.UnparsableSubtag 7 Syn.AtExtl1 (Just (10, '*')) (Just $ Syn.Grandfathered ZhMin)),
-    ("cmn-more*", Syn.UnparsableSubtag 4 Syn.AtPrimary (Just (8, '*')) (Just $ synExplode "cmn")),
-    ("cmn--", Syn.EmptySubtag 4 Syn.AtPrimary (Just $ synExplode "cmn")),
-    ("cmn-lotsoftag*", Syn.UnparsableSubtag 4 Syn.AtPrimary Nothing (Just $ synExplode "cmn")),
-    ("en-GB-oxendict-x", Syn.EmptySingleton 15 Nothing (Just $ synExplode "en-GB-oxendict")),
-    ("zh-419-a", Syn.EmptySingleton 7 (Just ExtA) (Just $ synExplode "zh-419"))
+    ("en-GB-oed-", Syn.TrailingTerminator [syntag|en-gb-oed|]),
+    ("zh-min-nan*", Syn.UnparsableSubtag 7 Syn.AtExtl1 (Just (10, '*')) (Just [syntag|zh-min|])),
+    ("cmn-more*", Syn.UnparsableSubtag 4 Syn.AtPrimaryShort (Just (8, '*')) (Just [syntag|cmn|])),
+    ("cmnabcd--", Syn.EmptySubtag 8 Syn.AtPrimaryLong (Just [syntag|cmnabcd|])),
+    ("cmn-lotsoftag*", Syn.UnparsableSubtag 4 Syn.AtPrimaryShort Nothing (Just [syntag|cmn|])),
+    ("en-GB-oxendict-x", Syn.EmptySingleton 15 Nothing (Just [syntag|en-GB-oxendict|])),
+    ("zh-419-a", Syn.EmptySingleton 7 (Just ExtA) (Just $ [syntag|zh-419|]))
   ]
-  where
-    -- TODO: ideally would have a better solution here - TH?
-    synExplode = orExplode Syn.parseBCP47
-    subExplode = orExplode parseSubtag
-
-    orExplode :: HasCallStack => (Text -> Either b c) -> Text -> c
-    orExplode f a = case f a of
-      Left _ -> error $ "couldn't parse" <> T.unpack a
-      Right x -> x
 
 spec :: Spec
 spec = do
