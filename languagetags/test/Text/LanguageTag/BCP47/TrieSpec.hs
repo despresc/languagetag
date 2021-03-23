@@ -10,6 +10,8 @@ import Test.QuickCheck
     Property,
     Testable,
     arbitrary,
+    chooseInt,
+    forAll,
     forAllShrink,
     liftArbitrary,
     shrink,
@@ -94,3 +96,16 @@ spec = do
         forAllEntry $ \(p, a) ->
           forAllPath $ \p' ->
             Trie.lookupLax (p <> p') (Trie.prunePast p $ Trie.insert p a t) === Just a
+  -- A small test of the manual Foldable instance
+  describe "length" $ do
+    prop "adds on disjoint tries" $ do
+      let disSplit t = do
+            let t' = Trie.fromTrie t
+            let l = length t'
+            let q = l `div` 4
+            s <- chooseInt (q, l - q)
+            let (x, y) = splitAt s t'
+            pure (Trie.toTrie x, Trie.toTrie y)
+      forAll' $ \t ->
+        forAll (disSplit t) $ \(u, v) ->
+          length u + length v === length t

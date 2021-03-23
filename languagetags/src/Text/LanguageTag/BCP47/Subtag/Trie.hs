@@ -60,13 +60,6 @@ import qualified Text.LanguageTag.Internal.BCP47.Subtag.NonEmptyTrie as NET
 import Text.LanguageTag.Internal.BCP47.Subtag.Trie
 import Prelude hiding (lookup, null)
 
-{- TODO:
-
-- view patterns for these tries, so they can be examined as leaves and
-  branches?
-
--}
-
 -- | Attempt to convert a possibly-empty 'Trie' to a non-empty
 -- 'NET.Trie', failing if the input is empty. This is the inverse of
 -- 'possiblyEmpty'.
