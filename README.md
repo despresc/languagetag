@@ -2,10 +2,11 @@
 
 The `languagetags` library provides
 [BCP47](https://tools.ietf.org/html/bcp47)-compliant language tag
-parsing and processing tools. For tag and subtag validation and
-canonicalization, and other registry-related processing, it uses the
-`languagetags-gen` package in this repository to generate the relevant
-functions from a copy of the [IANA subtag
+parsing and processing tools. The types and functions related to
+subtag validation, canonicalization, and other registry-related
+processing are generated automatically using the `languagetags-gen`
+package in this repository, which reads from a local copy of the [IANA
+subtag
 registry](https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry)
 in `languagetags-gen/registry/bcp47`. The date of the repository that
 is used can be found at the top of that file, or in the documentation

@@ -20,10 +20,10 @@ description:
 extra-source-files:
   README.md
 
-executable languagetags-gen
+library
   hs-source-dirs: src
   default-language: Haskell2010
-  main-is: Gen.hs
+  ghc-options: -Wall
   build-depends:
     languagetags == 0.1.0,
     base,
@@ -35,4 +35,35 @@ executable languagetags-gen
     process,
     time,
     directory >= 1.3.3.0 && < 1.4,
+  exposed-modules:
+    Text.LanguageTag.Gen
+    Text.LanguageTag.Gen.BCP47.Common
+    Text.LanguageTag.Gen.BCP47.Parse
+    Text.LanguageTag.Gen.BCP47.Render
+    Text.LanguageTag.Gen.Jar
+
+executable languagetags-gen
+  hs-source-dirs: app
+  default-language: Haskell2010
+  main-is: Main.hs
+  build-depends:
+    base,
+    languagetags-gen
   ghc-options: -Wall
+
+
+test-suite test
+  type: exitcode-stdio-1.0
+  default-language: Haskell2010
+  main-is: Spec.hs
+  hs-source-dirs:
+    test
+  build-depends:
+    languagetags,
+    languagetags-gen,
+    base,
+    text,
+    hspec,
+  ghc-options: -Wall
+  other-modules:
+    Text.LanguageTag.Gen.BCP47.ParseSpec

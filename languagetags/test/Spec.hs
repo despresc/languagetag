@@ -23,17 +23,6 @@ import qualified Text.LanguageTag.BCP47.SubtagSpec as SubtagSpec
 import qualified Text.LanguageTag.BCP47.SyntaxSpec as SyntaxSpec
 import qualified Text.LanguageTag.BCP47.TrieSpec as TrieSpec
 
-{- TODO:
-
-test:
-
-- think of things for tries (maybe just unit tests? though we now have
-  things like toPaths)
-
-- unit testing of validation (good and bad)
-
--}
-
 {-
 General spec convention: if one of the values fed to (===) is more
 trusted (more likely to be the correct value or something like that)

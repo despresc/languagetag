@@ -29,6 +29,8 @@ import qualified Text.LanguageTag.BCP47.Syntax as Syn
 import Text.LanguageTag.BCP47.Validation (validateBCP47)
 import Text.LanguageTag.Internal.BCP47.Registry.Types (unsafeBinSearchIndexOn)
 
+-- TODO: unit testing of validation
+
 spec :: Spec
 spec = do
   describe "binSearchIndexOn" $ do

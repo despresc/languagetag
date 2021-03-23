@@ -31,6 +31,9 @@ import Text.LanguageTag.BCP47.Registry
     redundantToValidTag,
   )
 
+-- TODO: more unit testing of canonicalization (not just the redundant
+-- tags)
+
 redundantTags :: [(Redundant, Text)]
 redundantTags =
   [ (AzArab, "az-Arab"),
