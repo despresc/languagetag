@@ -12,18 +12,29 @@
 -- <https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry>.
 module Text.LanguageTag.BCP47.Registry
   ( BCP47 (..),
-    renderBCP47,
-    renderBCP47Builder,
+    Normal (..),
     toSyntaxTag,
     toSubtags,
-    Normal (..),
+
+    -- * Rendering
+    renderBCP47,
+    renderBCP47Builder,
+
+    -- * Extension subtags and characters
+    ExtensionSubtag,
+    toExtensionSubtag,
+    fromExtensionSubtag,
     Syn.ExtensionChar (..),
     Syn.charToExtensionChar,
     Syn.extensionCharToChar,
     Syn.extensionCharToSubtag,
-    ExtensionSubtag,
-    toExtensionSubtag,
-    fromExtensionSubtag,
+
+    -- * Registry types and re-exports
+
+    -- ** Notes on the registry and types
+    -- $theregistry
+
+    -- ** Types and re-exports
     bcp47RegistryDate,
     Scope (..),
     Deprecation (..),
@@ -59,3 +70,46 @@ renderBCP47 = Syn.renderBCP47 . toSyntaxTag
 -- | Render a 'BCP47' tag to a lazy text builder
 renderBCP47Builder :: BCP47 -> TB.Builder
 renderBCP47Builder = Syn.renderBCP47Builder . toSyntaxTag
+
+-- $theregistry
+--
+-- The names of the subtag data constructors are roughly the same as
+-- the subtags themselves; all of them are camel case except for the
+-- 'Region' tags, which are all upper case. Additionally, the
+-- 'Extlang' constructors and the constructors corresponding to
+-- subtags that start with a digit are prefixed with the first three
+-- letters of their types. These modifications were necessary to
+-- arrive at constructor names that are valid and free of name
+-- collisions.
+--
+-- The registry itself contains records for language, extended
+-- language, script, and region subtags, and grandfathered and
+-- redundants tags. Some general notes on these records:
+--
+-- * Each record contains at least one (non-normative) description of
+--   what the subtag represents. The registry does not guarantee that
+--   this description will be in any particular language, and these
+--   descriptions may be added, changed, or removed as the registry
+--   updates.
+--
+-- * Each record may contain a deprecation notice, indicating that the
+--   associated tag or subtag should not be used. This value may be
+--   added, changed, or removed as the registry updates.
+--
+-- * If deprecated, a record may contain a preferred value that is
+--   recommended for use instead of the deprected tag. Note that for
+--   regions, this preferred value may not have exactly the same
+--   meaning as the old tag. This value may be added, removed or
+--   modified as the registry updates, and a change in this value does
+--   not imply that the affected subtag needs to be retagged.
+--
+-- * Extlang and variant records may have a prefix (more than one in
+--   the case of variant records) that is recommended as a prefix to
+--   the record's subtag. If a record does not have a prefix field,
+--   one will not be added as the registry updates, and changes to a
+--   prefix field must only widen the range of possible prefixes.
+--
+-- * Language and extlang records have macrolanguage and scope fields,
+--   which are informational and indicate an encompassing language and
+--   a classification of the language, respectively. These may be
+--   added, removed, or changed as the registry updates.

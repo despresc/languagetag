@@ -11,14 +11,15 @@
 module Text.LanguageTag.BCP47.Registry.Script
   ( -- * Script subtags
     Script (..),
+
+    -- * Rendering and conversion
     renderScript,
     renderScriptBuilder,
     scriptToSubtag,
 
-    -- * Script subtag records
+    -- * Records and lookup
     ScriptRecord (..),
     lookupScriptRecord,
-    scriptDetails,
   )
 where
 

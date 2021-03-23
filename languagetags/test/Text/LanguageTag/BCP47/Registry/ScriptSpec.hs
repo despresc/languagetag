@@ -13,10 +13,10 @@ import Text.LanguageTag.BCP47.Registry.Script
   ( Script,
     ScriptRecord (..),
     lookupScriptRecord,
-    scriptDetails,
     scriptToSubtag,
   )
 import Text.LanguageTag.BCP47.Validation (validateScript)
+import Text.LanguageTag.Internal.BCP47.Registry.ScriptRecords (scriptDetails)
 
 spec :: Spec
 spec = do

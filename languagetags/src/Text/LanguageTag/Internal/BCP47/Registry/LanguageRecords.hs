@@ -1,7 +1,19 @@
+-- |
+-- Description : Language record definitions
+-- Copyright   : 2021 Christian Despres
+-- License     : BSD-2-Clause
+-- Maintainer  : Christian Despres
+--
+-- Warning\: this is an internal module and may change or disappear
+-- without regard to the PVP.
+--
+-- Internal definitions for the records in the registry for 'Language' subtags.
+
 -- This is an auto-generated file. Do not edit by hand.
 
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_HADDOCK not-home #-}
 
 module Text.LanguageTag.Internal.BCP47.Registry.LanguageRecords
   (lookupLanguageDetails, validateLanguage, languageToSubtag, lookupLanguageRecord, languageDetails) where

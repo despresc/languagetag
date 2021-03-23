@@ -7,7 +7,7 @@
 -- License     : BSD-2-Clause
 -- Maintainer  : Christian Despres
 --
--- Warning: this is an internal module and may change or disappear
+-- Warning\: this is an internal module and may change or disappear
 -- without regard to the PVP. The data constructors exported from this
 -- module are also unsafe to use: the values they take are expected by
 -- the rest of the library to satisfy particular invariants that the
@@ -28,7 +28,6 @@ module Text.LanguageTag.Internal.BCP47.Syntax
 where
 
 import Control.DeepSeq (NFData (..), rwhnf)
-import qualified Data.ByteString.Internal as BI
 import Data.Hashable (Hashable (..), hashUsing)
 import qualified Data.List as List
 import Data.List.NonEmpty (NonEmpty)
@@ -38,7 +37,9 @@ import qualified Data.Text.Lazy.Builder as TB
 import Data.Word (Word8)
 import Text.LanguageTag.BCP47.Subtag
 import Text.LanguageTag.Internal.BCP47.Registry.Grandfathered
-import Text.LanguageTag.Internal.BCP47.Subtag (SubtagChar (..))
+import Text.LanguageTag.Internal.BCP47.Subtag
+  ( SubtagChar (..),
+  )
 
 -- | Render a possibly-absent region subtag in the middle of a tag,
 -- with an initial @-@
@@ -46,27 +47,27 @@ renderRegion :: MaybeSubtag -> TB.Builder
 renderRegion = maybeSubtag "" go
   where
     go s
-      | subtagLength s == 2 = TB.fromString $ '-' : List.unfoldr capgo (s, 0)
+      | subtagLength s == 2 = TB.fromString $ '-' : List.unfoldr (capgo s) 0
       | otherwise = "-" <> renderSubtagBuilderLower s
-    capgo (n, idx)
+    capgo s idx
       | idx == (2 :: Word8) = Nothing
       | otherwise =
-        let (c, n') = unsafePopChar n
-         in Just (unsafeUnpackUpperLetter c, (n', idx + 1))
+        let c = unsafeIndexSubtag s idx
+         in Just (unsafeUnpackUpperLetter c, idx + 1)
 
 -- | Render a possibly-absent script subtag in the middle of a tag,
 -- with an initial @-@
 renderScript :: MaybeSubtag -> TB.Builder
-renderScript = maybeSubtag "" $ \s -> TB.fromString $ '-' : List.unfoldr go (s, 0 :: Word8)
+renderScript = maybeSubtag "" $ \s -> TB.fromString $ '-' : List.unfoldr (go s) 0
   where
-    go (n, idx)
+    go s idx
       | idx == 4 = Nothing
       | idx == 0 =
-        let (c, n') = unsafePopChar n
-         in Just (unsafeUnpackUpperLetter c, (n', idx + 1))
+        let c = unsafeIndexSubtag s idx
+         in Just (unsafeUnpackUpperLetter c, idx + 1)
       | otherwise =
-        let (c, n') = unsafePopChar n
-         in Just (unpackCharLower c, (n', idx + 1))
+        let c = unsafeIndexSubtag s idx
+         in Just (unpackCharLower c, idx + 1)
 
 -- | A syntactically well-formed BCP47 tag. See
 -- <https://tools.ietf.org/html/bcp47#section-2.1> for the full
@@ -78,14 +79,14 @@ renderScript = maybeSubtag "" $ \s -> TB.fromString $ '-' : List.unfoldr go (s, 
 -- tags.
 data BCP47
   = NormalTag {-# UNPACK #-} !Normal
-  | Grandfathered !Grandfathered
+  | GrandfatheredTag !Grandfathered
   | PrivateUse !(NonEmpty Subtag)
   deriving (Eq, Ord)
 
 instance NFData BCP47 where
   rnf (NormalTag x) = rnf x
   rnf (PrivateUse x) = rnf x
-  rnf (Grandfathered _) = ()
+  rnf (GrandfatheredTag _) = ()
 
 instance Show BCP47 where
   showsPrec p ps r = showsPrec p (renderBCP47Builder ps) r
@@ -99,7 +100,7 @@ instance Hashable BCP47 where
     s
       `hashWithSalt` (1 :: Int)
       `hashWithSalt` t
-  hashWithSalt s (Grandfathered t) =
+  hashWithSalt s (GrandfatheredTag t) =
     s
       `hashWithSalt` (2 :: Int)
       `hashWithSalt` t
@@ -129,7 +130,7 @@ renderBCP47Builder (NormalTag (Normal pr e1 e2 e3 sc reg vars exts pu)) =
 renderBCP47Builder (PrivateUse t) = TB.singleton 'x' <> foldMap renderLowPref t
   where
     renderLowPref s = "-" <> renderSubtagBuilderLower s
-renderBCP47Builder (Grandfathered t) = case t of
+renderBCP47Builder (GrandfatheredTag t) = case t of
   ArtLojban -> "art-lojban"
   CelGaulish -> "cel-gaulish"
   EnGbOed -> "en-GB-oed"
@@ -265,6 +266,7 @@ charToExtensionChar c
   | otherwise = Nothing
   where
     toC n = Just . toEnum . subtract n . fromEnum
+{-# INLINE charToExtensionChar #-}
 
 -- | Convert an 'ExtensionChar' to a lower case 'Char'.
 extensionCharToChar :: ExtensionChar -> Char
@@ -274,6 +276,16 @@ extensionCharToChar ec
   | otherwise = toC 88 ec
   where
     toC n = toEnum . (+ n) . fromEnum
+{-# INLINE extensionCharToChar #-}
+
+extensionCharToSubtagChar :: ExtensionChar -> SubtagChar
+extensionCharToSubtagChar ec
+  | ec <= Ext9 = toC 48 ec
+  | ec <= ExtW = toC 87 ec
+  | otherwise = toC 88 ec
+  where
+    toC n = SubtagChar . fromIntegral . (+ n) . fromEnum
+{-# INLINE extensionCharToSubtagChar #-}
 
 -- | Convert a 'SubtagChar' to an 'ExtensionChar'. Note that the given
 -- subtag character must not be @x@.
@@ -292,9 +304,7 @@ unsafeSubtagCharToExtension (SubtagChar n)
 
 -- TODO: the direct definition might be a little more efficient
 extensionCharToSubtag :: ExtensionChar -> Subtag
-extensionCharToSubtag = go . extensionCharToChar
-  where
-    go = singleton . SubtagChar . fromIntegral . BI.c2w
+extensionCharToSubtag = singleton . extensionCharToSubtagChar
 
 instance Hashable ExtensionChar where
   hashWithSalt = hashUsing fromEnum

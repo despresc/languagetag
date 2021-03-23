@@ -15,11 +15,11 @@ import Text.LanguageTag.BCP47.Registry
 import Text.LanguageTag.BCP47.Registry.Language
   ( Language,
     LanguageRecord (..),
-    languageDetails,
     languageToSubtag,
     lookupLanguageRecord,
   )
 import Text.LanguageTag.BCP47.Validation (validateLanguage)
+import Text.LanguageTag.Internal.BCP47.Registry.LanguageRecords (languageDetails)
 
 spec :: Spec
 spec = do

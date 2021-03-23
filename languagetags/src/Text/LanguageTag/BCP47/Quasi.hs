@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -11,8 +12,8 @@
 -- License     : BSD-2-Clause
 -- Maintainer  : Christian Despres
 --
--- This module defines splices that allow for compile-time definitions
--- of the various BCP47 language tag types.
+-- This module defines splices that construct compile-time-checked
+-- values of the various BCP47 language tag types.
 module Text.LanguageTag.BCP47.Quasi
   ( subtag,
     syntag,
@@ -21,6 +22,7 @@ module Text.LanguageTag.BCP47.Quasi
   )
 where
 
+import Data.Foldable (foldl')
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as M
@@ -53,9 +55,6 @@ import Text.LanguageTag.Internal.BCP47.Registry.Types (ExtensionSubtag (..))
 import Text.LanguageTag.Internal.BCP47.Subtag (MaybeSubtag (..), Subtag (..))
 import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn
 
-{- TODO: better errors!
--}
-
 -- Hack to lift enum constructors
 mkEx :: Name -> String -> Name
 mkEx (Name _ f) s = Name (OccName s) f
@@ -75,9 +74,16 @@ neP f (x NE.:| xs) =
     '(NE.:|)
     [f x, ListP $ f <$> xs]
 
+tupE :: [Exp] -> Exp
+#if MIN_VERSION_template_haskell(2,16,0)
+tupE = TupE . fmap Just
+#else
+tupE = TupE
+#endif
+{-# INLINE tupE #-}
+
 appl :: Exp -> [Exp] -> Exp
-appl e (x : xs) = appl (AppE e x) xs
-appl e [] = e
+appl = foldl' AppE
 
 wordL :: Word64 -> Lit
 wordL = IntegerL . fromIntegral
@@ -136,8 +142,8 @@ syntagE (Syn.NormalTag (Syn.Normal p e1 e2 e3 s r v es ps)) =
       ]
 syntagE (Syn.PrivateUse x) =
   AppE (ConE 'Syn.PrivateUse) $ neE subtagE x
-syntagE (Syn.Grandfathered g) =
-  AppE (ConE 'Syn.Grandfathered) $ grandE g
+syntagE (Syn.GrandfatheredTag g) =
+  AppE (ConE 'Syn.GrandfatheredTag) $ grandE g
 
 syntagP :: Syn.BCP47 -> Pat
 syntagP (Syn.NormalTag (Syn.Normal p e1 e2 e3 s r v es ps)) =
@@ -162,7 +168,7 @@ syntagP (Syn.NormalTag (Syn.Normal p e1 e2 e3 s r v es ps)) =
         'Syn.Extension
         [extCharP x, neP subtagP y]
 syntagP (Syn.PrivateUse x) = ConP 'Syn.PrivateUse [neP subtagP x]
-syntagP (Syn.Grandfathered g) = ConP 'Syn.Grandfathered [grandP g]
+syntagP (Syn.GrandfatheredTag g) = ConP 'Syn.GrandfatheredTag [grandP g]
 
 validtagE :: BCP47 -> Exp
 validtagE (NormalTag (Normal l e s r v es ps)) =
@@ -192,17 +198,21 @@ validtagE (NormalTag (Normal l e s r v es ps)) =
       AppE
         (ConE 'ExtensionSubtag)
         (subtagE x)
-    extE' (x, y) = TupE [extCharE x, neE extSubtagE y]
+    extE' (x, y) = tupE [extCharE x, neE extSubtagE y]
 validtagE (PrivateUseTag x) = AppE (ConE 'PrivateUseTag) (neE subtagE x)
 validtagE (GrandfatheredTag g) = AppE (ConE 'GrandfatheredTag) (grandE g)
 
 -- | Create a 'Subtag' value from a raw subtag string. The text in the
 -- quasi-quote should be between one and eight ASCII alphanumeric
--- characters. Example:
+-- characters. Examples:
 --
 -- >>> :set -XQuasiQuotes
 -- >>> [subtag|sOm3sUb|]
 -- "som3sub"
+-- >>> [subtag|sub!|]
+-- <interactive>:3:9: error:
+--     • Invalid subtag: contains character '!' that is not an ASCII letter or number
+--     • In the quasi-quotation: [subtag|sub!|]
 --
 -- The 'subtag' quasi-quoter can be used in expressions and patterns.
 subtag :: QuasiQuoter
@@ -210,8 +220,8 @@ subtag =
   QuasiQuoter
     { quoteExp = qe,
       quotePat = qp,
-      quoteType = fail "cannot be used in a type context",
-      quoteDec = fail "cannot be used in a declaration context"
+      quoteType = const $ fail "Cannot be used in a type context",
+      quoteDec = const $ fail "Cannot be used in a declaration context"
     }
   where
     prettyErrorSuggestion Sub.EmptyInput =
@@ -223,21 +233,25 @@ subtag =
     prettyErrorSuggestion (Sub.TrailingTerminator _) =
       "lone subtags cannot end in a dash character"
     prettyErrorSuggestion (Sub.InvalidChar _ c) =
-      "the invalid character '" <> T.singleton c
-        <> "' was encountered - subtags must contain only ASCII letters and numbers"
+      "contains character '" <> T.singleton c
+        <> "' that is not an ASCII letter or number"
     qe s = case parseSubtag (T.pack s) of
-      Left e -> fail $ "invalid subtag: " <> T.unpack (prettyErrorSuggestion e)
+      Left e -> fail $ "Invalid subtag: " <> T.unpack (prettyErrorSuggestion e)
       Right x -> pure $ subtagE x
     qp s = case parseSubtag (T.pack s) of
-      Left _ -> fail "bad subtag"
+      Left e -> fail $ "Invalid subtag: " <> T.unpack (prettyErrorSuggestion e)
       Right x -> pure $ subtagP x
 
 -- | Create a merely well-formed 'Syn.BCP47' value from a raw tag
--- string. Example:
+-- string. Examples:
 --
 -- >>> :set -XQuasiQuotes
 -- >>> [syntag|eN-Gb-oxEndict|]
 -- "en-GB-oxendict"
+-- >>> [syntag|eN-us-hanS|]
+-- <interactive>:3:11: error:
+--     • Ill-formed tag: after region subtag, expected one of: variant subtag, start of extension or private use section; got "hans".
+--     • In the quasi-quotation: [canontag|eN-us-hanS|]
 --
 -- The 'syntag' quasi-quoter can be used in expressions and patterns.
 syntag :: QuasiQuoter
@@ -245,8 +259,8 @@ syntag =
   QuasiQuoter
     { quoteExp = qe,
       quotePat = qp,
-      quoteType = fail "cannot be used in a type context",
-      quoteDec = fail "cannot be used in a declaration context"
+      quoteType = const $ fail "Cannot be used in a type context",
+      quoteDec = const $ fail "Cannot be used in a declaration context"
     }
   where
     qe s = case Syn.parseBCP47 (T.pack s) of
@@ -266,15 +280,19 @@ syntag =
 -- en-GB-oed
 -- >>> renderBCP47 [validtag|sgn-br|]
 -- "sgn-BR"
+-- >>> renderBCP47 [validtag|unknown-US|]
+-- <interactive>:5:11: error:
+--     • Invalid tag: encountered unregistered primary language subtag "unknown"
+--     • In the quasi-quotation: [validtag|unknown-US|]
 --
 -- The 'validtag' quasi-quoter can only be used as an expression.
 validtag :: QuasiQuoter
 validtag =
   QuasiQuoter
     { quoteExp = qe,
-      quotePat = fail "cannot be used in a pattern context",
-      quoteType = fail "cannot be used in a type context",
-      quoteDec = fail "cannot be used in a declaration context"
+      quotePat = const $ fail "Cannot be used in a pattern context",
+      quoteType = const $ fail "Cannot be used in a type context",
+      quoteDec = const $ fail "Cannot be used in a declaration context"
     }
   where
     qe s = case Syn.parseBCP47 (T.pack s) of
@@ -283,8 +301,8 @@ validtag =
         Left e -> fail $ validErr' e
         Right x' -> pure $ validtagE x'
 
--- | Create a valid (but not canonicalized) 'BCP47' value from a raw
--- subtag string. Examples:
+-- | Create a valid and canonicalized 'BCP47' value from a raw tag
+-- string. Examples:
 --
 -- >>> :set -XQuasiQuotes
 -- >>> :set -XQuasiQuotes
@@ -294,15 +312,19 @@ validtag =
 -- en-GB-oxendict
 -- >>> renderBCP47 [canontag|sgn-br|]
 -- "bzs"
+-- >> renderBCP47 [canontag|en-gb-oed-x-more|]
+-- <interactive>:9:23: error:
+--     • Ill-formed tag: the irregular grandfathered tag en-GB-oed cannot be followed by further text
+--     • In the quasi-quotation: [canontag|en-gb-oed-x-more|]
 --
 -- The 'canontag' quasi-quoter can only be used as an expression.
 canontag :: QuasiQuoter
 canontag =
   QuasiQuoter
     { quoteExp = qe,
-      quotePat = fail "cannot be used in a pattern context",
-      quoteType = fail "cannot be used in a type context",
-      quoteDec = fail "cannot be used in a declaration context"
+      quotePat = const $ fail "Cannot be used in a pattern context",
+      quoteType = const $ fail "Cannot be used in a type context",
+      quoteDec = const $ fail "Cannot be used in a declaration context"
     }
   where
     qe s = case Syn.parseBCP47 (T.pack s) of
@@ -323,9 +345,9 @@ syntaxErr inp (Syn.UnparsableSubtag pos _ mpc _) =
       T.concat
         [ "subtag \"",
           badExample,
-          "\" contains the invalid character '",
+          "\" contains character '",
           T.singleton c,
-          "'"
+          "' that is not an ASCII letter or number"
         ]
   where
     badExample = T.take 8 $ T.takeWhile (/= '-') $ T.drop pos inp
@@ -347,21 +369,22 @@ syntaxErr _ (Syn.EmptySingleton _ mc _) = case mc of
     "the extension section after the subtag \"" <> T.singleton (Syn.extensionCharToChar c)
       <> "\" must be non-empty"
 syntaxErr _ (Syn.IrregNum g) =
-  "the irregular grandfathered tag " <> Syn.renderBCP47 (Syn.Grandfathered g)
+  "the irregular grandfathered tag " <> Syn.renderBCP47 (Syn.GrandfatheredTag g)
     <> " cannot be followed by further text"
 syntaxErr _ Syn.EmptyIrregI =
   "the irregular grandfathered subtag \"i\" must be followed by one of the subtags: "
     <> Syn.subtagCategorySyntax Syn.GrandfatheredIFollower
 
 syntaxErr' :: String -> Syn.SyntaxError -> String
-syntaxErr' s e = T.unpack $ "ill-formed tag: " <> syntaxErr (T.pack s) e
+syntaxErr' s e = T.unpack $ "Ill-formed tag: " <> syntaxErr (T.pack s) e
 
 validErr :: ValidationError -> Text
 validErr e = case e of
   InvalidLanguage st -> stm "primary language" st
   InvalidExtlang st -> stm "extended language" st
   ExcessExtlang st ->
-    "a second extended language subtag \"" <> Sub.renderSubtagLower st <> "\" - there can be only one extended language subtag"
+    "a second extended language subtag \"" <> Sub.renderSubtagLower st
+      <> "\" - there can be only one extended language subtag"
   InvalidScript st -> stm "script" st
   InvalidRegion st -> stm "region" st
   InvalidVariant st -> stm "variant" st
@@ -375,4 +398,4 @@ validErr e = case e of
     stm x y = "unregistered " <> x <> " subtag \"" <> Sub.renderSubtagLower y <> "\""
 
 validErr' :: ValidationError -> String
-validErr' e = T.unpack $ "invalid tag: encountered " <> validErr e
+validErr' e = T.unpack $ "Invalid tag: encountered " <> validErr e

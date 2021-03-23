@@ -1,6 +1,7 @@
 -- This is an auto-generated file. Do not edit by hand.
 
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# OPTIONS_HADDOCK not-home #-}
 
 module Text.LanguageTag.Internal.BCP47.Registry.Grandfathered where
 

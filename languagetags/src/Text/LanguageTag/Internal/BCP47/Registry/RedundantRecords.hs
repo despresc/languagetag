@@ -1,10 +1,22 @@
+-- |
+-- Description : Redundant record definitions
+-- Copyright   : 2021 Christian Despres
+-- License     : BSD-2-Clause
+-- Maintainer  : Christian Despres
+--
+-- Warning\: this is an internal module and may change or disappear
+-- without regard to the PVP.
+--
+-- Internal definitions for the records in the registry for 'Redundant' tags
+
 -- This is an auto-generated file. Do not edit by hand.
 
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_HADDOCK not-home #-}
 
 module Text.LanguageTag.Internal.BCP47.Registry.RedundantRecords
-  (lookupRedundantDetails, redundantToValidTag, redundantToSyntaxTag, lookupRedundantRecord, redundantDetails) where
+  (lookupRedundantDetails, redundantToValidNormal, redundantToSyntaxNormal, lookupRedundantRecord, redundantDetails) where
 
 import Prelude hiding (LT, GT)
 import Text.LanguageTag.Internal.BCP47.Registry.Redundant
@@ -99,12 +111,12 @@ lookupRedundantDetails :: Redundant -> (Normal, Syn.Normal, RangeRecord)
 lookupRedundantDetails = V.unsafeIndex redundantDetails . fromEnum
 
 -- | Convert a 'Redundant' tag to a 'Normal' validated tag
-redundantToValidTag :: Redundant -> Normal
-redundantToValidTag = (\(x, _, _) -> x) . lookupRedundantDetails
+redundantToValidNormal :: Redundant -> Normal
+redundantToValidNormal = (\(x, _, _) -> x) . lookupRedundantDetails
 
 -- | Convert a 'Redundant' tag to a merely well-formed tag
-redundantToSyntaxTag :: Redundant -> Syn.Normal
-redundantToSyntaxTag = (\(_, y, _) -> y) . lookupRedundantDetails
+redundantToSyntaxNormal :: Redundant -> Syn.Normal
+redundantToSyntaxNormal = (\(_, y, _) -> y) . lookupRedundantDetails
 
 -- | Look up the record associated to the given 'Redundant' tag
 lookupRedundantRecord :: Redundant -> RangeRecord

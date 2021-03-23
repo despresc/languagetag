@@ -1,6 +1,7 @@
 -- This is an auto-generated file. Do not edit by hand.
 
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# OPTIONS_HADDOCK not-home #-}
 
 module Text.LanguageTag.Internal.BCP47.Registry.Extlang where
 
@@ -8,7 +9,7 @@ import Prelude hiding (LT, GT)
 import Control.DeepSeq (NFData(..), rwhnf)
 import Data.Hashable (Hashable(..), hashUsing)
 
--- | The BCP47 extended language tags as of 2021-03-05. These are prefixed with "Ext" because they may overlap with primary language subtags. Note that if extended language subtags have a preferred value, then it refers to a primary language subtag.
+-- | The BCP47 extended language tags as of 2021-03-05. These are prefixed with "Ext" because they would otherwise overlap with the primary language subtags. Note that the preferred values of these subtags refer to primary language subtags.
 data Extlang
   = ExtAao -- ^ @aao@. Description: Algerian Saharan Arabic. Preferred value: aao.
   | ExtAbh -- ^ @abh@. Description: Tajiki Arabic. Preferred value: abh.

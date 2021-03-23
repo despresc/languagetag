@@ -6,15 +6,15 @@
 -- License     : BSD-2-Clause
 -- Maintainer  : Christian Despres
 --
--- Warning: this is an internal module and may change or disappear
+-- Warning\: this is an internal module and may change or disappear
 -- without regard to the PVP.
 --
 -- This module exists because, as it turns out, deriving a 'Show'
 -- instance for a data type with over eight thousand constructors
 -- takes a very long time. Writing the registered subtag types' show
--- instances manually using the functions in this module avoids this
--- problem, and the functions can also be used to render the
--- constructors during code generation.
+-- instances manually using the functions in this module shaves off a
+-- decent amount of compilation time, and these functions can also be
+-- used to render the constructors during code generation.
 module Text.LanguageTag.Internal.BCP47.Registry.DataConShow where
 
 import Data.Char (isDigit)
@@ -43,7 +43,7 @@ regionConShow = go . TL.unpack . TB.toLazyText . renderSubtagBuilderUpper
       | otherwise = t
     go [] = []
 
--- | Show a subtag in the style of an extlang data constructor
+-- | Show a subtag in the style of a variant data constructor
 variantConShow :: Subtag -> String
 variantConShow = go . TL.unpack . TB.toLazyText . renderSubtagBuilderTitle
   where

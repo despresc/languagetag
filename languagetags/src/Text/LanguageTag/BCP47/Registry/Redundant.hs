@@ -11,18 +11,21 @@
 module Text.LanguageTag.BCP47.Registry.Redundant
   ( -- * Redundant tags
     Redundant (..),
+
+    -- * Recognition
     recognizeRedundantNormal,
     recognizeRedundantTag,
+
+    -- * Rendering and conversion
     renderRedundant,
     renderRedundantBuilder,
     redundantToSyntaxTag,
     redundantToNormalTag,
     redundantToValidTag,
 
-    -- * Redundant tag records
+    -- * Records and lookup
     RangeRecord (..),
     lookupRedundantRecord,
-    redundantDetails,
 
     -- * Redundant tag trie
     redundantTrie,
@@ -34,18 +37,15 @@ import Data.Text (Text)
 import qualified Data.Text.Lazy.Builder as TB
 import Text.LanguageTag.BCP47.Subtag.Trie
   ( Trie,
-    lookupTrie,
-    stepBranch,
-    stepLeaf,
-    stepPath,
-    trieStep,
+    branch,
+    leaf,
+    path,
+    stepTrie,
   )
+import qualified Text.LanguageTag.BCP47.Subtag.Trie as Trie
 import Text.LanguageTag.Internal.BCP47.Registry
 import Text.LanguageTag.Internal.BCP47.Registry.Redundant
-import Text.LanguageTag.Internal.BCP47.Registry.RedundantRecords hiding
-  ( redundantToSyntaxTag,
-    redundantToValidTag,
-  )
+import Text.LanguageTag.Internal.BCP47.Registry.RedundantRecords
 import qualified Text.LanguageTag.Internal.BCP47.Registry.RedundantRecords as Internal
 import Text.LanguageTag.Internal.BCP47.Registry.Types
 import Text.LanguageTag.Internal.BCP47.Subtag (Subtag (..))
@@ -55,24 +55,21 @@ import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn
 renderRedundant :: Redundant -> Text
 renderRedundant = Syn.renderBCP47 . redundantToSyntaxTag
 
--- | Render a 'Redundant' tag to a strict text value
+-- | Render a 'Redundant' tag to a lazy text builder
 renderRedundantBuilder :: Redundant -> TB.Builder
 renderRedundantBuilder = Syn.renderBCP47Builder . redundantToSyntaxTag
 
 -- | Convert a 'Redundant' tag to a merely well-formed 'Syn.BCP47' tag
 redundantToSyntaxTag :: Redundant -> Syn.BCP47
-redundantToSyntaxTag = Syn.NormalTag . Internal.redundantToSyntaxTag
-{-# INLINE redundantToSyntaxTag #-}
+redundantToSyntaxTag = Syn.NormalTag . Internal.redundantToSyntaxNormal
 
 -- | Convert a 'Redundant' tag to a valid 'Normal' tag
 redundantToNormalTag :: Redundant -> Normal
-redundantToNormalTag = Internal.redundantToValidTag
-{-# INLINE redundantToNormalTag #-}
+redundantToNormalTag = Internal.redundantToValidNormal
 
 -- | Convert a 'Redundant' tag to a valid 'BCP47' tag
 redundantToValidTag :: Redundant -> BCP47
-redundantToValidTag = NormalTag . Internal.redundantToValidTag
-{-# INLINE redundantToValidTag #-}
+redundantToValidTag = NormalTag . redundantToNormalTag
 
 -- | A 'Trie' associating the 'Redundant' subtags to their
 -- @['Subtag']@ representation
@@ -81,7 +78,7 @@ redundantToValidTag = NormalTag . Internal.redundantToValidTag
 -- will never be changed
 redundantTrie :: Trie Redundant
 redundantTrie =
-  trieStep
+  stepTrie
     Nothing
     [ bRaw
         14116533031992819730
@@ -222,14 +219,17 @@ redundantTrie =
         ]
     ]
   where
-    bRaw = stepBranch . Subtag
-    lRaw = stepLeaf . Subtag
-    pRaw k = stepPath (Subtag k) . fmap Subtag
+    bRaw = branch . Subtag
+    lRaw = leaf . Subtag
+    pRaw k = path (Subtag k) . fmap Subtag
 
 -- | Determine whether or not a valid 'BCP47' tag represents a
 -- 'Redundant' tag
 recognizeRedundantNormal :: Normal -> Maybe Redundant
-recognizeRedundantNormal = flip (lookupTrie . NE.toList . toSubtags . NormalTag) redundantTrie
+recognizeRedundantNormal =
+  flip
+    (Trie.lookup . NE.toList . toSubtags . NormalTag)
+    redundantTrie
 
 -- | Determine whether or not a valid 'BCP47' tag represents a
 -- 'Redundant' tag

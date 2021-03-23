@@ -81,7 +81,7 @@ syntaxFailures =
     ("cmnabcd--", Syn.EmptySubtag 8 Syn.AtPrimaryLong (Just [syntag|cmnabcd|])),
     ("cmn-lotsoftag*", Syn.UnparsableSubtag 4 Syn.AtPrimaryShort Nothing (Just [syntag|cmn|])),
     ("en-GB-oxendict-x", Syn.EmptySingleton 15 Nothing (Just [syntag|en-GB-oxendict|])),
-    ("zh-419-a", Syn.EmptySingleton 7 (Just ExtA) (Just $ [syntag|zh-419|]))
+    ("zh-419-a", Syn.EmptySingleton 7 (Just ExtA) (Just [syntag|zh-419|]))
   ]
 
 spec :: Spec
@@ -142,7 +142,7 @@ spec = do
           === Just (Char.toLower c)
     prop "composes with extensionCharToChar on the left correctly" $
       forAll genExtensionChar' $ \c ->
-        (Syn.charToExtensionChar $ Syn.extensionCharToChar c) === Just c
+        Syn.charToExtensionChar (Syn.extensionCharToChar c) === Just c
   describe "extensionCharToSubtag" $ do
     prop "returns the correct singleton subtag" $
       forAll genExtensionChar' $ \c ->
@@ -157,7 +157,7 @@ spec = do
   describe "toSubtags" $ do
     prop "should compare correctly with renderBCP47" $
       forAllShrink genSynTag shrinkSynTag $ \st ->
-        T.intercalate "-" (NE.toList $ fmap renderSubtagLower $ Syn.toSubtags st)
+        T.intercalate "-" (NE.toList $ renderSubtagLower <$> Syn.toSubtags st)
           === T.toLower (Syn.renderBCP47 st)
   describe "parseBCP47FromSubtags" $ do
     prop "composes with toSubtags correctly on the left" $

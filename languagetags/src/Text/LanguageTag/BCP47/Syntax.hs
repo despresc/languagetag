@@ -67,7 +67,7 @@ toSubtags (NormalTag (Normal p e1 e2 e3 s r vs es ps)) =
       | null ps = []
       | otherwise = subtagX : ps
 toSubtags (PrivateUse x) = subtagX :| NE.toList x
-toSubtags (Grandfathered g) = case g of
+toSubtags (GrandfatheredTag g) = case g of
   ArtLojban -> Subtag 14108546179528654867 :| [Subtag 15690354374758891542]
   CelGaulish -> Subtag 14382069488147234835 :| [Subtag 14954113284221173783]
   EnGbOed -> Subtag 14679482985414131730 :| [Subtag 14954202562683731986, Subtag 16111381376313327635]
@@ -122,7 +122,7 @@ tagPop inp atlast pos end more = case popSubtag inp of
     Right a -> Left $ TrailingTerminator a
   Left Sub.EmptyInput -> end
   Left Sub.EmptySubtag -> Left $ EmptySubtag pos atlast mcon
-  Left Sub.TagTooLong -> Left $ UnparsableSubtag pos atlast Nothing $ mcon
+  Left Sub.TagTooLong -> Left $ UnparsableSubtag pos atlast Nothing mcon
   Left (Sub.InvalidChar n c) -> Left $ UnparsableSubtag pos atlast (Just (pos + n, c)) mcon
   where
     collapseLeft (Left _) = Nothing
@@ -165,10 +165,10 @@ parseBCP47 inp =
     catchIrregulars (Left e) = testIrregs (T.toLower inp)
       where
         throwGrand t x
-          | T.null t = Right $ Grandfathered x
+          | T.null t = Right $ GrandfatheredTag x
           | Just ('-', t') <- T.uncons t =
             if T.null t'
-              then Left $ TrailingTerminator $ Grandfathered x
+              then Left $ TrailingTerminator $ GrandfatheredTag x
               else Left $ IrregNum x
           | otherwise = Left e
         testIrregs t
@@ -207,26 +207,26 @@ parseBCP47' = parsePrimary
     tryGrandPrimary st0 con st1 atlast pos t =
       case (unwrapSubtag st0, unwrapSubtag st1) of
         (14108546179528654867, 15690354374758891542)
-          | T.null t -> pure $ Grandfathered ArtLojban
+          | T.null t -> pure $ GrandfatheredTag ArtLojban
         (14382069488147234835, 14954113284221173783)
-          | T.null t -> pure $ Grandfathered CelGaulish
+          | T.null t -> pure $ GrandfatheredTag CelGaulish
         (15977645578003677202, 14249204503046782995)
-          | T.null t -> pure $ Grandfathered NoBok
+          | T.null t -> pure $ GrandfatheredTag NoBok
         (15977645578003677202, 15989872147304546323)
-          | T.null t -> pure $ Grandfathered NoNyn
+          | T.null t -> pure $ GrandfatheredTag NoNyn
         (17699146535566049298, 14976579405109788693)
-          | T.null t -> pure $ Grandfathered ZhGuoyu
+          | T.null t -> pure $ GrandfatheredTag ZhGuoyu
         (17699146535566049298, 15098140437866610709)
-          | T.null t -> pure $ Grandfathered ZhHakka
+          | T.null t -> pure $ GrandfatheredTag ZhHakka
         (17699146535566049298, 15827742560719208467) -> do
           let pos' = pos + fromIntegral (subtagLength st1) + 1
-          tagPop t AtExtl1 pos' (Right $ Grandfathered ZhMin) $ \st2 t' ->
+          tagPop t AtExtl1 pos' (Right $ GrandfatheredTag ZhMin) $ \st2 t' ->
             case unwrapSubtag st2 of
               15962850549540323347
-                | T.null t' -> pure $ Grandfathered ZhMinNan
+                | T.null t' -> pure $ GrandfatheredTag ZhMinNan
               _ -> tryLext2 (con $ justSubtag st1) st2 AtExtl1 pos' t'
         (17699146535566049298, 17412902894784479253)
-          | T.null t -> pure $ Grandfathered ZhXiang
+          | T.null t -> pure $ GrandfatheredTag ZhXiang
         _ -> tryLext1 con st1 atlast pos t
 
     tryLext1 !con st atlast pos t
@@ -305,7 +305,7 @@ parseBCP47' = parsePrimary
       | otherwise = tagPop t AtIrregI 2 (Left EmptyIrregI) $ \st' t' ->
         case recognizeIrregI st' of
           Just g
-            | T.null t' -> Right $ Grandfathered g
+            | T.null t' -> Right $ GrandfatheredTag g
             | otherwise -> Left $ IrregNum g
           Nothing -> Left $ BadSubtag 2 AtIrregI st' Nothing
 
@@ -339,13 +339,15 @@ parsePrivateTag inp = do
 --
 -- Other than the 'parseBCP47' function, tags can also be constructed
 -- directly using 'grandfatheredSyntax', since all of the
--- 'Text.LanguageTag.BCP47.Registry.Grandfathered' tags are
--- automatically well-formed. These tags are the result of a prior
--- standard allowing the registration of entire tags, not simply
--- subtags; of those tags, the ones that could not be represented via
--- registered subtags were explicitly grandfathered into the current
--- standard via the grammar of the tags itself. All of them are valid,
--- but most are deprecated.
+-- 'Grandfathered' tags are automatically well-formed. These tags are
+-- the result of a prior standard allowing the registration of entire
+-- tags, not simply subtags; of those tags, the ones that could not be
+-- represented via registered subtags were explicitly grandfathered
+-- into the current standard via the grammar of the tags itself. All
+-- of them are valid, but most are deprecated.
+--
+-- The 'Text.LanguageTag.BCP47.Quasi.syntag' quasi-quoter is also
+-- available to construct compile-time-checked tags.
 
 ----------------------------------------------------------------
 -- Tag constants
@@ -430,10 +432,13 @@ instance NFData AtComponent where
 --
 -- * for 'BadSubtag', the start of the inappropriate 'Subtag'
 --
--- * for 'EmptySubtag', the position of the @-@
+-- * for 'EmptySubtag', the position of the @'-'@
 --
 -- * for 'EmptySingleton', the start of the empty extension or private
 --   use section that was encountered
+--
+-- The errors also include the initial segment of the tag that was
+-- parsed before the error occurred whenever possible.
 data SyntaxError
   = -- | encountered text that could not be parsed as a 'Subtag' (too
     -- long, or encountered a bad 'Char')
@@ -494,7 +499,7 @@ data SubtagCategory
   | -- | singleton subtag @i@ or @I@
     GrandfatheredIStart
   | -- | one of the subtags that can follow an initial @i@ in a
-    -- 'Text.LanguageTag.BCP47.Registry.Grandfathered' tag
+    -- 'Grandfathered' tag
     GrandfatheredIFollower
   deriving (Eq, Ord, Show, Enum, Bounded)
 

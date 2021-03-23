@@ -11,14 +11,15 @@
 module Text.LanguageTag.BCP47.Registry.Language
   ( -- * Language subtags
     Language (..),
+
+    -- * Rendering and conversion
     renderLanguage,
     renderLanguageBuilder,
     languageToSubtag,
 
-    -- * Language subtag records
+    -- * Records and lookup
     LanguageRecord (..),
     lookupLanguageRecord,
-    languageDetails,
   )
 where
 

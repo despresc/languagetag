@@ -18,11 +18,11 @@ import Text.LanguageTag.BCP47.Registry
 import Text.LanguageTag.BCP47.Registry.Extlang
   ( Extlang,
     ExtlangRecord (..),
-    extlangDetails,
     extlangToSubtag,
     lookupExtlangRecord,
   )
 import Text.LanguageTag.BCP47.Validation (validateExtlang)
+import Text.LanguageTag.Internal.BCP47.Registry.ExtlangRecords (extlangDetails)
 
 spec :: Spec
 spec = do

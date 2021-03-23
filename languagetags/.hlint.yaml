@@ -1,0 +1,6 @@
+- ignore:
+    name: Monoid law, left identity
+    within: Text.LanguageTag.BCP47.TrieSpec
+- ignore:
+    name: Monoid law, right identity
+    within: Text.LanguageTag.BCP47.TrieSpec

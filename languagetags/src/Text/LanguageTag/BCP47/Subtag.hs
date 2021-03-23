@@ -12,19 +12,25 @@
 module Text.LanguageTag.BCP47.Subtag
   ( -- * Subtags
     Subtag,
+
+    -- ** Parsing and construction
     parseSubtag,
     popSubtag,
+    singleton,
+
+    -- ** Rendering and conversion
+    renderSubtagLower,
+    unpackSubtag,
+
+    -- ** Query
+    subtagHead,
+    indexSubtag,
+    subtagLength,
+    subtagLength',
     containsLetter,
     containsOnlyLetters,
     containsDigit,
     containsOnlyDigits,
-    unpackSubtag,
-    renderSubtagLower,
-    subtagLength,
-    subtagLength',
-    subtagHead,
-    indexSubtag,
-    singleton,
 
     -- * Subtags that might be absent
     MaybeSubtag,
@@ -50,19 +56,18 @@ module Text.LanguageTag.BCP47.Subtag
     unwrapChar,
     wrapChar,
 
+    -- * Errors
+    SyntaxError (..),
+
     -- * Unsafe functions
     unsafeUnpackUpperLetter,
     unsafeIndexSubtag,
-    unsafePopChar,
-
-    -- * Errors
-    SyntaxError (..),
   )
 where
 
 import Control.DeepSeq (NFData (..))
 import qualified Data.Bits as Bit
-import qualified Data.ByteString.Internal as BI
+import Data.Char (ord)
 import qualified Data.List as List
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -71,19 +76,24 @@ import qualified Data.Text.Lazy.Builder as TB
 import Data.Word (Word64, Word8)
 import Text.LanguageTag.Internal.BCP47.Subtag
 
+-- From bytestring's Data.ByteString.Internal
+c2w :: Char -> Word8
+c2w = fromIntegral . ord
+{-# INLINE c2w #-}
+
 ----------------------------------------------------------------
 -- Subtags
 ----------------------------------------------------------------
 
--- | Render a 'Subtag' to a strict lower case text value
+-- | Render a 'Subtag' to a strict text value in lower case
 renderSubtagLower :: Subtag -> Text
 renderSubtagLower = TL.toStrict . TB.toLazyText . renderSubtagBuilderLower
 
--- | Render a 'Subtag' to a strict upper case text value
+-- | Render a 'Subtag' to a strict text value in upper case
 renderSubtagUpper :: Subtag -> Text
 renderSubtagUpper = TL.toStrict . TB.toLazyText . renderSubtagBuilderUpper
 
--- | Render a 'Subtag' to a strict title case text value
+-- | Render a 'Subtag' to a strict text value in title case
 renderSubtagTitle :: Subtag -> Text
 renderSubtagTitle = TL.toStrict . TB.toLazyText . renderSubtagBuilderTitle
 
@@ -130,15 +140,15 @@ readSubtag len = fixup . List.foldl' go (len, 57, False, False)
 
 -- | A possible syntax error that may be detected during parsing
 data SyntaxError
-  = -- | input was empty
+  = -- | the input was empty
     EmptyInput
-  | -- | a @-@ was found at the beginning of the subtag
+  | -- | a @\'-\'@ was found at the beginning of the subtag
     EmptySubtag
-  | -- | tag continued for more than 8 characters
+  | -- | the subtag continued for more than 8 characters
     TagTooLong
-  | -- | a @-@ was found at the end of an otherwise well-formed subtag
+  | -- | a @\'-\'@ was found at the end of an otherwise well-formed subtag
     TrailingTerminator Subtag
-  | -- | gives the offending 'Char' and its offset
+  | -- | an invalid 'Char' was found at that offset
     InvalidChar Int Char
   deriving (Eq, Ord, Show)
 
@@ -161,8 +171,8 @@ parseSubtag t = case popSubtag t of
     | otherwise -> Left $ InvalidChar (subtagLength' s) '-'
 
 -- | Attempt to parse a 'Subtag' from the input 'Text'
--- stream. Consumes the trailing @-@ character if it exists and is not
--- followed by the end of input.
+-- stream. Consumes the trailing @\'-\'@ character if it exists and is
+-- not followed by the end of input.
 popSubtag :: Text -> Either SyntaxError (Subtag, Text)
 popSubtag inp = case T.uncons inp of
   Just (c, t) -> case packCharDetail c of
@@ -211,10 +221,10 @@ onChar ::
   r
 onChar bad f g h c
   | c > 'z' = bad
-  | c >= 'a' = f $! BI.c2w c
+  | c >= 'a' = f $! c2w c
   | c > 'Z' = bad
-  | c >= 'A' = g $! BI.c2w c
-  | c <= '9' && c >= '0' = h $! BI.c2w c
+  | c >= 'A' = g $! c2w c
+  | c <= '9' && c >= '0' = h $! c2w c
   | otherwise = bad
 
 -- | Pack an ASCII alphanumeric character into the first 7 bits of a
@@ -228,22 +238,10 @@ packCharDetail = onChar Nothing low high dig
     high w = Just (SubtagChar $ w + 32, False)
     dig w = Just (SubtagChar w, True)
 
--- | Pack a normal 'Char' into a 'SubtagChar'.
+-- | Pack a normal 'Char' into a 'SubtagChar', converting it it to
+-- lower case if it is not already
 packChar :: Char -> Maybe SubtagChar
 packChar = fmap fst . packCharDetail
-
--- | Convert a packed letter to an unpacked upper case letter. The
--- input must in fact be an upper case letter.
-unsafeUnpackUpperLetter :: SubtagChar -> Char
-unsafeUnpackUpperLetter (SubtagChar w) =
-  BI.w2c $ w - 32
-
--- | Pop a character from the head of a 'Subtag'. Note that this will
--- mangle the stored length of a subtag, so the resulting 'Subtag'
--- should only be passed to functions like 'unsafeIndexSubtag',
--- 'subtagHead', or 'unsafePopChar' itself.
-unsafePopChar :: Subtag -> (SubtagChar, Subtag)
-unsafePopChar (Subtag n) = (SubtagChar $ fromIntegral $ Bit.shiftR n 57, Subtag $ Bit.shiftL n 7)
 
 data SeenChar
   = OnlyLetter

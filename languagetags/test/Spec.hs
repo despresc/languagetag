@@ -21,6 +21,7 @@ import qualified Text.LanguageTag.BCP47.Registry.VariantSpec as VariantSpec
 import qualified Text.LanguageTag.BCP47.RegistrySpec as RegistrySpec
 import qualified Text.LanguageTag.BCP47.SubtagSpec as SubtagSpec
 import qualified Text.LanguageTag.BCP47.SyntaxSpec as SyntaxSpec
+import qualified Text.LanguageTag.BCP47.TrieSpec as TrieSpec
 
 {- TODO:
 
@@ -61,3 +62,4 @@ main = hspec $
         describe "Grandfathered" GrandfatheredSpec.spec
       describe "Canonicalization" CanonicalizationSpec.spec
       describe "Quasi" QuasiSpec.spec
+      describe "Trie" TrieSpec.spec

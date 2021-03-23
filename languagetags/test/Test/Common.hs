@@ -63,10 +63,13 @@ import Text.LanguageTag.BCP47.Subtag
     renderSubtagLower,
     unpackCharLower,
   )
+import Text.LanguageTag.BCP47.Subtag.Trie (Trie)
+import qualified Text.LanguageTag.BCP47.Subtag.Trie as Trie
 import qualified Text.LanguageTag.BCP47.Syntax as Syn
 import Text.LanguageTag.Internal.BCP47.Registry.Types
   ( ExtensionSubtag (..),
   )
+import qualified Text.LanguageTag.Internal.BCP47.Subtag.NonEmptyTrie as NET
 import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn
 
 ----------------------------------------------------------------
@@ -397,7 +400,7 @@ genSynTag :: Gen Syn.BCP47
 genSynTag =
   oneof
     [ Syn.NormalTag <$> genSynNormal,
-      Syn.Grandfathered <$> genGrandfathered,
+      Syn.GrandfatheredTag <$> genGrandfathered,
       Syn.PrivateUse <$> genPrivateUseTag
     ]
 
@@ -449,6 +452,29 @@ genValidTag =
       GrandfatheredTag <$> genGrandfathered
     ]
 
+liftGenTrie :: Gen a -> Gen (Trie a)
+liftGenTrie p = oneof [Trie.Trie <$> liftGenNETrie p, pure Trie.empty]
+
+liftGenNETrie :: Gen a -> Gen (NET.Trie a)
+liftGenNETrie p = go 7
+  where
+    go depth = oneof [deeper depth, NET.Leaf <$> p]
+    deeper depth
+      | depth == 0 = NET.Leaf <$> p
+      | otherwise = do
+        a <- oneof [NET.Node <$> p, pure NET.Nil]
+        let dgen = chooseInt (0, depth - 1)
+        width <- chooseInt (1, 6)
+        l <- vectorOf width $ do
+          s <- genSubtag
+          t <- dgen >>= deeper
+          pure (s, t)
+        let m = M.fromList l
+        let (s, t, m') = case M.toList m of
+              ((x, y) : _) -> (x, y, M.delete x m)
+              [] -> error "vectorOf gave us an empty list"
+        pure $ NET.Branch a (NET.Step s t) m'
+
 ----------------------------------------------------------------
 -- Shrinking
 ----------------------------------------------------------------
@@ -458,6 +484,8 @@ shrinkText :: Text -> [Text]
 shrinkText = fmap T.pack . shrink . T.unpack
 
 -- | Shrink a subtag 'Text' value
+
+-- FIXME: isn't the T.null t branch redundant?
 shrinkSubtagText :: Text -> [Text]
 shrinkSubtagText t
   | T.null t = []
@@ -530,7 +558,7 @@ shrinkPrivateUseTag = liftShrinkNE shrinkSubtag
 shrinkSynTag :: Syn.BCP47 -> [Syn.BCP47]
 shrinkSynTag (Syn.NormalTag n) = Syn.NormalTag <$> shrinkSynNormal n
 shrinkSynTag (Syn.PrivateUse t) = Syn.PrivateUse <$> shrinkPrivateUseTag t
-shrinkSynTag (Syn.Grandfathered _) = []
+shrinkSynTag (Syn.GrandfatheredTag _) = []
 
 -- Very conservative until I feel like writing it properly
 shrinkValidTag :: BCP47 -> [BCP47]
@@ -556,7 +584,36 @@ shrinkValidTag (GrandfatheredTag _) = []
 
 shrinkListWith :: (a -> [a]) -> [a] -> [[a]]
 shrinkListWith _ [] = []
-shrinkListWith f l = liftShrink f l <> init (List.subsequences l)
+shrinkListWith f l = init (List.subsequences l) <> liftShrink f l
+
+liftShrinkNode :: (a -> [a]) -> NET.Node a -> [NET.Node a]
+liftShrinkNode f (NET.Node a) = NET.Nil : (NET.Node <$> f a)
+liftShrinkNode _ NET.Nil = []
+
+liftShrinkTrie :: (a -> [a]) -> Trie a -> [Trie a]
+liftShrinkTrie f (Trie.Trie x) = Trie.TrieNil : (Trie.Trie <$> liftShrinkNETrie f x)
+liftShrinkTrie _ Trie.TrieNil = []
+
+liftShrinkNETrie :: (a -> [a]) -> NET.Trie a -> [NET.Trie a]
+liftShrinkNETrie f (NET.Branch n (NET.Step x y) m) =
+  fromN n
+    <> [y]
+    <> (snd <$> M.toList m)
+    <> amalgam
+    <> [NET.Branch n' (NET.Step x y) m | n' <- liftShrinkNode f n]
+  where
+    fromN (NET.Node a) = [NET.Leaf a]
+    fromN NET.Nil = []
+    go (s, t) =
+      [(s, t') | t' <- liftShrinkNETrie f t]
+        <> [(s', t) | s' <- shrinkSubtag s]
+    amalgam = do
+      l <- shrinkListWith go $ M.toAscList $ M.insert x y m
+      let m' = M.fromList l
+      case M.toAscList m' of
+        ((a, b) : _) -> pure $ NET.Branch n (NET.Step a b) (M.delete a m')
+        [] -> []
+liftShrinkNETrie f (NET.Leaf a) = NET.Leaf <$> f a
 
 data DifferentElem a
   = DifferentLeft a

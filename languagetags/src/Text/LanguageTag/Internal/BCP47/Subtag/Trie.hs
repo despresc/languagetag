@@ -1,5 +1,6 @@
-{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveFoldable #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# OPTIONS_HADDOCK not-home #-}
 
 -- |
 -- Description : Internal subtag trie definitions
@@ -7,20 +8,67 @@
 -- License     : BSD-2-Clause
 -- Maintainer  : Christian Despres
 --
--- Warning: this is an internal module and may change or disappear
+-- Warning\: this is an internal module and may change or disappear
 -- without regard to the PVP.
-module Text.LanguageTag.Internal.BCP47.Subtag.Trie where
+module Text.LanguageTag.Internal.BCP47.Subtag.Trie
+  ( Trie (..),
+    Step (..),
+    fromTrie,
+    fromStep,
+  )
+where
 
-import Data.HashMap.Strict (HashMap)
+import Data.Functor.Classes
+  ( Show1 (..),
+    showsPrec1,
+    showsUnaryWith,
+  )
+import qualified Data.List.NonEmpty as NE
 import Text.LanguageTag.Internal.BCP47.Subtag (Subtag)
+import qualified Text.LanguageTag.Internal.BCP47.Subtag.NonEmptyTrie as NET
 
--- | A trie indexed by 'Subtag'. Note that the 'Foldable' methods do
--- not fold over the paths in the 'Trie' in a consistent order.
-data Trie a = Trie !(Maybe a) !(HashMap Subtag (Trie a))
-  deriving (Functor, Foldable)
+-- | A strict trie indexed by 'Subtag' values
+data Trie a
+  = Trie !(NET.Trie a)
+  | TrieNil
+  deriving (Eq, Ord, Functor)
 
--- | A step in a trie path; a child of a trie node. Equivalent to
--- @('Subtag', 'Trie' a)@. Note that the 'Foldable' methods do not
--- fold over the paths in the 'TrieStep' in a consistent order.
-data TrieStep a = TrieStep !Subtag !(Trie a)
-  deriving (Functor, Foldable)
+instance Foldable Trie where
+  foldr f b (Trie t) = foldr f b t
+  foldr _ b TrieNil = b
+  null (Trie _) = False
+  null _ = True
+
+-- | Merge two 'Trie's together, also merging overlapping nodes
+instance Semigroup a => Semigroup (Trie a) where
+  Trie x <> Trie y = Trie $ x <> y
+  Trie x <> TrieNil = Trie x
+  TrieNil <> Trie y = Trie y
+  TrieNil <> TrieNil = TrieNil
+
+instance Semigroup a => Monoid (Trie a) where
+  mempty = TrieNil
+
+-- | A step in a trie path; a child of a trie node.
+data Step a
+  = Step !Subtag !(Trie a)
+  deriving (Eq, Ord, Foldable, Show)
+
+-- | Transform a 'Trie' into its constituent paths.
+fromTrie :: Trie a -> [([Subtag], a)]
+fromTrie (Trie x) = NE.toList $ NET.fromTrie x
+fromTrie TrieNil = []
+
+-- | Transform a 'Step' into its label and constituent paths.
+fromStep :: Step a -> (Subtag, [([Subtag], a)])
+fromStep (Step s t) = (s, fromTrie t)
+
+instance Show a => Show (Trie a) where
+  showsPrec = showsPrec1
+
+instance Show1 Trie where
+  liftShowsPrec sp sl d m =
+    showsUnaryWith (liftShowsPrec sp' sl') "fromTrie" d (fromTrie m)
+    where
+      sp' = liftShowsPrec sp sl
+      sl' = liftShowList sp sl

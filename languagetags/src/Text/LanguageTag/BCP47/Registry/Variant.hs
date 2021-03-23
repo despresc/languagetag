@@ -11,14 +11,15 @@
 module Text.LanguageTag.BCP47.Registry.Variant
   ( -- * Variant subtags
     Variant (..),
+
+    -- * Rendering and conversion
     renderVariant,
     renderVariantBuilder,
     variantToSubtag,
 
-    -- * Variant subtag records
+    -- * Records and lookup
     VariantRecord (..),
     lookupVariantRecord,
-    variantDetails,
   )
 where
 

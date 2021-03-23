@@ -13,10 +13,10 @@ import Text.LanguageTag.BCP47.Registry.Region
   ( Region,
     RegionRecord (..),
     lookupRegionRecord,
-    regionDetails,
     regionToSubtag,
   )
 import Text.LanguageTag.BCP47.Validation (validateRegion)
+import Text.LanguageTag.Internal.BCP47.Registry.RegionRecords (regionDetails)
 
 spec :: Spec
 spec = do

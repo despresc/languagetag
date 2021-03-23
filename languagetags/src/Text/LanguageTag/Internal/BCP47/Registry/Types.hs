@@ -7,7 +7,7 @@
 -- License     : BSD-2-Clause
 -- Maintainer  : Christian Despres
 --
--- Warning: this is an internal module and may change or disappear
+-- Warning\: this is an internal module and may change or disappear
 -- without regard to the PVP.
 module Text.LanguageTag.Internal.BCP47.Registry.Types
   ( BCP47 (..),
@@ -131,7 +131,8 @@ instance NFData Normal where
 newtype ExtensionSubtag = ExtensionSubtag Subtag
   deriving (Eq, Ord, Show, Hashable)
 
--- | Convert a subtag to an extension subtag
+-- | Convert a subtag to an extension subtag, failing if it has length
+-- one
 toExtensionSubtag :: Subtag -> Maybe ExtensionSubtag
 toExtensionSubtag s
   | subtagLength s >= 2 = Just $ ExtensionSubtag s
@@ -148,7 +149,11 @@ instance NFData ExtensionSubtag where
 -- Language records
 ----------------------------------------------------------------
 
--- | A primary language subtag record
+-- | A primary language subtag record. Note that the descriptions are
+-- not guaranteed by the registry to be in any particular language or
+-- script. They also happen to be the same descriptions that appear as
+-- semicolon-separated lists next to the constructors of the
+-- 'Language' type.
 data LanguageRecord = LanguageRecord
   { languageDescription :: NonEmpty Text,
     languageDeprecation :: Deprecation Language,
@@ -166,6 +171,11 @@ data LanguageRecord = LanguageRecord
 -- will never be deprecated: these will have a deprecated
 -- 'extlangPreferredValue' exactly when 'extlangDeprecation' is
 -- 'True'.
+--
+-- The descriptions are not guaranteed by the registry to be in any
+-- particular language or script. They also happen to be the same
+-- descriptions that appear as semicolon-separated lists next to the
+-- constructors of the 'Extlang' type.
 data ExtlangRecord = ExtlangRecord
   { extlangDescription :: NonEmpty Text,
     extlangDeprecation :: Bool,
@@ -177,7 +187,11 @@ data ExtlangRecord = ExtlangRecord
   }
   deriving (Eq, Ord)
 
--- | A variant subtag record
+-- | A variant subtag record. Note that the descriptions are not
+-- guaranteed by the registry to be in any particular language or
+-- script. They also happen to be the same descriptions that appear as
+-- semicolon-separated lists next to the constructors of the 'Variant'
+-- type.
 data VariantRecord = VariantRecord
   { variantDescription :: NonEmpty Text,
     variantDeprecation :: Deprecation Variant,
@@ -185,7 +199,11 @@ data VariantRecord = VariantRecord
   }
   deriving (Eq, Ord)
 
--- | A script subtag record
+-- | A script subtag record. Note that the descriptions are not
+-- guaranteed by the registry to be in any particular language or
+-- script. They also happen to be the same descriptions that appear as
+-- semicolon-separated lists next to the constructors of the 'Script'
+-- type.
 data ScriptRecord = ScriptRecord
   { scriptDescription :: NonEmpty Text,
     scriptDeprecation :: Deprecation Script
@@ -193,8 +211,12 @@ data ScriptRecord = ScriptRecord
   deriving (Eq, Ord)
 
 -- | A region subtag record. Note that for deprecated region records,
---  the associated preferred value may not represent the same meaning
---  as the deprecated subtag.
+--  the associated preferred value may not have exactly the same
+--  meaning as the deprecated subtag. Note also that the descriptions
+--  are not guaranteed by the registry to be in any particular
+--  language or script. They also happen to be the same descriptions
+--  that appear as semicolon-separated lists next to the constructors
+--  of the 'Region' type.
 data RegionRecord = RegionRecord
   { regionDescription :: NonEmpty Text,
     regionDeprecation :: Deprecation Region
@@ -206,30 +228,51 @@ data RegionRecord = RegionRecord
 -- that the preferred values associated to their deprecation are an
 -- "extended language range", which is an entire tag that is strongly
 -- recommended as the replacement for the tag.
+--
+-- The descriptions are not guaranteed by the registry to be in any
+-- particular language or script. They also happen to be the same
+-- descriptions that appear as semicolon-separated lists next to the
+-- constructors of the 'Text.LanguageTag.BCP47.Registry.Grandfathered'
+-- and 'Text.LanguageTag.BCP47.Registry.Redundant' tag types.
+
 data RangeRecord = RangeRecord
   { rangeDescription :: NonEmpty Text,
     rangeDeprecation :: Deprecation Normal
   }
   deriving (Eq, Ord)
 
--- | The scope of a language or extended language
+-- | The scope of a language or extended language. If this is not
+-- present in a record then the language is an "individual language",
+-- i.e., what one would normally consider to be a language.
 data Scope
-  = Macrolanguage
-  | Collection
-  | Special
-  | PrivateUseScope
+  = -- | a cluster of closely related languages that are sometimes
+    -- considered to be a single language
+    Macrolanguage
+  | -- | a collection of languages usually related by history or
+    -- geography; a looser relationship than a 'Macrolanguage'
+    Collection
+  | -- | a subtag identifying something not particularly associated
+    -- with a concrete language
+    Special
+  | -- | a subtag reserved for private use
+    PrivateUseScope
   deriving (Eq, Ord, Show)
 
 -- | The deprecation status of a subtag
 data Deprecation a
-  = NotDeprecated
-  | DeprecatedSimple
-  | DeprecatedPreferred a
+  = -- | not deprecated
+    NotDeprecated
+  | -- | deprecated but without a preferred value
+    DeprecatedSimple
+  | -- | deprecated with a preferred value
+    DeprecatedPreferred a
   deriving (Eq, Ord, Show)
 
 -- | Search for an element in a vector with the given key using the
 -- given projection function and return its index. The vector must be
--- sorted with respect to the projection and must be non-empty.
+-- sorted with respect to the projection (otherwise the function will
+-- not work properly) and must be non-empty (otherwise the function
+-- will segfault).
 unsafeBinSearchIndexOn :: Ord b => (a -> b) -> b -> Vector a -> Maybe Int
 unsafeBinSearchIndexOn proj b v = go 0 (V.length v)
   where

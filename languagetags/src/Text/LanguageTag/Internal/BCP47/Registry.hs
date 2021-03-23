@@ -49,4 +49,4 @@ toSyntaxTag (NormalTag n) =
     mto f p x = maybe nullSubtag (justSubtag . f) $ p x
     toExt (c, x) = Syn.Extension c $ fromExtensionSubtag <$> x
 toSyntaxTag (PrivateUseTag x) = Syn.PrivateUse x
-toSyntaxTag (GrandfatheredTag x) = Syn.Grandfathered x
+toSyntaxTag (GrandfatheredTag x) = Syn.GrandfatheredTag x

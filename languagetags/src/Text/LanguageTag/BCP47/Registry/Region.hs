@@ -11,14 +11,15 @@
 module Text.LanguageTag.BCP47.Registry.Region
   ( -- * Region subtags
     Region (..),
+
+    -- * Rendering and conversion
     renderRegion,
     renderRegionBuilder,
     regionToSubtag,
 
-    -- * Region subtag records
+    -- * Records and lookup
     RegionRecord (..),
     lookupRegionRecord,
-    regionDetails,
   )
 where
 

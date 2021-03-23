@@ -12,9 +12,9 @@ import Text.LanguageTag.BCP47.Canonicalization (canonicalizeNormal)
 import Text.LanguageTag.BCP47.Registry.Grandfathered
   ( Grandfathered,
     RangeRecord (..),
-    grandfatheredDetails,
     lookupGrandfatheredRecord,
   )
+import Text.LanguageTag.Internal.BCP47.Registry.GrandfatheredRecords (grandfatheredDetails)
 
 spec :: Spec
 spec = do

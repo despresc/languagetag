@@ -17,10 +17,10 @@ import Text.LanguageTag.BCP47.Registry.Variant
   ( Variant,
     VariantRecord (..),
     lookupVariantRecord,
-    variantDetails,
     variantToSubtag,
   )
 import Text.LanguageTag.BCP47.Validation (validateVariant)
+import Text.LanguageTag.Internal.BCP47.Registry.VariantRecords (variantDetails)
 
 spec :: Spec
 spec = do

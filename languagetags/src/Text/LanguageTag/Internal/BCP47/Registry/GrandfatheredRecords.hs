@@ -1,7 +1,19 @@
+-- |
+-- Description : Internal Grandfathered records
+-- Copyright   : 2021 Christian Despres
+-- License     : BSD-2-Clause
+-- Maintainer  : Christian Despres
+--
+-- Warning\: this is an internal module and may change or disappear
+-- without regard to the PVP.
+--
+-- Internal definitions for the records in the registry for 'Grandfathered' tags
+
 -- This is an auto-generated file. Do not edit by hand.
 
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_HADDOCK not-home #-}
 
 module Text.LanguageTag.Internal.BCP47.Registry.GrandfatheredRecords
   (lookupGrandfatheredRecord, grandfatheredDetails) where
@@ -48,6 +60,6 @@ grandfatheredDetails = V.fromList
   ,RangeRecord ("Minnan, Hokkien, Amoy, Taiwanese, Southern Min, Southern\nFujian, Hoklo, Southern Fukien, Ho-lo" :| []) (DeprecatedPreferred $ Normal Nan Nothing Nothing Nothing S.empty M.empty [])
   ,RangeRecord ("Xiang or Hunanese" :| []) (DeprecatedPreferred $ Normal Hsn Nothing Nothing Nothing S.empty M.empty [])]
 
--- | Look up the subtag and record details associated to the given 'Grandfathered' tag.
+-- | Look up the record details associated to the given 'Grandfathered' tag.
 lookupGrandfatheredRecord :: Grandfathered -> RangeRecord
 lookupGrandfatheredRecord = V.unsafeIndex grandfatheredDetails . fromEnum

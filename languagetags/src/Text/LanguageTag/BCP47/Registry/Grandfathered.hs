@@ -19,7 +19,6 @@ module Text.LanguageTag.BCP47.Registry.Grandfathered
     -- * Grandfathered tag records
     RangeRecord (..),
     lookupGrandfatheredRecord,
-    grandfatheredDetails,
   )
 where
 
@@ -30,10 +29,10 @@ import Text.LanguageTag.Internal.BCP47.Registry.GrandfatheredRecords
 import Text.LanguageTag.Internal.BCP47.Registry.Types
 import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn
 
--- | Render a 'Grandfathered' tag to a 'Syn.BCP47' tag
+-- | Convert a 'Grandfathered' tag to a merely well-formed 'Syn.BCP47'
+-- tag
 grandfatheredSyntax :: Grandfathered -> Syn.BCP47
-grandfatheredSyntax = Syn.Grandfathered
-{-# INLINE grandfatheredSyntax #-}
+grandfatheredSyntax = Syn.GrandfatheredTag
 
 -- | Render a 'Grandfathered' tag to a strict text value
 renderGrandfathered :: Grandfathered -> Text

@@ -5,11 +5,11 @@
 -- Maintainer  : Christian Despres
 --
 -- This module provides the 'canonicalizeBCP47' function to
--- canonicalize 'BCP47' tags according to the relevant section of the
--- specification, available at
--- <https://tools.ietf.org/html/bcp47#section-4.5>. It also exports
--- various helper functions used in that function; these detect and
--- replace tags and subtags with their preferred values.
+-- canonicalize 'BCP47' tags according to the [relevant
+-- section](https://tools.ietf.org/html/bcp47#section-4.5) of the
+-- BCP47 specification. It also exports various helper functions used
+-- in that function; these detect and replace tags and subtags with
+-- their preferred values.
 module Text.LanguageTag.BCP47.Canonicalization
   ( -- * Canonicalization
     canonicalizeBCP47,
@@ -31,11 +31,11 @@ import Text.LanguageTag.BCP47.Registry
 import Text.LanguageTag.BCP47.Validation (validateExtlang)
 
 -- | Canonicalize a 'BCP47' tag. This involves replacing deprecated
--- tags and subtags with their preferred values, if they exist, and
--- replacing tags with an appropriate primary language subtag and
--- extended language subtag with the guaranteed-to-exist preferred
--- primary language subtag, if applicable. See also
--- 'extlangFormBCP47'.
+-- tags and subtags with their preferred values, if they exist. If the
+-- tag also has an appropriate primary language and extended language,
+-- that pair of subtags will be replaced with the guaranteed-to-exist
+-- preferred primary language of the extended language. See also
+-- 'canonicalizeExtlang' and 'extlangFormBCP47'.
 canonicalizeBCP47 :: BCP47 -> BCP47
 canonicalizeBCP47 (NormalTag n) = NormalTag $ canonicalizeNormal n
 canonicalizeBCP47 (GrandfatheredTag t) = canonicalizeGrandfathered t
@@ -69,12 +69,12 @@ canonicalizeGrandfathered t =
 -- | Replace the primary language subtag and extended language subtag
 -- with the extended language subtag's preferred primary language
 -- subtag and remove the extended language subtag, so that, e.g., the
--- tag @zh-cmn@ will be transformed by this function into the tag
--- @cmn@.
+-- tag @zh-cmn-hant-x-more@ will be transformed by this function into
+-- the tag @cmn-hant-x-more@.
 --
 -- Note that the standard permits 'Normal' tags to have an extended
 -- language subtag whose prefix conflicts with the tag's primary
--- language subtag. In these cases no replacement is performed and,
+-- language subtag. In these cases no replacement is performed and so,
 -- e.g., the tag @en-cmn@ will remain unchanged by this function.
 canonicalizeExtlang :: Normal -> Normal
 canonicalizeExtlang n = case extlang n of
@@ -86,25 +86,25 @@ canonicalizeExtlang n = case extlang n of
         }
   _ -> n
 
--- | Replace a language with its preferred value, if it is deprecated
+-- | Replace a language with its preferred value, if it exists
 canonicalizeLanguage :: Language -> Language
 canonicalizeLanguage l = case languageDeprecation $ lookupLanguageRecord l of
   DeprecatedPreferred l' -> l'
   _ -> l
 
--- | Replace a script with its preferred value, if it is deprecated
+-- | Replace a script with its preferred value, if it exists
 canonicalizeScript :: Script -> Script
 canonicalizeScript l = case scriptDeprecation $ lookupScriptRecord l of
   DeprecatedPreferred l' -> l'
   _ -> l
 
--- | Replace a region with its preferred value, if it is deprecated
+-- | Replace a region with its preferred value, if it exists
 canonicalizeRegion :: Region -> Region
 canonicalizeRegion l = case regionDeprecation $ lookupRegionRecord l of
   DeprecatedPreferred l' -> l'
   _ -> l
 
--- | Replace a variant with its preferred value, if it is deprecated
+-- | Replace a variant with its preferred value, if it exists
 canonicalizeVariant :: Variant -> Variant
 canonicalizeVariant l = case variantDeprecation $ lookupVariantRecord l of
   DeprecatedPreferred l' -> l'

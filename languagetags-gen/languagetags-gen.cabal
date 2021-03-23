@@ -25,13 +25,14 @@ executable languagetags-gen
   default-language: Haskell2010
   main-is: Gen.hs
   build-depends:
-    base >=4.12.0.0,
-    text >=1.2,
-    containers >=0.5,
+    languagetags == 0.1.0,
+    base,
+    text,
+    containers,
     bytestring,
     hashable,
     unordered-containers,
     process,
-    languagetags,
-    time
+    time,
+    directory >= 1.3.3.0 && < 1.4,
   ghc-options: -Wall

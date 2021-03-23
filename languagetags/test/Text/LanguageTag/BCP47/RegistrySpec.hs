@@ -24,7 +24,7 @@ import Text.LanguageTag.BCP47.Registry
     toSyntaxTag,
   )
 import Text.LanguageTag.BCP47.Registry.Redundant (recognizeRedundantTag, redundantTrie)
-import Text.LanguageTag.BCP47.Subtag.Trie (trieToPaths)
+import qualified Text.LanguageTag.BCP47.Subtag.Trie as Trie
 import qualified Text.LanguageTag.BCP47.Syntax as Syn
 import Text.LanguageTag.BCP47.Validation (validateBCP47)
 import Text.LanguageTag.Internal.BCP47.Registry.Types (unsafeBinSearchIndexOn)
@@ -59,7 +59,7 @@ spec = do
     let errSyn = fromRight (error "ill-formed redundant trie tag") . Syn.parseBCP47FromSubtags
     let errVal = fromRight (error "invalid redundant trie tag") . validateBCP47
     let rendpath (sts, r) = (errVal $ errSyn $ NE.fromList sts, r)
-    let redpaths = List.sortOn snd $ rendpath <$> trieToPaths redundantTrie
+    let redpaths = List.sortOn snd $ rendpath <$> Trie.fromTrie redundantTrie
     it "has paths that validate to their nodes" $ do
       List.find (\(x, y) -> recognizeRedundantTag x /= Just y) redpaths `shouldBe` Nothing
     it "has exactly the list of redundant tags as nodes" $ do

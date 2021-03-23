@@ -32,11 +32,12 @@ import Text.LanguageTag.BCP47.Subtag
     unpackCharLower,
     unpackSubtag,
     unsafeIndexSubtag,
-    unsafePopChar,
     unwrapSubtag,
     wrapSubtag,
   )
-import Text.LanguageTag.Internal.BCP47.Subtag (SubtagChar (..))
+import Text.LanguageTag.Internal.BCP47.Subtag
+  ( SubtagChar (..),
+  )
 
 {-
 TODO:
@@ -174,12 +175,3 @@ spec = do
     prop "unpacks subtags correctly" $
       forAllShrink genSubtag shrinkSubtag $ \st ->
         T.pack (unpackCharLower <$> unpackSubtag st) === renderSubtagLower st
-  describe "unsafePopChar" $ do
-    prop "behaves like unpackSubtag" $
-      forAllShrink genSubtag shrinkSubtag $ \st ->
-        let chars = go st 0 id []
-            len = subtagLength st
-            go x n acc
-              | n == len = acc
-              | otherwise = let (c, x') = unsafePopChar x in go x' (n + 1) (acc . (c :))
-         in chars === unpackSubtag st

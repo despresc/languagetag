@@ -5,12 +5,12 @@
 {-# OPTIONS_HADDOCK not-home #-}
 
 -- |
--- Description : Subtag types and functions
+-- Description : Internal subtag types and functions
 -- Copyright   : 2021 Christian Despres
 -- License     : BSD-2-Clause
 -- Maintainer  : Christian Despres
 --
--- Warning: this is an internal module and may change or disappear
+-- Warning\: this is an internal module and may change or disappear
 -- without regard to the PVP. The data constructors exported from this
 -- module are also unsafe to use: the values they take are expected by
 -- the rest of the library to satisfy particular invariants that the
@@ -39,6 +39,7 @@ module Text.LanguageTag.Internal.BCP47.Subtag
     SubtagChar (..),
     unpackCharLower,
     unpackCharUpper,
+    unsafeUnpackUpperLetter,
 
     -- * Unsafe functions
     unsafeIndexSubtag,
@@ -47,7 +48,6 @@ where
 
 import Control.DeepSeq (NFData)
 import qualified Data.Bits as Bit
-import qualified Data.ByteString.Internal as BI
 import Data.Hashable (Hashable (..))
 import qualified Data.List as List
 import qualified Data.Text.Lazy.Builder as TB
@@ -55,6 +55,12 @@ import qualified Data.Vector.Generic as VG
 import qualified Data.Vector.Generic.Mutable as VGM
 import Data.Vector.Unboxed (MVector, Vector)
 import Data.Word (Word64, Word8)
+import GHC.Base (unsafeChr)
+
+-- From bytestring's Data.ByteString.Internal
+w2c :: Word8 -> Char
+w2c = unsafeChr . fromIntegral
+{-# INLINE w2c #-}
 
 ----------------------------------------------------------------
 -- Subtags
@@ -83,13 +89,13 @@ unwrapSubtag :: Subtag -> Word64
 unwrapSubtag (Subtag n) = n
 {-# INLINE unwrapSubtag #-}
 
--- | Return the length of a subtag, which will be between 1 and 8.
+-- | Return the length of a subtag, which will be between 1 and 8
 subtagLength :: Subtag -> Word8
 subtagLength = fromIntegral . (Bit..&.) sel . unwrapSubtag
   where
     sel = 15
 
--- | Return the length of a subtag, which will be between 1 and 8.
+-- | Return the length of a subtag, which will be between 1 and 8
 subtagLength' :: Subtag -> Int
 subtagLength' = fromIntegral . (Bit..&.) sel . unwrapSubtag
   where
@@ -180,7 +186,7 @@ wrapSubtag n
 -- Maybe subtags
 ----------------------------------------------------------------
 
--- | A subtag that may not be present. Equivalent to @'Maybe'
+-- | A subtag that might be absent. Equivalent to @'Maybe'
 -- 'Subtag'@. Use 'justSubtag' and 'nullSubtag' to construct these,
 -- and 'maybeSubtag' to eliminate them.
 newtype MaybeSubtag = MaybeSubtag {unMaybeSubtag :: Subtag}
@@ -209,8 +215,8 @@ nullSubtag = MaybeSubtag (Subtag 0)
 -- Subtag characters
 ----------------------------------------------------------------
 
--- | The encoding of a valid subtag character (an ASCII lower case
--- alphabetic character or digit)
+-- | The encoding of a valid subtag character (a case-insensitive
+-- ASCII alphabetic character or digit)
 newtype SubtagChar = SubtagChar {unSubtagChar :: Word8}
   deriving (Eq, Ord, Show, Hashable)
 
@@ -219,14 +225,20 @@ newtype SubtagChar = SubtagChar {unSubtagChar :: Word8}
 
 -- N.B. will want unpackChar if the scope of Subtag ever expands
 unpackCharLower :: SubtagChar -> Char
-unpackCharLower (SubtagChar w) = BI.w2c w
+unpackCharLower (SubtagChar w) = w2c w
 
 -- | Unpack an ASCII alphanumeric character from a 'SubtagChar' to an
 -- upper case 'Char'
 unpackCharUpper :: SubtagChar -> Char
 unpackCharUpper (SubtagChar w)
-  | w >= 97 = BI.w2c $ w - 32
-  | otherwise = BI.w2c w
+  | w >= 97 = w2c $ w - 32
+  | otherwise = w2c w
+
+-- | Convert a packed letter to an unpacked upper case letter. The
+-- input must be a letter.
+unsafeUnpackUpperLetter :: SubtagChar -> Char
+unsafeUnpackUpperLetter (SubtagChar w) =
+  w2c $ w - 32
 
 ----------------------------------------------------------------
 -- Subtag indexing and rendering
@@ -247,7 +259,7 @@ unsafeIndexSubtag (Subtag n) idx =
 subtagHead :: Subtag -> SubtagChar
 subtagHead = (`unsafeIndexSubtag` 0)
 
--- | Unpack a 'Subtag' into its constituent 'SubtagChar' elements.
+-- | Unpack a 'Subtag' into its constituent 'SubtagChar' elements
 unpackSubtag :: Subtag -> [SubtagChar]
 unpackSubtag w = List.unfoldr go 0
   where
@@ -259,7 +271,7 @@ unpackSubtag w = List.unfoldr go 0
          in Just (c, idx + 1)
 {-# INLINE unpackSubtag #-}
 
--- | Render a subtag to a lower case lazy text builder
+-- | Render a subtag to a lazy text builder in lower case
 
 -- N.B. will want a plain renderSubtagBuilder and renderSubtag if the
 -- scope of Subtag ever expands
@@ -267,12 +279,12 @@ renderSubtagBuilderLower :: Subtag -> TB.Builder
 renderSubtagBuilderLower = TB.fromString . fmap unpackCharLower . unpackSubtag
 {-# INLINE renderSubtagBuilderLower #-}
 
--- | Render a subtag to an upper case lazy text builder
+-- | Render a subtag to a lazy text builder in upper case
 renderSubtagBuilderUpper :: Subtag -> TB.Builder
 renderSubtagBuilderUpper = TB.fromString . fmap unpackCharUpper . unpackSubtag
 {-# INLINE renderSubtagBuilderUpper #-}
 
--- | Render a subtag to a title case lazy text builder
+-- | Render a subtag to a lazy text builder in title case
 renderSubtagBuilderTitle :: Subtag -> TB.Builder
 renderSubtagBuilderTitle = TB.fromString . go . unpackSubtag
   where

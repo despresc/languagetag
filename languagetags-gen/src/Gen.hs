@@ -33,6 +33,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import Data.Time.Calendar (Day (..))
+import System.Directory (doesDirectoryExist)
 import Text.LanguageTag.BCP47.Registry (Deprecation (..), Scope (..))
 import Text.LanguageTag.BCP47.Subtag
   ( Subtag,
@@ -53,27 +54,21 @@ Tests of:
 
 - parseRawRecord, at least on select tags of different types
 
-Might also like to diff the parsed registry against the old one, for
-linting purposes (e.g. to verify that we haven't registered changes in
-(sub)tag information that should never be changed).
-
-Should move this to a separate package (making this a monorepo).
-
-I think that the registry records could be vectors, actually, because
-the registered subtag enums and their corresponding subtags have the
-same ordering and we already produce a sorted list of records. So we
-could implement a binary search and only keep around the one copy of
-the registries. Might be more efficient.
+Should also reduce the hideous duplication in the module rendering
+functions.
 -}
 
 main :: IO ()
 main = do
-  (u, r) <- readLocalRegistry
+  b <- doesDirectoryExist "./languagetags-gen"
+  let prefgen = if b then "./languagetags-gen" else "../languagetags-gen"
+  let preflang = if b then "./languagetags" else "../languagetags"
+  (u, r) <- readLocalRegistry prefgen
   unless (null u) $ do
     putStrLn "Unrecognized BCP47 registry tag fields:"
     print u
   putStrLn "writing the internal modules"
-  renderSplitRegistry $ splitRegistry r
+  renderSplitRegistry preflang $ splitRegistry r
 
 ----------------------------------------------------------------
 -- Parsing record jars and fetching the BCP47 registry
@@ -411,8 +406,8 @@ parseRegistryThrow inp = do
   jars <- either jarErr pure $ parseJarFile inp
   either tagErr pure $ parseRegistry jars
 
-readLocalRegistry :: IO ([(LineNum, Text)], RawRegistry)
-readLocalRegistry = T.readFile "./registry/bcp47" >>= parseRegistryThrow
+readLocalRegistry :: FilePath -> IO ([(LineNum, Text)], RawRegistry)
+readLocalRegistry pref = T.readFile (pref <> "/registry/bcp47") >>= parseRegistryThrow
 
 -- Unpack the four known registry ranges. In the unlikely even that
 -- more are added, the code generator will probably fail!
@@ -549,6 +544,21 @@ splitRegistry (RawRegistry regdate rs) =
 warning :: Text
 warning = "-- This is an auto-generated file. Do not edit by hand."
 
+moduleDoc :: Text -> [Text] -> [Text]
+moduleDoc shortdesc desc =
+  [ "-- |",
+    "-- Description : " <> shortdesc,
+    "-- Copyright   : 2021 Christian Despres",
+    "-- License     : BSD-2-Clause",
+    "-- Maintainer  : Christian Despres",
+    "--"
+  ]
+    <> (go <$> desc)
+  where
+    go t
+      | T.null t = "--"
+      | otherwise = "-- " <> t
+
 escapeHaddockChars :: Text -> Text
 escapeHaddockChars = T.concatMap go
   where
@@ -586,6 +596,7 @@ renderSubtagModuleWith tyname tydescription docnote proj sel reg =
     [ warning,
       "",
       "{-# LANGUAGE NoImplicitPrelude #-}",
+      "{-# OPTIONS_HADDOCK not-home #-}",
       "",
       "module Text.LanguageTag.Internal.BCP47.Registry." <> tyname <> " where",
       "",
@@ -653,31 +664,40 @@ renderRecordModuleWith ::
   Text
 renderRecordModuleWith tyname imps proj rend reg =
   T.unlines $
-    [ warning,
-      "",
-      "{-# LANGUAGE NoImplicitPrelude #-}",
-      "{-# LANGUAGE OverloadedStrings #-}",
-      "",
-      "module Text.LanguageTag.Internal.BCP47.Registry." <> tyname <> "Records",
-      "  ("
-        <> T.intercalate
-          ", "
-          [ lookupname1,
-            lookupname2,
-            lookupname3,
-            lookupname4,
-            detailTableName
-          ]
-        <> ") where",
-      "",
-      "import Prelude hiding (LT, GT)",
-      "import Text.LanguageTag.Internal.BCP47.Registry." <> tyname,
-      "import Text.LanguageTag.Internal.BCP47.Registry.Types",
-      "import Data.List.NonEmpty (NonEmpty(..))",
-      "import Data.Vector (Vector)",
-      "import qualified Data.Vector as V",
-      "import Text.LanguageTag.Internal.BCP47.Subtag (Subtag(..))"
-    ]
+    moduleDoc
+      (tyname <> " record definitions")
+      [ "Warning\\: this is an internal module and may change or disappear",
+        "without regard to the PVP.",
+        "",
+        "Internal definitions for the records in the registry for '" <> tyname <> "' subtags."
+      ]
+      <> [ "",
+           warning,
+           "",
+           "{-# LANGUAGE NoImplicitPrelude #-}",
+           "{-# LANGUAGE OverloadedStrings #-}",
+           "{-# OPTIONS_HADDOCK not-home #-}",
+           "",
+           "module Text.LanguageTag.Internal.BCP47.Registry." <> tyname <> "Records",
+           "  ("
+             <> T.intercalate
+               ", "
+               [ lookupname1,
+                 lookupname2,
+                 lookupname3,
+                 lookupname4,
+                 detailTableName
+               ]
+             <> ") where",
+           "",
+           "import Prelude hiding (LT, GT)",
+           "import Text.LanguageTag.Internal.BCP47.Registry." <> tyname,
+           "import Text.LanguageTag.Internal.BCP47.Registry.Types",
+           "import Data.List.NonEmpty (NonEmpty(..))",
+           "import Data.Vector (Vector)",
+           "import qualified Data.Vector as V",
+           "import Text.LanguageTag.Internal.BCP47.Subtag (Subtag(..))"
+         ]
       <> imps
       <> [""]
       <> theDetailTable
@@ -727,11 +747,6 @@ renderRecordModuleWith tyname imps proj rend reg =
       ]
 
 -- TODO: duplication, obviously, and rename this to renderRedundant...
--- TODO: should rename redundantToValidTag to redundantToNormal,
--- perhaps, and similarly with redundantToSyntaxTag, then can remove
--- certain definitions in Registry.Redundant. Also consider exporting
--- all of those internal modules and not exporting the details from
--- the normal modules.
 renderRangeRecordModuleWith ::
   -- | the type name
   Text ->
@@ -746,31 +761,40 @@ renderRangeRecordModuleWith ::
   Text
 renderRangeRecordModuleWith tyname imps proj rend reg =
   T.unlines $
-    [ warning,
-      "",
-      "{-# LANGUAGE NoImplicitPrelude #-}",
-      "{-# LANGUAGE OverloadedStrings #-}",
-      "",
-      "module Text.LanguageTag.Internal.BCP47.Registry." <> tyname <> "Records",
-      "  ("
-        <> T.intercalate
-          ", "
-          [ lookupname1,
-            lookupname2,
-            lookupname3,
-            lookupname4,
-            detailTableName
-          ]
-        <> ") where",
-      "",
-      "import Prelude hiding (LT, GT)",
-      "import Text.LanguageTag.Internal.BCP47.Registry." <> tyname,
-      "import Text.LanguageTag.Internal.BCP47.Registry.Types",
-      "import Data.List.NonEmpty (NonEmpty(..))",
-      "import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn",
-      "import Data.Vector (Vector)",
-      "import qualified Data.Vector as V"
-    ]
+    moduleDoc
+      (tyname <> " record definitions")
+      [ "Warning\\: this is an internal module and may change or disappear",
+        "without regard to the PVP.",
+        "",
+        "Internal definitions for the records in the registry for '" <> tyname <> "' tags"
+      ]
+      <> [ "",
+           warning,
+           "",
+           "{-# LANGUAGE NoImplicitPrelude #-}",
+           "{-# LANGUAGE OverloadedStrings #-}",
+           "{-# OPTIONS_HADDOCK not-home #-}",
+           "",
+           "module Text.LanguageTag.Internal.BCP47.Registry." <> tyname <> "Records",
+           "  ("
+             <> T.intercalate
+               ", "
+               [ lookupname1,
+                 lookupname2,
+                 lookupname3,
+                 lookupname4,
+                 detailTableName
+               ]
+             <> ") where",
+           "",
+           "import Prelude hiding (LT, GT)",
+           "import Text.LanguageTag.Internal.BCP47.Registry." <> tyname,
+           "import Text.LanguageTag.Internal.BCP47.Registry.Types",
+           "import Data.List.NonEmpty (NonEmpty(..))",
+           "import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn",
+           "import Data.Vector (Vector)",
+           "import qualified Data.Vector as V"
+         ]
       <> imps
       <> [""]
       <> detailsTable
@@ -796,15 +820,15 @@ renderRangeRecordModuleWith tyname imps proj rend reg =
     lookup1 =
       [ "-- | Look up the tag and record details associated to the given '" <> tyname <> "' tag",
         lookupname1 <> " :: " <> tyname <> " -> (Normal, Syn.Normal, RangeRecord)",
-        "lookup" <> tyname <> "Details = V.unsafeIndex " <> detailTableName <> " . fromEnum"
+        lookupname1 <> " = V.unsafeIndex " <> detailTableName <> " . fromEnum"
       ]
-    lookupname2 = T.toLower tyname <> "ToValidTag"
+    lookupname2 = T.toLower tyname <> "ToValidNormal"
     lookup2 =
       [ "-- | Convert a '" <> tyname <> "' tag to a 'Normal' validated tag",
         lookupname2 <> " :: " <> tyname <> " -> Normal",
         lookupname2 <> " = (\\(x, _, _) -> x) . " <> lookupname1
       ]
-    lookupname3 = T.toLower tyname <> "ToSyntaxTag"
+    lookupname3 = T.toLower tyname <> "ToSyntaxNormal"
     lookup3 =
       [ "-- | Convert a '" <> tyname <> "' tag to a merely well-formed tag",
         lookupname3 <> " :: " <> tyname <> " -> Syn.Normal",
@@ -841,21 +865,30 @@ renderGrandfatheredRecordModule ::
   Text
 renderGrandfatheredRecordModule tyname imps proj rend reg =
   T.unlines $
-    [ warning,
-      "",
-      "{-# LANGUAGE NoImplicitPrelude #-}",
-      "{-# LANGUAGE OverloadedStrings #-}",
-      "",
-      "module Text.LanguageTag.Internal.BCP47.Registry.GrandfatheredRecords",
-      "  (lookupGrandfatheredRecord, grandfatheredDetails) where",
-      "",
-      "import Prelude hiding (LT, GT)",
-      "import Text.LanguageTag.Internal.BCP47.Registry.Grandfathered",
-      "import Text.LanguageTag.Internal.BCP47.Registry.Types",
-      "import Data.List.NonEmpty (NonEmpty(..))",
-      "import Data.Vector (Vector)",
-      "import qualified Data.Vector as V"
-    ]
+    moduleDoc
+      ("Internal " <> tyname <> " records")
+      [ "Warning\\: this is an internal module and may change or disappear",
+        "without regard to the PVP.",
+        "",
+        "Internal definitions for the records in the registry for '" <> tyname <> "' tags"
+      ]
+      <> [ "",
+           warning,
+           "",
+           "{-# LANGUAGE NoImplicitPrelude #-}",
+           "{-# LANGUAGE OverloadedStrings #-}",
+           "{-# OPTIONS_HADDOCK not-home #-}",
+           "",
+           "module Text.LanguageTag.Internal.BCP47.Registry.GrandfatheredRecords",
+           "  (lookupGrandfatheredRecord, grandfatheredDetails) where",
+           "",
+           "import Prelude hiding (LT, GT)",
+           "import Text.LanguageTag.Internal.BCP47.Registry.Grandfathered",
+           "import Text.LanguageTag.Internal.BCP47.Registry.Types",
+           "import Data.List.NonEmpty (NonEmpty(..))",
+           "import Data.Vector (Vector)",
+           "import qualified Data.Vector as V"
+         ]
       <> imps
       <> [""]
       <> detailsTable
@@ -874,7 +907,7 @@ renderGrandfatheredRecordModule tyname imps proj rend reg =
       error $ "renderRecordModuleWith: given a registry with one entry for" <> T.unpack tyname
     lookupname1 = "lookup" <> tyname <> "Record"
     lookup1 =
-      [ "-- | Look up the subtag and record details associated to the given 'Grandfathered' tag.",
+      [ "-- | Look up the record details associated to the given 'Grandfathered' tag.",
         lookupname1 <> " :: " <> tyname <> " -> RangeRecord",
         lookupname1 <> " = V.unsafeIndex " <> detailTableName <> " . fromEnum"
       ]
@@ -910,6 +943,7 @@ renderModuleWith tyname tydescription docnote d sel rs =
     [ warning,
       "",
       "{-# LANGUAGE NoImplicitPrelude #-}",
+      "{-# OPTIONS_HADDOCK not-home #-}",
       "",
       "module " <> modulename <> " where",
       "",
@@ -983,8 +1017,8 @@ rendSubtag x = T.pack $ "Subtag " <> show (unwrapSubtag $ parseSubtag' x)
 
 -- TODO: write resolveRef functions for each of the registry components
 
-renderSplitRegistry :: Registry -> IO ()
-renderSplitRegistry sr = do
+renderSplitRegistry :: FilePath -> Registry -> IO ()
+renderSplitRegistry pref sr = do
   traverse_
     (rendwrite intprefix)
     [ ("Language.hs", rendlang),
@@ -1005,7 +1039,7 @@ renderSplitRegistry sr = do
     ]
   where
     rendwrite p (x, y) = T.writeFile (p <> x) $ y sr
-    intprefix = "../languagetags/src/Text/LanguageTag/Internal/BCP47/Registry/"
+    intprefix = pref <> "/src/Text/LanguageTag/Internal/BCP47/Registry/"
     regdatemodule =
       T.unlines
         [ warning,
@@ -1014,7 +1048,7 @@ renderSplitRegistry sr = do
           "",
           "import Data.Time.Calendar (Day(..))",
           "",
-          "-- | The date of the BCP47 subtag registry that this library uses. The current value is: "
+          "-- | The date of the BCP47 registry that this library uses. The current value is: "
             <> T.pack (show (date sr))
             <> ".",
           "bcp47RegistryDate :: Day",
@@ -1031,7 +1065,7 @@ renderSplitRegistry sr = do
     rendextlang = renderSubtagModuleWith
       "Extlang"
       "extended language"
-      "These are prefixed with \"Ext\" because they may overlap with primary language subtags. Note that if extended language subtags have a preferred value, then it refers to a primary language subtag."
+      "These are prefixed with \"Ext\" because they would otherwise overlap with the primary language subtags. Note that the preferred values of these subtags refer to primary language subtags."
       extlangRecords
       $ \(ExtlangRecord a x y z _ _ _ _) ->
         ( a,
@@ -1070,7 +1104,7 @@ renderSplitRegistry sr = do
       renderModuleWith
         "Redundant"
         "redundant"
-        "The names of redundant constructors come from the corresponding tag, by converting the subtags to title case then removing the intermediate dashes."
+        "The names of redundant constructors are derived from the corresponding tag by converting the subtags to title case and then removing the intermediate dashes."
         (date sr)
         $ \(RangeRecord a x y) -> (a, x, y, Nothing)
 

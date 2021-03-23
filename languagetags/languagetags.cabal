@@ -13,12 +13,11 @@ description:
   This library aims to provide tools for parsing and analyzing a
   variety of different language tags, /language tag/ meaning some code
   in a standard for identifying human languages. Currently it only
-  supports checking the syntactic well-formedness and semantic
-  validity of [BCP47 language tags](https://tools.ietf.org/html/bcp47)
-  as of its current 2009 version, as well as canonicalizing such
-  tags. The registered subtag types and other relevant registry
-  functions are statically generated using data from the IANA Language
-  Subtag Registry, available from
+  supports the processing of [BCP47 language
+  tags](https://tools.ietf.org/html/bcp47) as of the current 2009
+  version of that standard. The registered tag and subtag types and
+  other relevant registry functions are statically generated using
+  data from the IANA Language Subtag Registry, available from
   <https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry>. See
   the Registry submodule for the exact registry version this library
   uses.
@@ -31,16 +30,16 @@ library
   hs-source-dirs: src
   default-language: Haskell2010
   build-depends:
-    base >=4.12.0.0,
-    text >=1.2,
-    containers >=0.6.3.1,
-    bytestring,
-    hashable,
-    unordered-containers,
-    deepseq,
-    time,
-    vector,
-    template-haskell
+    base >= 4.12 && < 4.15,
+    text >= 1.2.3.0 && < 1.3,
+    containers >= 0.6.0.1 && < 0.7,
+    bytestring >= 0.10.8.0 && < 0.11,
+    hashable >= 1.2.7.0 && < 1.4,
+    unordered-containers >= 0.2.9.0 && < 0.3,
+    deepseq >= 1.4.4.0 && < 1.5,
+    time >= 1.6 && < 1.12,
+    vector >= 0.12.0.1 && < 0.13,
+    template-haskell >= 2.14.0.0 && < 2.17
   ghc-options: -Wall
   exposed-modules:
     Text.LanguageTag.BCP47.Canonicalization
@@ -54,34 +53,35 @@ library
     Text.LanguageTag.BCP47.Registry.Script
     Text.LanguageTag.BCP47.Registry.Variant
     Text.LanguageTag.BCP47.Subtag
+    Text.LanguageTag.BCP47.Subtag.NonEmptyTrie
     Text.LanguageTag.BCP47.Subtag.Trie
     Text.LanguageTag.BCP47.Syntax
     Text.LanguageTag.BCP47.Syntax.Trie
     Text.LanguageTag.BCP47.Validation
     Text.LanguageTag.Internal.BCP47.Registry.DataConShow
+    Text.LanguageTag.Internal.BCP47.Registry.ExtlangRecords
+    Text.LanguageTag.Internal.BCP47.Registry.GrandfatheredRecords
+    Text.LanguageTag.Internal.BCP47.Registry.LanguageRecords
+    Text.LanguageTag.Internal.BCP47.Registry.RedundantRecords
+    Text.LanguageTag.Internal.BCP47.Registry.RegionRecords
+    Text.LanguageTag.Internal.BCP47.Registry.ScriptRecords
     Text.LanguageTag.Internal.BCP47.Registry.Types
+    Text.LanguageTag.Internal.BCP47.Registry.VariantRecords
     Text.LanguageTag.Internal.BCP47.Subtag
+    Text.LanguageTag.Internal.BCP47.Subtag.NonEmptyTrie
     Text.LanguageTag.Internal.BCP47.Subtag.Trie
     Text.LanguageTag.Internal.BCP47.Syntax
-
   other-modules:
     Text.LanguageTag.Internal.BCP47.Registry
     Text.LanguageTag.Internal.BCP47.Registry.Date
     Text.LanguageTag.Internal.BCP47.Registry.Extlang
-    Text.LanguageTag.Internal.BCP47.Registry.ExtlangRecords
     Text.LanguageTag.Internal.BCP47.Registry.Grandfathered
-    Text.LanguageTag.Internal.BCP47.Registry.GrandfatheredRecords
     Text.LanguageTag.Internal.BCP47.Registry.Language
-    Text.LanguageTag.Internal.BCP47.Registry.LanguageRecords
     Text.LanguageTag.Internal.BCP47.Registry.Orphans
     Text.LanguageTag.Internal.BCP47.Registry.Redundant
-    Text.LanguageTag.Internal.BCP47.Registry.RedundantRecords
     Text.LanguageTag.Internal.BCP47.Registry.Region
-    Text.LanguageTag.Internal.BCP47.Registry.RegionRecords
     Text.LanguageTag.Internal.BCP47.Registry.Script
-    Text.LanguageTag.Internal.BCP47.Registry.ScriptRecords
     Text.LanguageTag.Internal.BCP47.Registry.Variant
-    Text.LanguageTag.Internal.BCP47.Registry.VariantRecords
 
 test-suite test
   type: exitcode-stdio-1.0
@@ -89,7 +89,16 @@ test-suite test
   main-is: Spec.hs
   hs-source-dirs:
     test
-  build-depends: languagetags, base, text, containers, deepseq, hspec, QuickCheck, vector
+  build-depends:
+    languagetags,
+    base,
+    text,
+    containers,
+    deepseq,
+    vector,
+    unordered-containers,
+    hspec,
+    QuickCheck,
   ghc-options: -Wall
   other-modules:
     Test.Common
@@ -105,3 +114,4 @@ test-suite test
     Text.LanguageTag.BCP47.RegistrySpec
     Text.LanguageTag.BCP47.SubtagSpec
     Text.LanguageTag.BCP47.SyntaxSpec
+    Text.LanguageTag.BCP47.TrieSpec

@@ -12,14 +12,15 @@
 module Text.LanguageTag.BCP47.Registry.Extlang
   ( -- * Extended language subtags
     Extlang (..),
+
+    -- * Rendering and conversion
     renderExtlang,
     renderExtlangBuilder,
     extlangToSubtag,
 
-    -- * Extended language subtag records
+    -- * Records and lookup
     ExtlangRecord (..),
     lookupExtlangRecord,
-    extlangDetails,
   )
 where
 
