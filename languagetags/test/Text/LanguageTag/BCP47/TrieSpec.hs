@@ -15,6 +15,7 @@ import Test.QuickCheck
     forAllShrink,
     liftArbitrary,
     shrink,
+    (.&&.),
     (===),
   )
 import Text.LanguageTag.BCP47.Subtag (Subtag)
@@ -96,7 +97,8 @@ spec = do
         forAllEntry $ \(p, a) ->
           forAllPath $ \p' ->
             Trie.lookupLax (p <> p') (Trie.prunePast p $ Trie.insert p a t) === Just a
-  -- A small test of the manual Foldable instance
+  -- A small test of the manual Foldable instance, and I suppose of
+  -- the semigroup instance too
   describe "length" $ do
     prop "adds on disjoint tries" $ do
       let disSplit t = do
@@ -106,6 +108,10 @@ spec = do
             s <- chooseInt (q, l - q)
             let (x, y) = splitAt s t'
             pure (Trie.toTrie x, Trie.toTrie y)
-      forAll' $ \t ->
+      forAllSemi $ \t ->
         forAll (disSplit t) $ \(u, v) ->
-          length u + length v === length t
+          length u + length v === length (u <> v) .&&. length (u <> v) === length t
+    prop "is sub-additive on all tries" $ do
+      forAllSemi $ \t ->
+        forAllSemi $ \u ->
+          length (t <> u) <= length t + length u
