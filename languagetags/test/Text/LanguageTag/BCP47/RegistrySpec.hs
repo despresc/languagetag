@@ -1,9 +1,13 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Text.LanguageTag.BCP47.RegistrySpec (spec) where
 
 import Data.Either (fromRight)
+import Data.Foldable (toList)
 import qualified Data.List as List
 import qualified Data.List.NonEmpty as NE
 import Data.Maybe (mapMaybe)
+import qualified Data.Text as T
 import qualified Data.Vector as V
 import Test.Common
 import Test.Hspec
@@ -21,15 +25,19 @@ import Text.LanguageTag.BCP47.Registry
   ( recognizeRedundantNormal,
     redundantToNormalTag,
     redundantToValidTag,
+    renderBCP47,
+    toSubtags,
     toSyntaxTag,
   )
 import Text.LanguageTag.BCP47.Registry.Redundant (recognizeRedundantTag, redundantTrie)
+import Text.LanguageTag.BCP47.Subtag (renderSubtagLower)
 import qualified Text.LanguageTag.BCP47.Subtag.Trie as Trie
 import qualified Text.LanguageTag.BCP47.Syntax as Syn
 import Text.LanguageTag.BCP47.Validation (validateBCP47)
 import Text.LanguageTag.Internal.BCP47.Registry.Types (unsafeBinSearchIndexOn)
 
--- TODO: unit testing of validation
+-- TODO: unit testing of validation, rendering (especially for things
+-- like variant and extension ordering)
 
 spec :: Spec
 spec = do
@@ -57,6 +65,19 @@ spec = do
     prop "composes with validateBCP47 correctly on the right" $
       forAllShrink genValidTag shrinkValidTag $ \tg ->
         validateBCP47 (toSyntaxTag tg) === Right tg
+  describe "renderBCP47" $ do
+    prop "equals the toSubtags implementation up to case" $
+      forAllShrink genValidTag shrinkValidTag $ \tg ->
+        T.toLower (renderBCP47 tg)
+          === T.intercalate
+            "-"
+            ( fmap renderSubtagLower $
+                toList $ toSubtags tg
+            )
+    prop "generates text that validates to the same tag" $
+      forAllShrink genValidTag shrinkValidTag $ \tg ->
+        let tg' = fmap validateBCP47 $ Syn.parseBCP47 $ renderBCP47 tg
+         in tg' === Right (Right tg)
   describe "redundantTrie" $ do
     let errSyn = fromRight (error "ill-formed redundant trie tag") . Syn.parseBCP47FromSubtags
     let errVal = fromRight (error "invalid redundant trie tag") . validateBCP47

@@ -73,7 +73,6 @@ library
     Text.LanguageTag.Internal.BCP47.Subtag.Trie
     Text.LanguageTag.Internal.BCP47.Syntax
   other-modules:
-    Text.LanguageTag.Internal.BCP47.Registry
     Text.LanguageTag.Internal.BCP47.Registry.Date
     Text.LanguageTag.Internal.BCP47.Registry.Extlang
     Text.LanguageTag.Internal.BCP47.Registry.Grandfathered

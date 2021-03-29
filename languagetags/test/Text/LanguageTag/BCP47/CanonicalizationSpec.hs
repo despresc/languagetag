@@ -32,7 +32,16 @@ import Text.LanguageTag.BCP47.Registry
   )
 
 -- TODO: more unit testing of canonicalization (not just the redundant
--- tags)
+-- tags), and testing of categorizeVariants, lintBCP47, and the
+-- warnings that are returned from them. For example, test:
+--
+-- - that categorizeVariants uses each of the variants of the original
+--   tag (and no others, not that it's likely to introduce new
+--   variants)
+--
+-- - that only non-fixed warnings are returned after running lintBCP47
+--   twice, and perhaps also that they're the same as the last time
+--   (up to reordering?)
 
 redundantTags :: [(Redundant, Text)]
 redundantTags =

@@ -15,6 +15,7 @@ module Text.LanguageTag.BCP47.Registry.Grandfathered
     renderGrandfathered,
     renderGrandfatheredBuilder,
     grandfatheredSyntax,
+    Syn.grandfatheredToSubtags,
 
     -- * Grandfathered tag records
     RangeRecord (..),

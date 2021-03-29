@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE TupleSections #-}
 
@@ -284,6 +285,24 @@ listVariantChains (VariantChains t) = foldr go [] t
       | otherwise =
         (NE.cons v <$> listVariantChains (VariantChains vcs)) <> l
 
+-- | Enumerate the variants in a 'VariantChains' so that if @x@ and
+-- @y@ are variants in the chain and @x@ occurs before @y@ anywhere in
+-- the depth-first traversal, then @x@ will occur before @y@ in the
+-- output list.
+enumerateChainVariants :: VariantChains -> [Variant]
+enumerateChainVariants (VariantChains x) = fst $ unfoldChains x [] mempty
+  where
+    -- This definition has the effect of a double-reversal, since we
+    -- need to go through the chains back-to-front. Could be avoided
+    -- with a Sequence, but the VariantChains occurring in practice
+    -- will be very small, so it shouldn't be an issue.
+    unfoldChains chains vlist usedVariants = foldl' go (vlist, usedVariants) (reverse chains)
+    go (!vlist, !usedVariants) (v, VariantChains subchains)
+      | v `S.member` usedVariants' = (vlist', usedVariants')
+      | otherwise = (v : vlist', S.insert v usedVariants')
+      where
+        (vlist', usedVariants') = unfoldChains subchains vlist usedVariants
+
 -- | Get the set of all the variants appearing in the input
 -- 'VariantChains'
 variantsInChains :: VariantChains -> Set Variant
@@ -360,12 +379,12 @@ splitPrefixedVariants = S.partition $ not . null . variantPrefixes . lookupVaria
 --   organized into a tree by common prefixes (with children sorted
 --   alphabetically);
 --
--- * @prefs@ is the set of all the variants in @'variants' n@ that
---   have at least one prefix in the registry (the entries of @chains@
---   will be elements of this set); and
+-- * @prefs@ is the set of variants in @'variants' n@ that have at
+--   least one prefix in the registry (the entries of @chains@ will be
+--   elements of this set); and
 --
--- * @noprefs@ is the set of all the variants in @'variants' n@ that
---   have no prefixes in the registry.
+-- * @noprefs@ is the set of variants in @'variants' n@ that have no
+--   prefixes in the registry.
 --
 -- In a tag following the standard's recommendations, @chains@ will
 -- have exactly one path using all of the elements of @prefs@ once if
@@ -385,37 +404,36 @@ splitPrefixedVariants = S.partition $ not . null . variantPrefixes . lookupVaria
 -- output would be
 --
 -- @
--- VariantChains
---   [(Rozaj,
---     VariantChains
---       [(Biske, VariantChains [(Var1994, VariantChains [])]),
---        (Njiva, VariantChains [(Var1994, VariantChains [])])
+-- 'VariantChains'
+--   [('Text.LanguageTag.BCP47.Registry.Variant.Rozaj',
+--     'VariantChains'
+--       [('Text.LanguageTag.BCP47.Registry.Variant.Biske', 'VariantChains' [('Text.LanguageTag.BCP47.Registry.Variant.Var1994', 'VariantChains' [])]),
+--        ('Text.LanguageTag.BCP47.Registry.Variant.Njiva', 'VariantChains' [('Text.LanguageTag.BCP47.Registry.Variant.Var1994', 'VariantChains' [])])
 --       ])]
 -- @
 --
 -- This function exists in part to satisfy the standard's recommended
--- presentation of variants in a tag, given in [page 57, item
--- 6](https://tools.ietf.org/html/bcp47#page-1-57), and elsewhere. For
--- a tag using variants as recommended (see the [section on
--- variants](https://tools.ietf.org/html/bcp47#section-2.2.5)), the
--- (single) chain of variants with satisfied prefixes should appear
--- first, followed by any general purpose variants (variants without
--- prefixes). If a tag has variants with unsatisfied prefixes, or has
--- more than one prefix chain, there isn't a good way of ordering the
--- variants; one possible way is to enumerate the variants in the
--- 'VariantChains' (perhaps depth-first), then append the general
--- purpose variants in alphabetical order, then append the remaining
--- prefixes in alphabetical order. Another way is to choose a single
--- prefix chain to have at the beginning, followed by the general
--- purpose variants and any leftovers. So some possible presentations
--- of the @sl-rozaj-biske-njiva-1994-alalc97-1606nict@ tag are
+-- presentation of variants in a tag, given in [item 6, page
+-- 57](https://tools.ietf.org/html/bcp47#page-1-57) and
+-- elsewhere. Since the standard is not totally precise about the
+-- ordering of variants that don't satisfy its recommendations, this
+-- library uses the ordering:
 --
 -- @
--- "sl-rozaj-biske-njiva-1994-alalc97-1606nict"
--- "sl-rozaj-biske-1994-njiva-alalc97-1606nict"
--- "sl-rozaj-biske-1994-alalc97-1606nict-njiva"
--- "sl-rozaj-njiva-1994-alalc97-1606nict-biske"
+-- 'concat' [ 'enumerateChainVariants' chains
+--        , 'S.toAscList' noprefs
+--        , 'S.toAscList' $ prefs 'S.\\' 'variantsInChains' chains ]
 -- @
+--
+-- This should result in the best matching behaviour for tags with
+-- variants that clash with each other or have unsatisfied
+-- prefixes. Thus
+--
+-- > "sl-rozaj-biske-njiva-1994-alalc97-1606nict"
+--
+-- would be the ordering chosen by
+-- 'Text.LanguageTag.BCP47.Registry.renderBCP47' for the example tag
+-- above.
 --
 -- (You may notice that @sl-rozaj@ comes up a lot when discussing
 -- variant subtags. That is because the only non-deprecated variant

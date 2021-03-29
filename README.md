@@ -44,6 +44,46 @@ updates. See the [registry maintenance
 section](https://tools.ietf.org/html/bcp47#section-3.3) of the
 standard for the full details.
 
+## A brief overview of the package
+
+The BCP47-related modules are organized under the
+`Text.LanguageTag.BCP47` hierarchy. The main modules here are
+
+`Subtag`
+: Defines a compact representation of a BCP47 subtag. In a full tag,
+  these can represent languages (`en`, `fr`, `cmn`, `ja`), scripts
+  (`Latn`, `Hant`, `Cyrl`), and regions (`US`, `419`), among other
+  things.
+
+`Syntax`
+: Defines an opaque `BCP47` type that represents well-formed
+  (syntactically correct) tags according to the standard, and a `Text`
+  parser for that type.
+
+`Registry`
+: Defines a `BCP47` type that represents valid tags according to the
+  standard. It also exports enumerations for all of the different
+  registered tags and subtags in the IANA registry, as well as their
+  records and record lookup functions.
+
+`Validation`
+: Defines the `validateBCP47` function that attempts to validate
+  `Syntax.BCP47` tags and return `Registry.BCP47` tags.
+
+`Canonicalization`
+: Defines functions that canonicalize valid BCP47 tags (replacing
+  deprecated tags and extended language tags) according to the
+  standard. It also defines more general tag linting functions that
+  implement other recommendations in the standard, such as removing
+  redundant script subtags and removing variant subtags with
+  unsatisfied prefixes.
+
+`Quasi`
+: Defines quasi-quoters to construct statically-checked subtags and
+  tags. The main `tag` quasi-quoter ensures that its input passes
+  linting without any warnings, but there are also other, less strict,
+  quasi-quoters in the module.
+
 ## Future
 
 The library may be updated in future to add support for other

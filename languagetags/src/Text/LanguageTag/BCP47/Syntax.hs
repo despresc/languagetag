@@ -67,33 +67,7 @@ toSubtags (NormalTag (Normal p e1 e2 e3 s r vs es ps)) =
       | null ps = []
       | otherwise = subtagX : ps
 toSubtags (PrivateUse x) = subtagX :| NE.toList x
-toSubtags (GrandfatheredTag g) = case g of
-  ArtLojban -> Subtag 14108546179528654867 :| [Subtag 15690354374758891542]
-  CelGaulish -> Subtag 14382069488147234835 :| [Subtag 14954113284221173783]
-  EnGbOed -> Subtag 14679482985414131730 :| [Subtag 14954202562683731986, Subtag 16111381376313327635]
-  IAmi -> Subtag 15132094747964866577 :| [Subtag 14102819922971197459]
-  IBnn -> Subtag 15132094747964866577 :| [Subtag 14248104991419006995]
-  IDefault -> Subtag 15132094747964866577 :| [Subtag 14526138628724883479]
-  IEnochian -> Subtag 15132094747964866577 :| [Subtag 14680466211245977112]
-  IHak -> Subtag 15132094747964866577 :| [Subtag 15098133032806121491]
-  IKlingon -> Subtag 15132094747964866577 :| [Subtag 15542853518732230679]
-  ILux -> Subtag 15132094747964866577 :| [Subtag 15697226132455686163]
-  IMingo -> Subtag 15132094747964866577 :| [Subtag 15827749698417983509]
-  INavajo -> Subtag 15132094747964866577 :| [Subtag 15962927641447628822]
-  IPwn -> Subtag 15132094747964866577 :| [Subtag 16275850723642572819]
-  ITao -> Subtag 15132094747964866577 :| [Subtag 16827550474088480787]
-  ITay -> Subtag 15132094747964866577 :| [Subtag 16827638435018702867]
-  ITsu -> Subtag 15132094747964866577 :| [Subtag 16847869448969781267]
-  NoBok -> Subtag 15977645578003677202 :| [Subtag 14249204503046782995]
-  NoNyn -> Subtag 15977645578003677202 :| [Subtag 15989872147304546323]
-  SgnBeFr -> Subtag 16690181889360658451 :| [Subtag 14237004322024980498, Subtag 14828101773117358098]
-  SgnBeNl -> Subtag 16690181889360658451 :| [Subtag 14237004322024980498, Subtag 15974267878283149330]
-  SgnChDe -> Subtag 16690181889360658451 :| [Subtag 14384497209821364242, Subtag 14525234698176692242]
-  ZhGuoyu -> Subtag 17699146535566049298 :| [Subtag 14976579405109788693]
-  ZhHakka -> Subtag 17699146535566049298 :| [Subtag 15098140437866610709]
-  ZhMin -> Subtag 17699146535566049298 :| [Subtag 15827742560719208467]
-  ZhMinNan -> Subtag 17699146535566049298 :| [Subtag 15827742560719208467, Subtag 15962850549540323347]
-  ZhXiang -> Subtag 17699146535566049298 :| [Subtag 17412902894784479253]
+toSubtags (GrandfatheredTag g) = grandfatheredToSubtags g
 
 -- | Parse a 'BCP47' tag from a list of subtags by first rendering the
 -- list to a 'Text' tag then parsing that tag
@@ -358,9 +332,6 @@ subtagCharx = SubtagChar 120
 
 subtagI :: Subtag
 subtagI = Subtag 15132094747964866577
-
-subtagX :: Subtag
-subtagX = Subtag 17293822569102704657
 
 ----------------------------------------------------------------
 -- Internal convenience class

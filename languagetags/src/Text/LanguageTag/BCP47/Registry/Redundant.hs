@@ -32,7 +32,8 @@ module Text.LanguageTag.BCP47.Registry.Redundant
   )
 where
 
-import qualified Data.List.NonEmpty as NE
+import Data.Maybe (catMaybes)
+import qualified Data.Set as S
 import Data.Text (Text)
 import qualified Data.Text.Lazy.Builder as TB
 import Text.LanguageTag.BCP47.Subtag.Trie
@@ -43,11 +44,15 @@ import Text.LanguageTag.BCP47.Subtag.Trie
     stepTrie,
   )
 import qualified Text.LanguageTag.BCP47.Subtag.Trie as Trie
-import Text.LanguageTag.Internal.BCP47.Registry
+import Text.LanguageTag.Internal.BCP47.Registry.ExtlangRecords (extlangToSubtag)
+import Text.LanguageTag.Internal.BCP47.Registry.LanguageRecords (languageToSubtag)
 import Text.LanguageTag.Internal.BCP47.Registry.Redundant
 import Text.LanguageTag.Internal.BCP47.Registry.RedundantRecords
 import qualified Text.LanguageTag.Internal.BCP47.Registry.RedundantRecords as Internal
+import Text.LanguageTag.Internal.BCP47.Registry.RegionRecords (regionToSubtag)
+import Text.LanguageTag.Internal.BCP47.Registry.ScriptRecords (scriptToSubtag)
 import Text.LanguageTag.Internal.BCP47.Registry.Types
+import Text.LanguageTag.Internal.BCP47.Registry.VariantRecords (variantToSubtag)
 import Text.LanguageTag.Internal.BCP47.Subtag (Subtag (..))
 import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn
 
@@ -226,10 +231,19 @@ redundantTrie =
 -- | Determine whether or not a valid 'BCP47' tag represents a
 -- 'Redundant' tag
 recognizeRedundantNormal :: Normal -> Maybe Redundant
-recognizeRedundantNormal =
-  flip
-    (Trie.lookup . NE.toList . toSubtags . NormalTag)
-    redundantTrie
+recognizeRedundantNormal n
+  | null $ extensions n,
+    null $ privateUse n =
+    Trie.lookup (l' : (catMaybes [e', s', r'] <> vs')) redundantTrie
+  | otherwise = Nothing
+  where
+    l' = languageToSubtag $ language n
+    e' = extlangToSubtag <$> extlang n
+    s' = scriptToSubtag <$> script n
+    r' = regionToSubtag <$> region n
+    -- not the correct presentation in general, but none of the
+    -- redundant tags have more than one variant
+    vs' = fmap variantToSubtag $ S.toAscList $ variants n
 
 -- | Determine whether or not a valid 'BCP47' tag represents a
 -- 'Redundant' tag
