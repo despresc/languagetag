@@ -42,6 +42,16 @@ import Text.LanguageTag.BCP47.Registry
 -- - that only non-fixed warnings are returned after running lintBCP47
 --   twice, and perhaps also that they're the same as the last time
 --   (up to reordering?)
+--
+-- - that enumerateChainVariants has the following property when
+--   called on a VariantChains value produced by categorizeVariants:
+--   if x and y are variants in the input and x comes before y in one
+--   of the listVariantChains, then x comes before y in the resulting
+--   enumeration.
+--
+-- - that enumerateChainVariants behaves the same as reverse . ordNub
+--   . reverse . depthFirstTraversal (in which case we could replace
+--   the implementation of enumerateVariantChains with that function)
 
 redundantTags :: [(Redundant, Text)]
 redundantTags =

@@ -285,10 +285,19 @@ listVariantChains (VariantChains t) = foldr go [] t
       | otherwise =
         (NE.cons v <$> listVariantChains (VariantChains vcs)) <> l
 
--- | Enumerate the variants in a 'VariantChains' so that if @x@ and
--- @y@ are variants in the chain and @x@ occurs before @y@ anywhere in
--- the depth-first traversal, then @x@ will occur before @y@ in the
--- output list.
+-- | Enumerate the variants in a 'VariantChains' tree. This function
+-- produces a subsequence of the depth-first traversal of the
+-- 'VariantChains' without any repeated variants by performing that
+-- traversal and keeping the /final/ appearance of an element. When
+-- applied to a 'VariantChains' from 'categorizeVariant', this has the
+-- effect of ensuring that if @x@ and @y@ are variants in the
+-- 'VariantChains' and @x@ comes before @y@ in one of the
+-- 'listVariantChains' chains, then @x@ will come before @y@ in the
+-- result of 'enumerateChainVariants'. (This isn't true in general,
+-- since in an arbitrary 'VariantChains' there could be variants @x@
+-- and @y@ appearing in different orders in different
+-- 'listVariantChains' chains, making the property impossible to
+-- satisfy).
 enumerateChainVariants :: VariantChains -> [Variant]
 enumerateChainVariants (VariantChains x) = fst $ unfoldChains x [] mempty
   where
