@@ -47,7 +47,7 @@ standard for the full details.
 ## A brief overview of the package
 
 The BCP47-related modules are organized under the
-`Text.LanguageTag.BCP47` hierarchy. The main modules here are
+`Text.LanguageTag.BCP47` hierarchy. The main modules are:
 
 - `Subtag` defines a compact representation of a BCP47 subtag. In a
   full tag, these can represent languages (`en`, `fr`, `cmn`, `ja`),
@@ -63,8 +63,9 @@ The BCP47-related modules are organized under the
   the different registered tags and subtags in the IANA registry, as
   well as their records and record lookup functions.
 
-- `Validation` defines the `validateBCP47` function that attempts to
-  validate `Syntax.BCP47` tags and return `Registry.BCP47` tags.
+- `Validation` defines functions that validate raw `Subtag` values and
+  `Syntax.BCP47` tags, returning subtags and `BCP47` tags from
+  `Registry`.
 
 - `Canonicalization` defines functions that canonicalize valid BCP47
   tags (replacing deprecated tags and extended language tags)
