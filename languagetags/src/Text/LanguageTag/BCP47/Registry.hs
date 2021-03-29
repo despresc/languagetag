@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 -- |
 -- Description : Registered BCP47 tags, subtags and their records
 -- Copyright   : 2021 Christian Despres
@@ -48,7 +50,12 @@ module Text.LanguageTag.BCP47.Registry
   )
 where
 
+import Data.Foldable (toList)
+import qualified Data.List as List
+import qualified Data.Map.Strict as M
+import qualified Data.Set as S
 import Data.Text (Text)
+import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Builder as TB
 import Text.LanguageTag.BCP47.Registry.Extlang
 import Text.LanguageTag.BCP47.Registry.Grandfathered
@@ -57,19 +64,60 @@ import Text.LanguageTag.BCP47.Registry.Redundant
 import Text.LanguageTag.BCP47.Registry.Region
 import Text.LanguageTag.BCP47.Registry.Script
 import Text.LanguageTag.BCP47.Registry.Variant
-import qualified Text.LanguageTag.BCP47.Syntax as Syn
+import Text.LanguageTag.BCP47.Subtag (renderSubtagBuilderLower)
+import Text.LanguageTag.Internal.BCP47.Canonicalization
 import Text.LanguageTag.Internal.BCP47.Registry
 import Text.LanguageTag.Internal.BCP47.Registry.Date
 import Text.LanguageTag.Internal.BCP47.Registry.Types
 import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn
 
--- | Render a 'BCP47' tag to strict text
+-- | Render a 'BCP47' tag to strict text, using 'renderBCP47Builder'
+-- internally
 renderBCP47 :: BCP47 -> Text
-renderBCP47 = Syn.renderBCP47 . toSyntaxTag
+renderBCP47 = TL.toStrict . TB.toLazyText . renderBCP47Builder
 
--- | Render a 'BCP47' tag to a lazy text builder
+-- | Render a 'BCP47' tag to a lazy text builder. Note that this
+-- function is not equivalent to @'Syn.renderBCP47' . 'toSyntaxTag'@,
+-- because the variants in the tag may need to be rendered
+-- non-alphabetically to conform to the standard's recommendations. If
+-- you would like to know exactly how this is done, and how this
+-- relates to the standard, consult the documentation for the internal
+-- function 'Internal.categorizeVariants'. (Of the presentation
+-- options given in that function, this rendering function happens to
+-- choose to concatenate all of the variant chains and then remove
+-- duplicates).
 renderBCP47Builder :: BCP47 -> TB.Builder
-renderBCP47Builder = Syn.renderBCP47Builder . toSyntaxTag
+renderBCP47Builder (NormalTag n) =
+  mconcat $
+    List.intersperse "-" $
+      l' : (e' <> s' <> r' <> firstVariants' <> midVariants <> endVariants <> es' <> pu')
+  where
+    l' = renderLanguageBuilder $ language n
+    e' = toList $ renderExtlangBuilder <$> extlang n
+    s' = toList $ renderScriptBuilder <$> script n
+    r' = toList $ renderRegionBuilder <$> region n
+    (chains, havePrefs, noPrefs) = categorizeVariants n
+    ordNub' _ [] = []
+    ordNub' s (x : xs)
+      | x `S.member` s = ordNub' s xs
+      | otherwise = x : ordNub' (S.insert x s) xs
+    firstVariants = ordNub' mempty $ mconcat $ toList <$> listVariantChains chains
+    firstVariants' = fmap renderVariantBuilder firstVariants
+    midVariants = renderVariantBuilder <$> S.toAscList noPrefs
+    endVariants =
+      fmap renderVariantBuilder $
+        S.toAscList $ havePrefs S.\\ S.fromList firstVariants
+    es' = concatMap renderExt $ M.toAscList $ extensions n
+    renderExt (c, subs) =
+      TB.singleton (Syn.extensionCharToChar c) :
+      toList (renderSubtagBuilderLower . fromExtensionSubtag <$> subs)
+    pu'
+      | null $ privateUse n = []
+      | otherwise = "x" : (renderSubtagBuilderLower <$> privateUse n)
+renderBCP47Builder (PrivateUseTag sts) =
+  mconcat $ List.intersperse "-" $ toList $ renderSubtagBuilderLower <$> sts
+renderBCP47Builder (GrandfatheredTag t) =
+  renderGrandfatheredBuilder t
 
 -- $theregistry
 --

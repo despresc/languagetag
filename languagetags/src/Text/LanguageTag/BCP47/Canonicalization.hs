@@ -10,105 +10,155 @@
 -- BCP47 specification. It also exports various helper functions used
 -- in that function; these detect and replace tags and subtags with
 -- their preferred values.
+--
+-- This module also provides the 'lintBCP47' function and other types
+-- to
 module Text.LanguageTag.BCP47.Canonicalization
-  ( -- * Canonicalization
+  ( lintBCP47,
+    LintWarnings (..),
+    LintWarning (..),
+    DeprecatedComponent (..),
+    Internal.PrefixedComponent (..),
+
+    -- * Canonicalization
     canonicalizeBCP47,
     canonicalizeNormal,
     canonicalizeLanguage,
     canonicalizeExtlang,
-    canonicalizeRegion,
     canonicalizeScript,
+    canonicalizeRegion,
     canonicalizeVariant,
 
     -- * Extlang form
     extlangFormBCP47,
-    normalToExtlangForm,
+
+    -- * Other normalization
+    suppressLanguageScript,
+    suppressLanguageScriptNormal,
+    restoreLanguageScript,
+    restoreLanguageScriptNormal,
+    removeMismatchedVariants,
   )
 where
 
-import qualified Data.Set as S
 import Text.LanguageTag.BCP47.Registry
-import Text.LanguageTag.BCP47.Validation (validateExtlang)
+import Text.LanguageTag.Internal.BCP47.Canonicalization
+  ( DeprecatedComponent (..),
+    LintWarning (..),
+    LintWarnings (..),
+    runLintM,
+  )
+import qualified Text.LanguageTag.Internal.BCP47.Canonicalization as Internal
 
--- | Canonicalize a 'BCP47' tag. This involves replacing deprecated
--- tags and subtags with their preferred values, if they exist. If the
--- tag also has an appropriate primary language and extended language,
--- that pair of subtags will be replaced with the guaranteed-to-exist
--- preferred primary language of the extended language. See also
--- 'canonicalizeExtlang' and 'extlangFormBCP47'.
-canonicalizeBCP47 :: BCP47 -> BCP47
-canonicalizeBCP47 (NormalTag n) = NormalTag $ canonicalizeNormal n
-canonicalizeBCP47 (GrandfatheredTag t) = canonicalizeGrandfathered t
-canonicalizeBCP47 x@(PrivateUseTag _) = x
+-- | This function canonicalizes its input with 'canonicalizeBCP47',
+--  suppresses the script when appropriate with
+--  'suppressLanguageScript', then removes any variant subtags with
+--  prefixes in the registry that aren't satisfied by the rest of the
+--  tag with 'removeMismatchedVariants'. A tag returned by this
+--  function (especially with no 'notFixed' warnings) will satisfy
+--  many of recommendations scattered throughout the standard that can
+--  be checked (and sometimes fixed) automatically in a reasonable
+--  way.
+lintBCP47 :: BCP47 -> (LintWarnings, BCP47)
+lintBCP47 t = runLintM $ do
+  t' <- Internal.canonicalizeBCP47 t
+  t'' <- Internal.suppressLanguageScript t'
+  Internal.removeMismatchedVariants t''
 
--- | Canonicalize a 'Normal' tag
-canonicalizeNormal :: Normal -> Normal
-canonicalizeNormal n = case recognizeRedundantNormal n of
-  Nothing -> n''
-  Just r -> case rangeDeprecation $ lookupRedundantRecord r of
-    DeprecatedPreferred x -> x
-    _ -> n''
+----------------------------------------------------------------
+-- Canonicalization
+----------------------------------------------------------------
+
+-- | Canonicalize a 'BCP47' tag by replacing the language and extended
+-- language with their single language subtag equivalents and
+-- replacing any deprecated tags or subtags with their non-deprecated
+-- preferred values, whenever possible. See also 'canonicalizeExtlang'
+-- and 'extlangFormBCP47'.
+canonicalizeBCP47 :: BCP47 -> (LintWarnings, BCP47)
+canonicalizeBCP47 = runLintM . Internal.canonicalizeBCP47
+
+-- | Canonicalize a 'Normal' tag by replacing correct language and
+-- extended language pairs with their single language subtag
+-- equivalents, and replacing any deprecated subtags with their
+-- non-deprecated preferred values, if possible
+canonicalizeNormal :: Normal -> (LintWarnings, Normal)
+canonicalizeNormal = runLintM . Internal.canonicalizeNormal
+
+-- | Canonicalize a 'Language' subtag by replacing it with its
+-- preferred value, if applicable
+canonicalizeLanguage :: Language -> (LintWarnings, Language)
+canonicalizeLanguage = runLintM . Internal.canonicalizeLanguage
+
+-- | Canonicalize the language and extended language in a tag by
+-- replacing the pair with their preferred single language subtag
+-- replacement, if applicable. This process will, e.g., transform the
+-- tag @zh-cmn-hant-x-more@ into tag @cmn-hant-x-more@. This function
+-- will return an (unfixed) 'Internal.PrefixedComponent' warning if
+-- there is a mismatch between the extended language subtag's prefix
+-- and the primary language subtag.
+canonicalizeExtlang :: Normal -> (LintWarnings, Normal)
+canonicalizeExtlang = runLintM . Internal.canonicalizeExtlang
+
+-- | Canonicalize a 'Script' subtag by replacing it with its
+-- preferred value, if applicable
+canonicalizeScript :: Script -> (LintWarnings, Script)
+canonicalizeScript = runLintM . Internal.canonicalizeScript
+
+-- | Canonicalize a 'Region' subtag by replacing it with its preferred
+-- value, if applicable
+canonicalizeRegion :: Region -> (LintWarnings, Region)
+canonicalizeRegion = runLintM . Internal.canonicalizeRegion
+
+-- | Canonicalize a 'Variant' subtag by replacing it with its
+-- preferred value, if applicable
+canonicalizeVariant :: Variant -> (LintWarnings, Variant)
+canonicalizeVariant = runLintM . Internal.canonicalizeVariant
+
+----------------------------------------------------------------
+-- Script suppression
+----------------------------------------------------------------
+
+-- | Suppress a superfluous script subtag. Note that this only
+-- suppresses a script that is in the language subtag's
+-- @Suppress-Script@ field. It does not look at the extended language
+-- subtag's field, since this function is meant to be used on
+-- canonicalized tags, and those types of tags only have an extlang
+-- when there is a prefix mismatch (in which case the script
+-- suppression doesn't really apply).
+suppressLanguageScript :: BCP47 -> (LintWarnings, BCP47)
+suppressLanguageScript = runLintM . Internal.suppressLanguageScript
+
+-- | Suppress the script subtag of a tag if it appears in the
+-- 'languageScriptSuppression' of the tag's 'Language'
+suppressLanguageScriptNormal :: Normal -> (LintWarnings, Normal)
+suppressLanguageScriptNormal = runLintM . Internal.suppressLanguageScriptNormal
+
+-- | Add the 'languageScriptSuppression' back to a tag, if it does not
+-- conflict with an existing script subtag. This only affects 'Normal'
+-- tags.
+restoreLanguageScript :: BCP47 -> BCP47
+restoreLanguageScript (NormalTag n) = NormalTag $ restoreLanguageScriptNormal n
+restoreLanguageScript x = x
+
+-- | Add the 'languageScriptSuppression' back to a tag, if it does not
+-- conflict with an existing script subtag
+restoreLanguageScriptNormal :: Normal -> Normal
+restoreLanguageScriptNormal n
+  | Nothing <- script n =
+    n {script = ssup}
+  | otherwise = n
   where
-    n' = canonicalizeExtlang n
-    n'' =
-      n'
-        { language = canonicalizeLanguage $ language n',
-          script = canonicalizeScript <$> script n,
-          region = canonicalizeRegion <$> region n,
-          variants = S.map canonicalizeVariant $ variants n
-        }
+    ssup = languageScriptSuppression $ lookupLanguageRecord $ language n
 
--- | Canonicalize a 'Grandfathered' tag by replacing it with its
--- preferred value, if it is deprecated
-canonicalizeGrandfathered :: Grandfathered -> BCP47
-canonicalizeGrandfathered t =
-  case rangeDeprecation $ lookupGrandfatheredRecord t of
-    DeprecatedPreferred x -> NormalTag x
-    _ -> GrandfatheredTag t
-
--- | Replace the primary language subtag and extended language subtag
--- with the extended language subtag's preferred primary language
--- subtag and remove the extended language subtag, so that, e.g., the
--- tag @zh-cmn-hant-x-more@ will be transformed by this function into
--- the tag @cmn-hant-x-more@.
---
--- Note that the standard permits 'Normal' tags to have an extended
--- language subtag whose prefix conflicts with the tag's primary
--- language subtag. In these cases no replacement is performed and so,
--- e.g., the tag @en-cmn@ will remain unchanged by this function.
-canonicalizeExtlang :: Normal -> Normal
-canonicalizeExtlang n = case extlang n of
-  Just el
-    | language n == extlangPrefix (lookupExtlangRecord el) ->
-      n
-        { language = extlangPreferredValue $ lookupExtlangRecord el,
-          extlang = Nothing
-        }
-  _ -> n
-
--- | Replace a language with its preferred value, if it exists
-canonicalizeLanguage :: Language -> Language
-canonicalizeLanguage l = case languageDeprecation $ lookupLanguageRecord l of
-  DeprecatedPreferred l' -> l'
-  _ -> l
-
--- | Replace a script with its preferred value, if it exists
-canonicalizeScript :: Script -> Script
-canonicalizeScript l = case scriptDeprecation $ lookupScriptRecord l of
-  DeprecatedPreferred l' -> l'
-  _ -> l
-
--- | Replace a region with its preferred value, if it exists
-canonicalizeRegion :: Region -> Region
-canonicalizeRegion l = case regionDeprecation $ lookupRegionRecord l of
-  DeprecatedPreferred l' -> l'
-  _ -> l
-
--- | Replace a variant with its preferred value, if it exists
-canonicalizeVariant :: Variant -> Variant
-canonicalizeVariant l = case variantDeprecation $ lookupVariantRecord l of
-  DeprecatedPreferred l' -> l'
-  _ -> l
+-- | Remove the variants from a tag with prefixes that are not
+-- satisfied by the rest of the tag. Also warn about any prefix
+-- collisions (multiple variants with satisfied prefixes that cannot
+-- be put into a single chain together) in the tag. If you would like
+-- to know exactly how this is done, and how this relates to the
+-- standard, consult the documentation for the internal function
+-- 'Internal.categorizeVariants'.
+removeMismatchedVariants :: BCP47 -> (LintWarnings, BCP47)
+removeMismatchedVariants = runLintM . Internal.removeMismatchedVariants
 
 -- | Transform a language tag into "extlang form", a variant of the
 -- canonical form in which extlang subtags are preserved or added
@@ -127,23 +177,7 @@ canonicalizeVariant l = case variantDeprecation $ lookupVariantRecord l of
 -- Note that the standard permits 'Normal' tags to have an extended
 -- language subtag whose prefix conflicts with the tag's primary
 -- language subtag. In these cases no replacement is performed and,
--- e.g., the tag @en-cmn@ will remain unchanged by this function.
-extlangFormBCP47 :: BCP47 -> BCP47
-extlangFormBCP47 x = case canonicalizeBCP47 x of
-  NormalTag y -> NormalTag $ normalToExtlangForm' y
-  _ -> x
-
--- | Convert a 'Normal' tag to extlang form
-normalToExtlangForm :: Normal -> Normal
-normalToExtlangForm = normalToExtlangForm' . canonicalizeNormal
-
--- | Convert a canonical 'Normal' tag to extlang form
-normalToExtlangForm' :: Normal -> Normal
-normalToExtlangForm' n = case validateExtlang $ languageToSubtag $ language n of
-  Just x
-    | Nothing <- extlang n ->
-      n
-        { language = extlangPrefix $ lookupExtlangRecord x,
-          extlang = Just x
-        }
-  _ -> n
+-- e.g., the tag @en-cmn@ will remain unchanged by this function. This
+-- will still be noted in the returned 'LintWarnings'.
+extlangFormBCP47 :: BCP47 -> (LintWarnings, BCP47)
+extlangFormBCP47 = runLintM . Internal.extlangFormBCP47

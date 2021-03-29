@@ -28,7 +28,7 @@ spec = do
     it "has a canonical preferred value, if applicable" $ do
       let depNonCanon x =
             maybePreferred (regionDeprecation $ lookupRegionRecord x)
-              >>= badRound' canonicalizeRegion
+              >>= badRound' (snd . canonicalizeRegion)
       depNonCanon `shouldNotMatch` regiontags
   describe "regionDetails" $ do
     it "has the same number of entries as the Region type has constructors" $ do

@@ -31,7 +31,7 @@ spec = do
     it "has a canonical preferred value, if applicable" $ do
       let depNonCanon x =
             maybePreferred (languageDeprecation $ lookupLanguageRecord x)
-              >>= badRound' canonicalizeLanguage
+              >>= badRound' (snd . canonicalizeLanguage)
       depNonCanon `shouldNotMatch` langtags
     it "has a macrolanguage macrolanguage, if applicable" $ do
       let getMacroScope x =

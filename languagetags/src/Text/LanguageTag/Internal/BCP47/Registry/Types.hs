@@ -234,7 +234,6 @@ data RegionRecord = RegionRecord
 -- descriptions that appear as semicolon-separated lists next to the
 -- constructors of the 'Text.LanguageTag.BCP47.Registry.Grandfathered'
 -- and 'Text.LanguageTag.BCP47.Registry.Redundant' tag types.
-
 data RangeRecord = RangeRecord
   { rangeDescription :: NonEmpty Text,
     rangeDeprecation :: Deprecation Normal

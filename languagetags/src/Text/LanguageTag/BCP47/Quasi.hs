@@ -1,6 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -16,6 +15,7 @@
 -- values of the various BCP47 language tag types.
 module Text.LanguageTag.BCP47.Quasi
   ( subtag,
+    tag,
     syntag,
     validtag,
     canontag,
@@ -36,7 +36,14 @@ import Language.Haskell.TH.Syntax
   ( Name (..),
     OccName (..),
   )
-import Text.LanguageTag.BCP47.Canonicalization (canonicalizeBCP47)
+import Text.LanguageTag.BCP47.Canonicalization
+  ( DeprecatedComponent (..),
+    LintWarning (..),
+    LintWarnings (..),
+    PrefixedComponent (..),
+    canonicalizeBCP47,
+    lintBCP47,
+  )
 import Text.LanguageTag.BCP47.Registry
   ( BCP47 (..),
     Extlang (..),
@@ -45,6 +52,12 @@ import Text.LanguageTag.BCP47.Registry
     Region (..),
     Script (..),
     Variant (..),
+    renderExtlang,
+    renderGrandfathered,
+    renderLanguage,
+    renderRedundant,
+    renderRegion,
+    renderScript,
     renderVariant,
   )
 import Text.LanguageTag.BCP47.Subtag (parseSubtag)
@@ -331,7 +344,40 @@ canontag =
       Left e -> fail $ syntaxErr' s e
       Right x -> case validateBCP47 x of
         Left e -> fail $ validErr' e
-        Right x' -> pure $ validtagE $ canonicalizeBCP47 x'
+        Right x' -> pure $ validtagE $ snd $ canonicalizeBCP47 x'
+
+-- | Create a 'BCP47' value from a raw tag string that would pass
+-- through 'lintBCP47' without warnings; the result will, among other
+-- things, be valid and canonicalized. Other quasi-quoters are
+-- available in this module that are less strict than this, should you
+-- want to create tags that are non-canonical or fail to follow
+-- certain recommendations that the standard makes.
+--
+-- >>> :set -XQuasiQuotes
+-- >>> renderBCP47 [tag|yue-hant|]
+-- "yue-Hant"
+-- >>> renderBCP47 [tag|eN-Gb-oxenDicT|]
+-- "en-GB-oxendict"
+-- >>> renderBCP47 [tag|sgn-br|]
+-- <interactive>:4:18: error:
+--    • Linting returned warning: used deprecated redundant tag "sgn-BR"
+--    • In the quasi-quotation: [tag|sgn-br|]
+tag :: QuasiQuoter
+tag =
+  QuasiQuoter
+    { quoteExp = qe,
+      quotePat = const $ fail "Cannot be used in a pattern context",
+      quoteType = const $ fail "Cannot be used in a type context",
+      quoteDec = const $ fail "Cannot be used in a declaration context"
+    }
+  where
+    qe s = case Syn.parseBCP47 (T.pack s) of
+      Left e -> fail $ syntaxErr' s e
+      Right x -> case validateBCP47 x of
+        Left e -> fail $ validErr' e
+        Right x' -> case lintBCP47 x' of
+          (LintWarnings [] [], x'') -> pure $ validtagE x''
+          (w, _) -> fail $ lintWarningsErr' w
 
 ----------------------------------------------------------------
 -- Nicer errors
@@ -399,3 +445,44 @@ validErr e = case e of
 
 validErr' :: ValidationError -> String
 validErr' e = T.unpack $ "Invalid tag: encountered " <> validErr e
+
+-- | Choose one of the warnings and render it. Should only be called
+-- on a 'LintWarnings' that is known to have at least one warning in
+-- it.
+lintWarningsErr :: LintWarnings -> Text
+lintWarningsErr (LintWarnings _ (x : _)) = lintWarningErr x
+lintWarningsErr (LintWarnings (x : _) _) = lintWarningErr x
+lintWarningsErr _ = "no warnings found, somehow"
+
+lintWarningsErr' :: LintWarnings -> String
+lintWarningsErr' w = T.unpack $ "Linting returned warning: " <> lintWarningsErr w
+
+quoteText :: Text -> Text
+quoteText t = "\"" <> t <> "\""
+
+lintWarningErr :: LintWarning -> Text
+lintWarningErr (UsedDeprecated d) =
+  "used deprecated " <> case d of
+    DeprecatedLanguage l -> "language subtag " <> quoteText (renderLanguage l)
+    DeprecatedExtlang e -> "extended language subtag " <> quoteText (renderExtlang e)
+    DeprecatedScript s -> "script subtag " <> quoteText (renderScript s)
+    DeprecatedRegion r -> "region subtag " <> quoteText (renderRegion r)
+    DeprecatedVariant v -> "variant subtag " <> quoteText (renderVariant v)
+    DeprecatedRedundant r -> "redundant tag " <> quoteText (renderRedundant r)
+    DeprecatedGrandfathered r -> "grandfathered tag " <> quoteText (renderGrandfathered r)
+lintWarningErr (SuperfluousScript l s) =
+  "script subtag " <> quoteText (renderScript s) <> " is implied by the language subtag "
+    <> quoteText (renderLanguage l)
+lintWarningErr (PrefixMismatch c) = case c of
+  PrefixedExtlang e ->
+    "used extended language subtag " <> quoteText (renderExtlang e)
+      <> " without its registered prefix"
+  PrefixedVariant v ->
+    "used variant subtag " <> quoteText (renderVariant v)
+      <> " without one of its registered prefixes"
+lintWarningErr (PrefixCollision _ _) =
+  "used multiple variants with registered prefixes that cannot be satisfied simultaneously"
+lintWarningErr (UsedExtlang e) =
+  "used the extended language subtag " <> quoteText (renderExtlang e)
+    <> " instead of its replacement primary language subtag "
+    <> quoteText (renderExtlang e)

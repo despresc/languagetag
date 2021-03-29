@@ -33,8 +33,8 @@ import Text.LanguageTag.Internal.BCP47.Registry.Types
 
 -- | Render a 'Region' subtag to a strict text value
 renderRegion :: Region -> Text
-renderRegion = Sub.renderSubtagLower . regionToSubtag
+renderRegion = Sub.renderSubtagUpper . regionToSubtag
 
 -- | Render a 'Region' subtag to a lazy text builder
 renderRegionBuilder :: Region -> TB.Builder
-renderRegionBuilder = Sub.renderSubtagBuilderLower . regionToSubtag
+renderRegionBuilder = Sub.renderSubtagBuilderUpper . regionToSubtag

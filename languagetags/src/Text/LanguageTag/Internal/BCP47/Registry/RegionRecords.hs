@@ -26,7 +26,7 @@ import Data.Vector (Vector)
 import qualified Data.Vector as V
 import Text.LanguageTag.Internal.BCP47.Subtag (Subtag(..))
 
--- | All of the record information associated to 'Region' subtags, together with their corresponding 'Subtag', occurring in the same order as that type's constructors
+-- | All of the record information associated to 'Region' subtags, together with their corresponding 'Subtag's, occurring in the same order as that type's constructors
 regionDetails :: Vector (Subtag, RegionRecord)
 regionDetails = V.fromList
   [(Subtag 6972003231727616035, RegionRecord ("World" :| []) NotDeprecated)

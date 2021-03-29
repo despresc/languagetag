@@ -55,7 +55,7 @@ spec = do
     it "has only canonical preferred values" $ do
       let depNonCanon x =
             maybePreferred (rangeDeprecation $ lookupRedundantRecord x)
-              >>= badRound' canonicalizeNormal
+              >>= badRound' (snd . canonicalizeNormal)
       depNonCanon `shouldNotMatch` redundanttags
   describe "redundantDetails" $ do
     it "has the same number of entries as the Redundant type has constructors" $ do

@@ -37,9 +37,7 @@ import qualified Data.Text.Lazy.Builder as TB
 import Data.Word (Word8)
 import Text.LanguageTag.BCP47.Subtag
 import Text.LanguageTag.Internal.BCP47.Registry.Grandfathered
-import Text.LanguageTag.Internal.BCP47.Subtag
-  ( SubtagChar (..),
-  )
+import Text.LanguageTag.Internal.BCP47.Subtag (SubtagChar (..))
 
 -- | Render a possibly-absent region subtag in the middle of a tag,
 -- with an initial @-@

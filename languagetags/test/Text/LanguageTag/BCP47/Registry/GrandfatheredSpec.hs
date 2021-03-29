@@ -23,7 +23,7 @@ spec = do
     it "has only canonical preferred values" $ do
       let depNonCanon x =
             maybePreferred (rangeDeprecation $ lookupGrandfatheredRecord x)
-              >>= badRound' canonicalizeNormal
+              >>= badRound' (snd . canonicalizeNormal)
       depNonCanon `shouldNotMatch` grandfatheredtags
   describe "grandfatheredDetails" $ do
     it "has the same number of entries as the Grandfathered type has constructors" $ do

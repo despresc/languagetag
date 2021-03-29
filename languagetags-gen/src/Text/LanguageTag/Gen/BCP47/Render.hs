@@ -216,7 +216,7 @@ renderRecordModuleWith tyname imps proj rend reg =
     detailTableEntries = ["  [" <> T.intercalate "\n  ," details <> "]"]
     detailTableName = T.toLower tyname <> "Details"
     theDetailTable =
-      [ "-- | All of the record information associated to '" <> tyname <> "' subtags, together with their corresponding 'Subtag', occurring in the same order as that type's constructors",
+      [ "-- | All of the record information associated to '" <> tyname <> "' subtags, together with their corresponding 'Subtag's, occurring in the same order as that type's constructors",
         detailTableName <> " :: Vector (Subtag, " <> tyname <> "Record)",
         detailTableName <> " = V.fromList"
       ]

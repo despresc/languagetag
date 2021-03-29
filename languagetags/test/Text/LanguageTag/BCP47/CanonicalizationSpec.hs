@@ -113,16 +113,16 @@ spec = do
   describe "canonicalizeBCP47" $ do
     prop "should be idempotent" $
       forAllShrink genValidTag shrinkValidTag $ \tg ->
-        let tg' = canonicalizeBCP47 tg
-         in canonicalizeBCP47 tg' === tg'
+        let tg' = snd (canonicalizeBCP47 tg)
+         in snd (canonicalizeBCP47 tg') === tg'
     prop "composes with extlangFormBCP47 on the left" $
       forAllShrink genValidTag shrinkValidTag $ \tg ->
-        let tg' = canonicalizeBCP47 tg
-         in canonicalizeBCP47 (extlangFormBCP47 tg') === tg'
+        let tg' = snd $ canonicalizeBCP47 tg
+         in snd (canonicalizeBCP47 (snd $ extlangFormBCP47 tg')) === tg'
     prop "composes with extlangFormBCP47 on the right" $
       forAllShrink genValidTag shrinkValidTag $ \tg ->
-        let tg' = extlangFormBCP47 tg
-         in extlangFormBCP47 (canonicalizeBCP47 tg') === tg'
+        let tg' = snd $ extlangFormBCP47 tg
+         in snd (extlangFormBCP47 $ snd $ canonicalizeBCP47 tg') === tg'
     describe "correctly returns the preferred value of the deprecated redundant tag" $ do
       let depPrefer (r, t) = case rangeDeprecation $ lookupRedundantRecord r of
             DeprecatedPreferred n -> Just (NormalTag n, redundantToValidTag r, t)
@@ -130,10 +130,10 @@ spec = do
       let redundantTags' = mapMaybe depPrefer redundantTags
       let test (canon, r, l) =
             it (T.unpack l) $
-              canonicalizeBCP47 r `shouldBe` canon
+              snd (canonicalizeBCP47 r) `shouldBe` canon
       traverse_ test redundantTags'
   describe "extlangFormBCP47" $ do
     prop "should be idempotent" $
       forAllShrink genValidTag shrinkValidTag $ \tg ->
-        let tg' = extlangFormBCP47 tg
-         in extlangFormBCP47 tg' === tg'
+        let tg' = snd $ extlangFormBCP47 tg
+         in snd (extlangFormBCP47 tg') === tg'

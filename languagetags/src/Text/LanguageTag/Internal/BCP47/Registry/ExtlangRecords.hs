@@ -27,7 +27,7 @@ import qualified Data.Vector as V
 import Text.LanguageTag.Internal.BCP47.Subtag (Subtag(..))
 import Text.LanguageTag.Internal.BCP47.Registry.Language
 
--- | All of the record information associated to 'Extlang' subtags, together with their corresponding 'Subtag', occurring in the same order as that type's constructors
+-- | All of the record information associated to 'Extlang' subtags, together with their corresponding 'Subtag's, occurring in the same order as that type's constructors
 extlangDetails :: Vector (Subtag, ExtlangRecord)
 extlangDetails = V.fromList
   [(Subtag 14089361900647219219, ExtlangRecord ("Algerian Saharan Arabic" :| []) False Aao Ar Nothing (Just Ar) Nothing)

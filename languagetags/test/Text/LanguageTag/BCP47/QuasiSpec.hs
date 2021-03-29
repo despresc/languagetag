@@ -74,5 +74,5 @@ spec = do
   describe "canontag" $ do
     let test (l, x) =
           it ("parses " <> T.unpack l <> " correctly") $
-            x `shouldBe` canonicalizeBCP47 (pVal l)
+            x `shouldBe` snd (canonicalizeBCP47 (pVal l))
     traverse_ test canontagExamples

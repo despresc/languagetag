@@ -28,7 +28,7 @@ spec = do
     it "has a canonical preferred value, if applicable" $ do
       let depNonCanon x =
             maybePreferred (scriptDeprecation $ lookupScriptRecord x)
-              >>= badRound' canonicalizeScript
+              >>= badRound' (snd . canonicalizeScript)
       depNonCanon `shouldNotMatch` scripttags
   describe "scriptDetails" $ do
     it "has the same number of entries as the Script type has constructors" $ do

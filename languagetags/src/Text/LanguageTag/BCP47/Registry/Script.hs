@@ -33,8 +33,8 @@ import Text.LanguageTag.Internal.BCP47.Registry.Types
 
 -- | Render a 'Script' subtag to a strict text value
 renderScript :: Script -> Text
-renderScript = Sub.renderSubtagLower . scriptToSubtag
+renderScript = Sub.renderSubtagTitle . scriptToSubtag
 
 -- | Render a 'Script' subtag to a lazy text builder
 renderScriptBuilder :: Script -> TB.Builder
-renderScriptBuilder = Sub.renderSubtagBuilderLower . scriptToSubtag
+renderScriptBuilder = Sub.renderSubtagBuilderTitle . scriptToSubtag

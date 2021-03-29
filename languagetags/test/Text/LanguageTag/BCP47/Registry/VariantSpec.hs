@@ -32,7 +32,7 @@ spec = do
     it "has a canonical preferred value, if applicable" $ do
       let depNonCanon x =
             maybePreferred (variantDeprecation $ lookupVariantRecord x)
-              >>= badRound' canonicalizeVariant
+              >>= badRound' (snd . canonicalizeVariant)
       depNonCanon `shouldNotMatch` varianttags
     it "has canonical prefixes, if applicable" $ do
       let depNonCanon x = case badPrefs of
@@ -40,7 +40,7 @@ spec = do
             _ -> Nothing
             where
               badPrefs =
-                mapMaybe (badRound' canonicalizeNormal) $
+                mapMaybe (badRound' (snd . canonicalizeNormal)) $
                   variantPrefixes $ lookupVariantRecord x
       depNonCanon `shouldNotMatch` varianttags
   describe "variantDetails" $ do

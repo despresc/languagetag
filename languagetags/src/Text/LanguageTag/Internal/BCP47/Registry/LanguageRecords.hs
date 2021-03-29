@@ -27,7 +27,7 @@ import qualified Data.Vector as V
 import Text.LanguageTag.Internal.BCP47.Subtag (Subtag(..))
 import Text.LanguageTag.Internal.BCP47.Registry.Script
 
--- | All of the record information associated to 'Language' subtags, together with their corresponding 'Subtag', occurring in the same order as that type's constructors
+-- | All of the record information associated to 'Language' subtags, together with their corresponding 'Subtag's, occurring in the same order as that type's constructors
 languageDetails :: Vector (Subtag, LanguageRecord)
 languageDetails = V.fromList
   [(Subtag 14088385534321754130, LanguageRecord ("Afar" :| []) NotDeprecated Nothing Nothing Nothing)

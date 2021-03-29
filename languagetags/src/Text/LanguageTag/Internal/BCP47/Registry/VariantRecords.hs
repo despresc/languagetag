@@ -31,7 +31,7 @@ import Text.LanguageTag.Internal.BCP47.Registry.Language
 import Text.LanguageTag.Internal.BCP47.Registry.Script
 import Text.LanguageTag.Internal.BCP47.Registry.Region
 
--- | All of the record information associated to 'Variant' subtags, together with their corresponding 'Subtag', occurring in the same order as that type's constructors
+-- | All of the record information associated to 'Variant' subtags, together with their corresponding 'Subtag's, occurring in the same order as that type's constructors
 variantDetails :: Vector (Subtag, VariantRecord)
 variantDetails = V.fromList
   [(Subtag 7122868793502725176, VariantRecord ("Late Middle French (to 1606)" :| []) NotDeprecated [Normal Frm Nothing Nothing Nothing (S.fromList []) M.empty []])
