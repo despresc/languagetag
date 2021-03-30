@@ -146,19 +146,6 @@ renderBCP47Builder (PrivateUseTag sts) =
 renderBCP47Builder (GrandfatheredTag t) =
   renderGrandfatheredBuilder t
 
--- | Order the variants in a 'Normal' tag according to the standard's
--- recommendations. This cannot be implemented as a newtype-defined
--- custom 'Ord' instance for 'Variant' because the ordering in the
--- standard is context-sensitive. This function is used to implement
--- 'renderBCP47' and 'toSubtags'.
-orderNormalVariants :: Normal -> [Variant]
-orderNormalVariants n = firstVariants <> midVariants <> endVariants
-  where
-    (chains, havePrefs, noPrefs) = categorizeVariants n
-    firstVariants = enumerateChainVariants chains
-    midVariants = S.toAscList noPrefs
-    endVariants = S.toAscList $ havePrefs S.\\ S.fromList firstVariants
-
 -- | Convert a 'BCP47' tag to its component subtags, in the same order
 -- as they would appear in 'renderBCP47'. This is not equal to
 -- @'Syn.toSubtags' . 'toSyntaxTag'@ for reasons described in the

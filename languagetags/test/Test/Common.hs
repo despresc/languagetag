@@ -560,21 +560,22 @@ shrinkSynTag (Syn.NormalTag n) = Syn.NormalTag <$> shrinkSynNormal n
 shrinkSynTag (Syn.PrivateUse t) = Syn.PrivateUse <$> shrinkPrivateUseTag t
 shrinkSynTag (Syn.GrandfatheredTag _) = []
 
--- Very conservative until I feel like writing it properly
-shrinkValidTag :: BCP47 -> [BCP47]
-shrinkValidTag (NormalTag (Normal l e s r v es ps)) =
-  fmap NormalTag $
-    [Normal l e' s r v es ps | e' <- shrinkMaybe e]
-      <> [Normal l e s' r v es ps | s' <- shrinkMaybe s]
-      <> [Normal l e s r' v es ps | r' <- shrinkMaybe r]
-      <> [Normal l e s r v' es ps | v' <- S.fromList <$> liftShrink (const []) (S.toList v)]
-      <> [Normal l e s r v es' ps | es' <- shrinkValidExtensions es]
-      <> [Normal l e s r v es ps' | ps' <- liftShrink shrinkSubtag ps]
+shrinkValidNormal :: Normal -> [Normal]
+shrinkValidNormal (Normal l e s r v es ps) =
+  [Normal l e' s r v es ps | e' <- shrinkMaybe e]
+    <> [Normal l e s' r v es ps | s' <- shrinkMaybe s]
+    <> [Normal l e s r' v es ps | r' <- shrinkMaybe r]
+    <> [Normal l e s r v' es ps | v' <- S.fromList <$> liftShrink (const []) (S.toList v)]
+    <> [Normal l e s r v es' ps | es' <- shrinkValidExtensions es]
+    <> [Normal l e s r v es ps' | ps' <- liftShrink shrinkSubtag ps]
   where
     shrinkMaybe = liftShrink (const [])
     shrinkE (c, xs) = (,) c <$> liftShrinkNE shrinkExtensionSubtag xs
     shrinkValidExtensions = fmap M.fromList . shrinkListWith shrinkE . M.toList
     shrinkExtensionSubtag (ExtensionSubtag t) = mapMaybe toExtensionSubtag $ shrinkSubtag t
+
+shrinkValidTag :: BCP47 -> [BCP47]
+shrinkValidTag (NormalTag n) = fmap NormalTag $ shrinkValidNormal n
 shrinkValidTag (PrivateUseTag t) = PrivateUseTag <$> shrinkPrivateUseTag t
 shrinkValidTag (GrandfatheredTag _) = []
 

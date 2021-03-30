@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 module Text.LanguageTag.BCP47.RegistrySpec (spec) where
 
@@ -7,6 +8,7 @@ import Data.Foldable (toList)
 import qualified Data.List as List
 import qualified Data.List.NonEmpty as NE
 import Data.Maybe (mapMaybe)
+import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Vector as V
 import Test.Common
@@ -21,8 +23,10 @@ import Test.QuickCheck
     shrink,
     (===),
   )
+import Text.LanguageTag.BCP47.Quasi (validtag)
 import Text.LanguageTag.BCP47.Registry
-  ( recognizeRedundantNormal,
+  ( BCP47,
+    recognizeRedundantNormal,
     redundantToNormalTag,
     redundantToValidTag,
     renderBCP47,
@@ -36,8 +40,15 @@ import qualified Text.LanguageTag.BCP47.Syntax as Syn
 import Text.LanguageTag.BCP47.Validation (validateBCP47)
 import Text.LanguageTag.Internal.BCP47.Registry.Types (unsafeBinSearchIndexOn)
 
--- TODO: unit testing of validation, rendering (especially for things
--- like variant and extension ordering)
+-- TODO: unit testing of validation (good and bad)
+
+-- TODO: add to me
+renderingExamples :: [(BCP47, Text)]
+renderingExamples =
+  [ ( [validtag|sl-cmn-hant-us-njiva-rozaj-biske-1994-alalc97-1606nict-b-and-a-tag-x-more|],
+      "sl-cmn-Hant-US-rozaj-biske-njiva-1994-alalc97-1606nict-a-tag-b-and-x-more"
+    )
+  ]
 
 spec :: Spec
 spec = do
@@ -78,6 +89,9 @@ spec = do
       forAllShrink genValidTag shrinkValidTag $ \tg ->
         let tg' = fmap validateBCP47 $ Syn.parseBCP47 $ renderBCP47 tg
          in tg' === Right (Right tg)
+    it "renders all the examples correctly" $ do
+      let badPair (x, y) = renderBCP47 x /= y
+      badPair `shouldNotFind` renderingExamples
   describe "redundantTrie" $ do
     let errSyn = fromRight (error "ill-formed redundant trie tag") . Syn.parseBCP47FromSubtags
     let errVal = fromRight (error "invalid redundant trie tag") . validateBCP47

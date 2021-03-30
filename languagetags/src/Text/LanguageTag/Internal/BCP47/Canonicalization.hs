@@ -64,7 +64,11 @@ data LintWarnings = LintWarnings
   }
   deriving (Eq, Ord, Show)
 
--- | A possible warning that may be raised during linting
+-- | A possible warning that may be raised during linting. Note that a
+-- 'PrefixCollision' warning means that multiple variants with
+-- satisfied prefixes were used in the tag, but they couldn't be
+-- arranged in a list such that the variant at the end of the list had
+-- a matching prefix that included all of the previous variants.
 data LintWarning
   = -- | used a deprecated tag or subtag
     UsedDeprecated DeprecatedComponent
@@ -119,17 +123,13 @@ warnNotFixed :: LintWarning -> LintM ()
 warnNotFixed w = LintM $ \x@LintS {sNotFixed = f} -> (x {sNotFixed = (w :) . f}, ())
 
 instance Applicative LintM where
-  pure a = LintM $ (,a)
+  pure a = LintM (,a)
   (<*>) = ap
 
 instance Monad LintM where
   LintM ma >>= mf = LintM $ \l ->
     let (l', a) = ma l
      in unLintM (mf a) l'
-
--- | Lint a 'BCP47' tag, fixing as much as we can
-lintBCP47 :: BCP47 -> LintM BCP47
-lintBCP47 = undefined
 
 -- | Run a 'LintM' action
 runLintM :: LintM a -> (LintWarnings, a)
@@ -276,6 +276,13 @@ suppressLanguageScriptNormal n
 newtype VariantChains = VariantChains [(Variant, VariantChains)]
   deriving (Eq, Ord, Show)
 
+-- | Enumerate the nodes in a 'VariantChains' tree with a depth-first
+-- traversal
+depthFirstEnumeration :: VariantChains -> [Variant]
+depthFirstEnumeration (VariantChains chains) = foldr getVars [] chains
+  where
+    getVars (v, subchains) l = v : (depthFirstEnumeration subchains <> l)
+
 -- | List all of the paths in a 'VariantChains' value
 listVariantChains :: VariantChains -> [NonEmpty Variant]
 listVariantChains (VariantChains t) = foldr go [] t
@@ -289,11 +296,11 @@ listVariantChains (VariantChains t) = foldr go [] t
 -- produces a subsequence of the depth-first traversal of the
 -- 'VariantChains' without any repeated variants by performing that
 -- traversal and keeping the /final/ appearance of an element. When
--- applied to a 'VariantChains' from 'categorizeVariant', this has the
--- effect of ensuring that if @x@ and @y@ are variants in the
+-- applied to a 'VariantChains' from 'categorizeVariants', this has
+-- the effect of ensuring that if @x@ and @y@ are variants in the
 -- 'VariantChains' and @x@ comes before @y@ in one of the
 -- 'listVariantChains' chains, then @x@ will come before @y@ in the
--- result of 'enumerateChainVariants'. (This isn't true in general,
+-- result of 'enumerateChainVariants'. (This doesn't hold in general,
 -- since in an arbitrary 'VariantChains' there could be variants @x@
 -- and @y@ appearing in different orders in different
 -- 'listVariantChains' chains, making the property impossible to
@@ -315,10 +322,7 @@ enumerateChainVariants (VariantChains x) = fst $ unfoldChains x [] mempty
 -- | Get the set of all the variants appearing in the input
 -- 'VariantChains'
 variantsInChains :: VariantChains -> Set Variant
-variantsInChains = S.fromList . go
-  where
-    go (VariantChains chains) = foldr getVars [] chains
-    getVars (v, subchains) l = v : (go subchains <> l)
+variantsInChains = S.fromList . depthFirstEnumeration
 
 -- | Given a set of variants in a tag, return a list of those variants
 -- together with the variant parts of their prefixes filtered
@@ -463,7 +467,10 @@ categorizeVariants n = (growVariantChains matchInit, hasPrefs, noPrefs)
 
 -- | Remove the variants with unsatisfied prefixes from the tag. Also
 -- warn about any prefix collisions that are encountered. This only
--- affects 'Normal' tags.
+-- affects 'Normal' tags. Note that applying this function to a tag
+-- may invalidate prior warnings (e.g., if a tag uses a 'Variant' that
+-- is both deprecated without a preferred value and also has an
+-- unsatisfied prefix).
 removeMismatchedVariants :: BCP47 -> LintM BCP47
 removeMismatchedVariants (NormalTag t) = NormalTag <$> removeMismatchedVariantsNormal t
 removeMismatchedVariants x = pure x
@@ -485,6 +492,43 @@ removeMismatchedVariantsNormal n = do
     warnUnsatisfiedPrefs =
       traverse_ (warnFixed . PrefixMismatch . PrefixedVariant) $
         S.toList unsatisfiedPrefs
+
+-- | Issue unsatisfied prefix and prefix collision 'notFixed' warnings
+-- about the variants
+issueVariantPrefixWarningsNormal :: Normal -> LintM ()
+issueVariantPrefixWarningsNormal n = do
+  warnUnsatisfiedPrefs
+  warnManyChains
+  where
+    (chains, havePrefs, _) = categorizeVariants n
+    warnManyChains = case listVariantChains chains of
+      (x : y : ys) -> warnNotFixed $ PrefixCollision x (y NE.:| ys)
+      _ -> pure ()
+    satisfiedPrefs = variantsInChains chains
+    unsatisfiedPrefs = havePrefs S.\\ satisfiedPrefs
+    warnUnsatisfiedPrefs =
+      traverse_ (warnNotFixed . PrefixMismatch . PrefixedVariant) $
+        S.toList unsatisfiedPrefs
+
+-- | Issue 'PrefixMismatch' and 'PrefixCollision' warnings if
+-- appropriate
+issueVariantPrefixWarnings :: BCP47 -> LintM ()
+issueVariantPrefixWarnings (NormalTag n) = issueVariantPrefixWarningsNormal n
+issueVariantPrefixWarnings _ = pure ()
+
+-- | Order the variants in a 'Normal' tag according to the standard's
+-- recommendations. This cannot be implemented as a newtype-defined
+-- custom 'Ord' instance for 'Variant' because the ordering in the
+-- standard is context-sensitive. This function is used to implement
+-- 'Text.LanguageTag.BCP47.Registry.renderBCP47' and
+-- 'Text.LanguageTag.BCP47.Registry.toSubtags'.
+orderNormalVariants :: Normal -> [Variant]
+orderNormalVariants n = firstVariants <> midVariants <> endVariants
+  where
+    (chains, havePrefs, noPrefs) = categorizeVariants n
+    firstVariants = enumerateChainVariants chains
+    midVariants = S.toAscList noPrefs
+    endVariants = S.toAscList $ havePrefs S.\\ S.fromList firstVariants
 
 ----------------------------------------------------------------
 -- Extlang form

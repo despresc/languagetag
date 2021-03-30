@@ -37,6 +37,7 @@ module Text.LanguageTag.BCP47.Canonicalization
     suppressLanguageScriptNormal,
     restoreLanguageScript,
     restoreLanguageScriptNormal,
+    Internal.issueVariantPrefixWarnings,
     removeMismatchedVariants,
   )
 where
@@ -52,18 +53,25 @@ import qualified Text.LanguageTag.Internal.BCP47.Canonicalization as Internal
 
 -- | This function canonicalizes its input with 'canonicalizeBCP47',
 --  suppresses the script when appropriate with
---  'suppressLanguageScript', then removes any variant subtags with
---  prefixes in the registry that aren't satisfied by the rest of the
---  tag with 'removeMismatchedVariants'. A tag returned by this
+--  'suppressLanguageScript', then warns about (but does not remove)
+--  variant subtags with prefixes in the registry that aren't
+--  satisfied by the rest of the tag or with prefixes that collide
+--  with the prefixes of other variants with
+--  'Internal.issueVariantPrefixWarnings'. A tag returned by this
 --  function (especially with no 'notFixed' warnings) will satisfy
 --  many of recommendations scattered throughout the standard that can
 --  be checked (and sometimes fixed) automatically in a reasonable
 --  way.
+
+-- TODO: really ought to give this function some configuration (e.g.,
+-- whether or not to fix certain things that can be automatically
+-- fixed)
 lintBCP47 :: BCP47 -> (LintWarnings, BCP47)
 lintBCP47 t = runLintM $ do
   t' <- Internal.canonicalizeBCP47 t
   t'' <- Internal.suppressLanguageScript t'
-  Internal.removeMismatchedVariants t''
+  Internal.issueVariantPrefixWarnings t''
+  pure t''
 
 ----------------------------------------------------------------
 -- Canonicalization

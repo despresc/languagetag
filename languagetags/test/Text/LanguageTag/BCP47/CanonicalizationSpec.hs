@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 -- |
@@ -7,8 +8,11 @@
 -- Maintainer  : Christian Despres
 module Text.LanguageTag.BCP47.CanonicalizationSpec (spec) where
 
-import Data.Foldable (traverse_)
+import Control.Applicative ((<|>))
+import Data.Foldable (toList, traverse_)
+import qualified Data.List as List
 import Data.Maybe (mapMaybe)
+import qualified Data.Set as S
 import Data.Text (Text)
 import qualified Data.Text as T
 import Test.Common
@@ -19,39 +23,30 @@ import Test.QuickCheck
     (===),
   )
 import Text.LanguageTag.BCP47.Canonicalization
-  ( canonicalizeBCP47,
+  ( LintWarnings (..),
+    canonicalizeBCP47,
     extlangFormBCP47,
+    lintBCP47,
   )
 import Text.LanguageTag.BCP47.Registry
   ( BCP47 (..),
     Deprecation (..),
+    Normal (..),
     RangeRecord (..),
     Redundant (..),
     lookupRedundantRecord,
+    orderNormalVariants,
     redundantToValidTag,
+  )
+import Text.LanguageTag.Internal.BCP47.Canonicalization
+  ( categorizeVariants,
+    depthFirstEnumeration,
+    enumerateChainVariants,
+    listVariantChains,
   )
 
 -- TODO: more unit testing of canonicalization (not just the redundant
--- tags), and testing of categorizeVariants, lintBCP47, and the
--- warnings that are returned from them. For example, test:
---
--- - that categorizeVariants uses each of the variants of the original
---   tag (and no others, not that it's likely to introduce new
---   variants)
---
--- - that only non-fixed warnings are returned after running lintBCP47
---   twice, and perhaps also that they're the same as the last time
---   (up to reordering?)
---
--- - that enumerateChainVariants has the following property when
---   called on a VariantChains value produced by categorizeVariants:
---   if x and y are variants in the input and x comes before y in one
---   of the listVariantChains, then x comes before y in the resulting
---   enumeration.
---
--- - that enumerateChainVariants behaves the same as reverse . ordNub
---   . reverse . depthFirstTraversal (in which case we could replace
---   the implementation of enumerateVariantChains with that function)
+-- tags)
 
 redundantTags :: [(Redundant, Text)]
 redundantTags =
@@ -124,6 +119,28 @@ redundantTags =
     (ZhYue, "zh-yue")
   ]
 
+data PathOrder
+  = Before
+  | After
+  | Both
+  | Incomparable
+
+-- Get the path order of two _distinct_ elements
+getPathOrder :: Eq a => [[a]] -> a -> a -> PathOrder
+getPathOrder ls x y = summary (False, False) $ mapMaybe go ls
+  where
+    go l = do
+      xn <- List.findIndex (== x) l
+      yn <- List.findIndex (== y) l
+      pure $ xn < yn
+    summary (_, !b) (True : xs) = summary (True, b) xs
+    summary (!a, _) (False : xs) = summary (a, True) xs
+    summary (a, b) []
+      | a && b = Both
+      | a = Before
+      | b = After
+      | otherwise = Incomparable
+
 spec :: Spec
 spec = do
   -- could consider generating canonical tags and then testing
@@ -156,3 +173,55 @@ spec = do
       forAllShrink genValidTag shrinkValidTag $ \tg ->
         let tg' = snd $ extlangFormBCP47 tg
          in snd (extlangFormBCP47 tg') === tg'
+  describe "enumerateChainVariants" $ do
+    prop "behaves like a DFT and reverse-nub" $
+      forAllShrink genValidNormal shrinkValidNormal $ \tg ->
+        let (chains, _, _) = categorizeVariants tg
+            ordNub' _ [] = []
+            ordNub' s (x : xs)
+              | x `S.member` s = ordNub' s xs
+              | otherwise = x : ordNub' (S.insert x s) xs
+         in enumerateChainVariants chains
+              === reverse
+                ( ordNub' mempty $
+                    reverse $
+                      depthFirstEnumeration chains
+                )
+    prop "has the correct variant ordering" $
+      forAllShrink genValidNormal shrinkValidNormal $ \tg ->
+        -- This is the property in the documentation for
+        -- enumerateChainVariants (and renderBCP47) that if x appears
+        -- before y in one of the paths, then x will appear before y
+        -- in the enumeration. This is also implicitly a test that
+        -- Both will never appear as a PathOrder for a pair of
+        -- distinct elements
+        let (chains, _, _) = categorizeVariants tg
+            enumeration = enumerateChainVariants chains
+            paths = toList <$> listVariantChains chains
+            vs = S.toList $ variants tg
+            pairs = [(x, y) | x <- vs, y <- vs, x < y]
+            getNotBefore l x y
+              | Just n <- List.findIndex (== x) l,
+                Just m <- List.findIndex (== y) l,
+                n < m =
+                Nothing
+              | otherwise = Just (x, y)
+            badPair x y = case getPathOrder paths x y of
+              Before -> getNotBefore enumeration x y
+              After -> getNotBefore enumeration y x
+              Both -> getNotBefore enumeration x y <|> getNotBefore enumeration y x
+              Incomparable -> Nothing
+         in uncurry badPair `shouldNotMatch` pairs
+  describe "orderNormalVariants" $ do
+    prop "lists the variants of a normal tag exactly once" $
+      forAllShrink genValidNormal shrinkValidNormal $ \tg ->
+        List.sort (orderNormalVariants tg) === S.toAscList (variants tg)
+  describe "lintBCP47" $ do
+    prop "should only return notFixed warnings (and the same ones) when run twice" $
+      forAllShrink genValidTag shrinkValidTag $ \tg ->
+        let (w, tg') = lintBCP47 tg
+            (w', _) = lintBCP47 tg'
+            badWarnings
+              | null (fixed w') && (notFixed w == notFixed w') = Nothing
+              | otherwise = Just (w, w')
+         in badWarnings === Nothing
