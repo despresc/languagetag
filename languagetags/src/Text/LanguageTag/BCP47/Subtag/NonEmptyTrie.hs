@@ -39,7 +39,7 @@ module Text.LanguageTag.BCP47.Subtag.NonEmptyTrie
     delete,
     prune,
     prunePast,
-    update,
+    updateSub,
     alterSub,
 
     -- * Conversions to and from non-empty lists

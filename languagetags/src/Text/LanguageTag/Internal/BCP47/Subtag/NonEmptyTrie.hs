@@ -31,7 +31,7 @@ module Text.LanguageTag.Internal.BCP47.Subtag.NonEmptyTrie
     delete,
     prune,
     prunePast,
-    update,
+    updateSub,
     alterSub,
 
     -- * Conversion
@@ -149,16 +149,16 @@ alterSub f [] tr = f $ Just tr
 
 -- | Modify or delete the sub-'Trie' at the given position, returning
 -- 'Nothing' if this action would result in an empty 'Trie'
-update :: (Trie a -> Maybe (Trie a)) -> [Subtag] -> Trie a -> Maybe (Trie a)
-update f (st : sts) tr@(Branch n (Step k t) m) =
+updateSub :: (Trie a -> Maybe (Trie a)) -> [Subtag] -> Trie a -> Maybe (Trie a)
+updateSub f (st : sts) tr@(Branch n (Step k t) m) =
   case compare st k of
     LT -> Just tr
-    EQ -> case update f sts t of
+    EQ -> case updateSub f sts t of
       Nothing -> reform n m
       Just t' -> Just $ Branch n (Step k t') m
-    GT -> Just $ Branch n (Step k t) $ M.update (update f sts) st m
-update _ (_ : _) tr@(Leaf _) = Just tr
-update f [] tr = f tr
+    GT -> Just $ Branch n (Step k t) $ M.update (updateSub f sts) st m
+updateSub _ (_ : _) tr@(Leaf _) = Just tr
+updateSub f [] tr = f tr
 
 -- | Modify or create the sub-'Trie' at the given position
 modCreate :: (Maybe (Trie a) -> Trie a) -> [Subtag] -> Trie a -> Trie a
@@ -185,7 +185,7 @@ insert l a = modCreate go l
 -- | Delete the content of the given node at the end, returning
 -- 'Nothing' if that would result in an empty 'Trie'
 delete :: [Subtag] -> Trie a -> Maybe (Trie a)
-delete = update go
+delete = updateSub go
   where
     go (Branch _ s m) = Just $ Branch Nil s m
     go (Leaf _) = Nothing
@@ -194,12 +194,12 @@ delete = update go
 -- children, if it exists. Returns 'Nothing' if the resulting 'Trie'
 -- would be empty.
 prune :: [Subtag] -> Trie a -> Maybe (Trie a)
-prune = update $ const Nothing
+prune = updateSub $ const Nothing
 
 -- | Delete the children of the given node, if it exists. Returns
 -- 'Nothing' if the resulting 'Trie' would be empty.
 prunePast :: [Subtag] -> Trie a -> Maybe (Trie a)
-prunePast = update go
+prunePast = updateSub go
   where
     go (Branch (Node a) _ _) = Just $ Leaf a
     go (Branch Nil _ _) = Nothing
