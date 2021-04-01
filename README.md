@@ -70,9 +70,10 @@ The BCP47-related modules are organized under the
 - `Canonicalization` defines functions that canonicalize valid BCP47
   tags (replacing deprecated tags and extended language tags)
   according to the standard. It also defines more general tag linting
-  functions that implement other recommendations in the standard, such
-  as removing redundant script subtags and removing variant subtags
-  with unsatisfied prefixes.
+  functions that detect and sometimes fix aspects of tags that are not
+  recommended by the standard, such as the presence of redundant
+  script subtags or the presence of variant subtags with unsatisfied
+  prefixes.
 
 - `Quasi` defines quasi-quoters to construct statically-checked
   subtags and tags. The main `tag` quasi-quoter ensures that its input
