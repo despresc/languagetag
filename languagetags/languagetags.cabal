@@ -21,6 +21,8 @@ description:
   <https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry>. See
   the Registry submodule for the exact registry version this library
   uses.
+tested-with:
+  GHC ==8.6.5 || ==8.8.4 || ==8.10.4 || ==9.0.1
 
 extra-source-files:
   CHANGELOG.md
