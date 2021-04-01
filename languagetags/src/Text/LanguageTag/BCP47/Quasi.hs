@@ -22,8 +22,10 @@ module Text.LanguageTag.BCP47.Quasi
   )
 where
 
+import Control.Applicative ((<|>))
 import Data.Foldable (foldl')
-import Data.List.NonEmpty (NonEmpty)
+import Data.Functor (($>))
+import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
@@ -35,12 +37,16 @@ import Language.Haskell.TH.Quote
 import Language.Haskell.TH.Syntax
   ( Name (..),
     OccName (..),
+    Q,
   )
 import Text.LanguageTag.BCP47.Canonicalization
-  ( DeprecatedComponent (..),
-    LintWarning (..),
+  ( CanonicalWarnings (..),
+    DeprecatedComponent (..),
+    ExtlangWarning (..),
     LintWarnings (..),
-    PrefixedComponent (..),
+    PrefixCollision (..),
+    SuperfluousScriptWarning (..),
+    VariantWarnings (..),
     canonicalizeBCP47,
     lintBCP47,
   )
@@ -362,6 +368,11 @@ canontag =
 -- <interactive>:4:18: error:
 --    • Linting returned warning: used deprecated redundant tag "sgn-BR"
 --    • In the quasi-quotation: [tag|sgn-br|]
+-- >>> renderBCP47 [tag|de-1996-1901|]
+-- <interactive>:5:18: error:
+--    • Linting returned warning: the variant "1901" and the variant "1996" have overlapping
+-- prefixes and should not be used together
+--    • In the quasi-quotation: [tag|de-1996-1901|]
 tag :: QuasiQuoter
 tag =
   QuasiQuoter
@@ -376,8 +387,7 @@ tag =
       Right x -> case validateBCP47 x of
         Left e -> fail $ validErr' e
         Right x' -> case lintBCP47 x' of
-          (LintWarnings [] [], x'') -> pure $ validtagE x''
-          (w, _) -> fail $ lintWarningsErr' w
+          (w, x'') -> guardNoLintWarnings w $> validtagE x''
 
 ----------------------------------------------------------------
 -- Nicer errors
@@ -449,17 +459,79 @@ validErr' e = T.unpack $ "Invalid tag: encountered " <> validErr e
 -- | Choose one of the warnings and render it. Should only be called
 -- on a 'LintWarnings' that is known to have at least one warning in
 -- it.
-lintWarningsErr :: LintWarnings -> Text
-lintWarningsErr (LintWarnings _ (x : _)) = lintWarningErr x
-lintWarningsErr (LintWarnings (x : _) _) = lintWarningErr x
-lintWarningsErr _ = "no warnings found, somehow"
+lintWarningsErr :: LintWarnings -> Maybe Text
+lintWarningsErr w =
+  canonErr (canonicalWarnings w)
+    <|> scriptErr (scriptWarning w)
+    <|> variantErr (variantWarnings w)
+  where
+    canonErr (CanonicalWarnings dep ew) = case S.toAscList dep of
+      (x : _) ->
+        Just $
+          "used deprecated " <> case x of
+            DeprecatedLanguage l -> "language subtag " <> quoteText (renderLanguage l)
+            DeprecatedExtlang e -> "extended language subtag " <> quoteText (renderExtlang e)
+            DeprecatedScript s -> "script subtag " <> quoteText (renderScript s)
+            DeprecatedRegion r -> "region subtag " <> quoteText (renderRegion r)
+            DeprecatedVariant v -> "variant subtag " <> quoteText (renderVariant v)
+            DeprecatedRedundant r -> "redundant tag " <> quoteText (renderRedundant r)
+            DeprecatedGrandfathered g -> "grandfathered tag " <> quoteText (renderGrandfathered g)
+      [] -> case ew of
+        ExtlangPrefixMismatch e ->
+          Just $
+            "used extended language subtag " <> quoteText (renderExtlang e)
+              <> " without its registered prefix"
+        UsedExtlang e ->
+          Just $
+            "used the extended language subtag " <> quoteText (renderExtlang e)
+              <> " instead of its identical replacement primary language subtag "
+              <> quoteText (renderExtlang e)
+        NoExtlangWarning -> Nothing
+    scriptErr (SuperfluousLanguageScript s l) =
+      Just $
+        "script subtag "
+          <> quoteText (renderScript s)
+          <> " is implied by the language subtag "
+          <> quoteText (renderLanguage l)
+    scriptErr (SuperfluousExtlangScript s e) =
+      Just $
+        "script subtag "
+          <> quoteText (renderScript s)
+          <> " is implied by the extended language subtag "
+          <> quoteText (renderExtlang e)
+    scriptErr NoSuperfluousScript = Nothing
+    rendChain (x :| xs)
+      | null xs =
+        "the variant "
+          <> quoteText (renderVariant x)
+      | otherwise =
+        "the variant chain "
+          <> quoteText (T.intercalate "-" $ renderVariant <$> x : xs)
 
-lintWarningsErr' :: LintWarnings -> String
-lintWarningsErr' w = T.unpack $ "Linting returned warning: " <> lintWarningsErr w
+    variantErr (VariantWarnings pc s) = case pc of
+      PrefixCollision xs (ys :| _) ->
+        Just $
+          rendChain xs
+            <> " and "
+            <> rendChain ys
+            <> " have overlapping prefixes and should not be used together"
+      NoPrefixCollision -> case S.toAscList s of
+        (x : _) ->
+          Just $
+            "used variant subtag "
+              <> quoteText (renderVariant x)
+              <> " without one of its registered prefixes"
+        [] -> Nothing
+
+guardNoLintWarnings :: LintWarnings -> Q ()
+guardNoLintWarnings w = case lintWarningsErr w of
+  Nothing -> pure ()
+  Just t -> fail $ T.unpack $ "Linting returned warning: " <> t
 
 quoteText :: Text -> Text
 quoteText t = "\"" <> t <> "\""
 
+{-
 lintWarningErr :: LintWarning -> Text
 lintWarningErr (UsedDeprecated d) =
   "used deprecated " <> case d of
@@ -486,3 +558,4 @@ lintWarningErr (UsedExtlang e) =
   "used the extended language subtag " <> quoteText (renderExtlang e)
     <> " instead of its replacement primary language subtag "
     <> quoteText (renderExtlang e)
+-}

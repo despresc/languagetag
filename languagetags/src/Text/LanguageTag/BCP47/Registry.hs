@@ -75,7 +75,7 @@ import Text.LanguageTag.BCP47.Subtag
     renderSubtagBuilderLower,
   )
 import qualified Text.LanguageTag.BCP47.Syntax as Syn
-import Text.LanguageTag.Internal.BCP47.Canonicalization
+import Text.LanguageTag.BCP47.Canonicalization
 import Text.LanguageTag.Internal.BCP47.Registry.Date
 import Text.LanguageTag.Internal.BCP47.Registry.Types
 import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn
@@ -84,7 +84,8 @@ import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn
 -- function is not equivalent to @'Syn.renderBCP47' . 'toSyntaxTag'@,
 -- because the variants in the tag may need to be rendered
 -- non-alphabetically to conform to the standard's
--- recommendations. The order chosen here is as follows:
+-- recommendations. The order chosen by 'orderNormalVariants' and used
+-- here is as follows:
 --
 -- 1. The variants in the tag with at least one satisfied prefix (a
 --    prefix in their registry record that match the rest of the tag)
@@ -106,9 +107,9 @@ import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn
 -- chain). Additionally, most tags that are encountered have no
 -- variants at all, and most of the remainder have only one variant,
 -- so this (still necessary) treatment of the variants will not affect
--- the tag's presentation. (The documentation for the internal
--- function 'categorizeVariants' goes into more detail about analyzing
--- the variants of tags).
+-- the tag's presentation. (The documentation for the function
+-- 'categorizeVariants' goes into more detail about analyzing the
+-- variants of tags).
 --
 -- A (nonsensical) example of rendering a 'Normal' tag with all of the
 -- possible tag parts present:

@@ -8,7 +8,8 @@ module Text.LanguageTag.BCP47.Registry.GrandfatheredSpec (spec) where
 import qualified Data.Vector as V
 import Test.Common
 import Test.Hspec
-import Text.LanguageTag.BCP47.Canonicalization (canonicalizeNormal)
+import Text.LanguageTag.BCP47.Canonicalization (lintBCP47)
+import Text.LanguageTag.BCP47.Registry (BCP47 (..))
 import Text.LanguageTag.BCP47.Registry.Grandfathered
   ( Grandfathered,
     RangeRecord (..),
@@ -20,10 +21,14 @@ spec :: Spec
 spec = do
   let grandfatheredtags = [minBound .. maxBound :: Grandfathered]
   describe "lookupGrandfatheredRecord" $ do
-    it "has only canonical preferred values" $ do
+    it "has values that lint cleanly to themselves" $ do
       let depNonCanon x =
             maybePreferred (rangeDeprecation $ lookupGrandfatheredRecord x)
-              >>= badRound' (snd . canonicalizeNormal)
+              >>= badLint
+          badLint t = case lintBCP47 (NormalTag t) of
+            (w, NormalTag t')
+              | w == mempty && t == t' -> Nothing
+            _ -> Just t
       depNonCanon `shouldNotMatch` grandfatheredtags
   describe "grandfatheredDetails" $ do
     it "has the same number of entries as the Grandfathered type has constructors" $ do

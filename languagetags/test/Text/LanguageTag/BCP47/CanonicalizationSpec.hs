@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 -- |
 -- Description : Testing canonicalization
@@ -11,6 +12,7 @@ module Text.LanguageTag.BCP47.CanonicalizationSpec (spec) where
 import Control.Applicative ((<|>))
 import Data.Foldable (toList, traverse_)
 import qualified Data.List as List
+import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (mapMaybe)
 import qualified Data.Set as S
 import Data.Text (Text)
@@ -23,26 +25,35 @@ import Test.QuickCheck
     (===),
   )
 import Text.LanguageTag.BCP47.Canonicalization
-  ( LintWarnings (..),
+  ( CanonicalWarnings (..),
+    DeprecatedComponent (..),
+    ExtlangWarning (..),
+    LintWarnings (..),
+    PrefixCollision (..),
+    SuperfluousScriptWarning (..),
+    VariantWarnings (..),
     canonicalizeBCP47,
+    categorizeVariants,
+    depthFirstEnumeration,
+    enumerateChainVariants,
     extlangFormBCP47,
     lintBCP47,
+    listVariantChains,
   )
+import Text.LanguageTag.BCP47.Quasi (validtag)
 import Text.LanguageTag.BCP47.Registry
   ( BCP47 (..),
     Deprecation (..),
+    Extlang (..),
+    Language (..),
     Normal (..),
     RangeRecord (..),
     Redundant (..),
+    Script (..),
+    Variant (..),
     lookupRedundantRecord,
     orderNormalVariants,
     redundantToValidTag,
-  )
-import Text.LanguageTag.Internal.BCP47.Canonicalization
-  ( categorizeVariants,
-    depthFirstEnumeration,
-    enumerateChainVariants,
-    listVariantChains,
   )
 
 -- TODO: more unit testing of canonicalization (not just the redundant
@@ -117,6 +128,57 @@ redundantTags =
     (ZhGan, "zh-gan"),
     (ZhWuu, "zh-wuu"),
     (ZhYue, "zh-yue")
+  ]
+
+lintWarningExamples :: [(BCP47, LintWarnings)]
+lintWarningExamples =
+  [ ( [validtag|de-1996-1901|],
+      LintWarnings
+        { canonicalWarnings = mempty,
+          scriptWarning = mempty,
+          variantWarnings =
+            VariantWarnings
+              { variantPrefixCollisions = PrefixCollision (Var1901 :| []) ((Var1996 :| []) :| []),
+                variantPrefixMismatches = mempty
+              }
+        }
+    ),
+    ( [validtag|zh-cmn|],
+      LintWarnings
+        { canonicalWarnings =
+            CanonicalWarnings
+              { deprecatedComponents = S.singleton $ DeprecatedRedundant ZhCmn,
+                extlangWarning = UsedExtlang ExtCmn
+              },
+          scriptWarning = mempty,
+          variantWarnings = mempty
+        }
+    ),
+    ( [validtag|en-cmn|],
+      LintWarnings
+        { canonicalWarnings =
+            CanonicalWarnings
+              { deprecatedComponents = mempty,
+                extlangWarning = ExtlangPrefixMismatch ExtCmn
+              },
+          scriptWarning = mempty,
+          variantWarnings = mempty
+        }
+    ),
+    ( [validtag|en-Latn|],
+      LintWarnings
+        { canonicalWarnings = mempty,
+          scriptWarning = SuperfluousLanguageScript Latn En,
+          variantWarnings = mempty
+        }
+    ),
+    ( [validtag|en-1606nict|],
+      LintWarnings
+        { canonicalWarnings = mempty,
+          scriptWarning = mempty,
+          variantWarnings = VariantWarnings mempty $ S.singleton Var1606nict
+        }
+    )
   ]
 
 data PathOrder
@@ -217,11 +279,21 @@ spec = do
       forAllShrink genValidNormal shrinkValidNormal $ \tg ->
         List.sort (orderNormalVariants tg) === S.toAscList (variants tg)
   describe "lintBCP47" $ do
-    prop "should only return notFixed warnings (and the same ones) when run twice" $
+    prop "is idempotent" $
       forAllShrink genValidTag shrinkValidTag $ \tg ->
-        let (w, tg') = lintBCP47 tg
-            (w', _) = lintBCP47 tg'
-            badWarnings
-              | null (fixed w') && (notFixed w == notFixed w') = Nothing
-              | otherwise = Just (w, w')
-         in badWarnings === Nothing
+        let (_, tg') = lintBCP47 tg
+            (_, tg'') = lintBCP47 tg'
+         in tg'' === tg'
+    prop "gives the same warnings after the second linting" $
+      forAllShrink genValidTag shrinkValidTag $ \tg ->
+        let (_, tg') = lintBCP47 tg
+            (w, tg'') = lintBCP47 tg'
+            (w', _) = lintBCP47 tg''
+         in w' === w
+    it "gives the correct warnings for the examples" $ do
+      let badPair (x, y)
+            | y == w = Nothing
+            | otherwise = Just (x, y, w)
+            where
+              (w, _) = lintBCP47 x
+      badPair `shouldNotMatch` lintWarningExamples

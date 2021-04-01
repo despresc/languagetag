@@ -11,7 +11,9 @@ import Test.Common
 import Test.Hspec
 import Text.LanguageTag.BCP47.Canonicalization
   ( canonicalizeNormal,
-    canonicalizeVariant,
+  )
+import Text.LanguageTag.BCP47.Registry
+  ( Deprecation (..),
   )
 import Text.LanguageTag.BCP47.Registry.Variant
   ( Variant,
@@ -25,6 +27,9 @@ import Text.LanguageTag.Internal.BCP47.Registry.VariantRecords (variantDetails)
 spec :: Spec
 spec = do
   let varianttags = [minBound .. maxBound :: Variant]
+  let canonVariant x = case variantDeprecation $ lookupVariantRecord x of
+        NotDeprecated -> Just x
+        _ -> Nothing
   describe "variantToSubtag" $ do
     it "composes on the right with validateVariant correctly" $ do
       badRound (validateVariant . variantToSubtag) `shouldNotMatch` varianttags
@@ -32,7 +37,7 @@ spec = do
     it "has a canonical preferred value, if applicable" $ do
       let depNonCanon x =
             maybePreferred (variantDeprecation $ lookupVariantRecord x)
-              >>= badRound' (snd . canonicalizeVariant)
+              >>= badRound canonVariant
       depNonCanon `shouldNotMatch` varianttags
     it "has canonical prefixes, if applicable" $ do
       let depNonCanon x = case badPrefs of

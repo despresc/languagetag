@@ -16,7 +16,8 @@ import Test.QuickCheck
   ( forAllShrink,
     (===),
   )
-import Text.LanguageTag.BCP47.Canonicalization (canonicalizeNormal)
+import Text.LanguageTag.BCP47.Canonicalization (lintBCP47)
+import Text.LanguageTag.BCP47.Registry (BCP47 (..))
 import Text.LanguageTag.BCP47.Registry.Redundant
   ( RangeRecord (..),
     Redundant,
@@ -55,7 +56,11 @@ spec = do
     it "has only canonical preferred values" $ do
       let depNonCanon x =
             maybePreferred (rangeDeprecation $ lookupRedundantRecord x)
-              >>= badRound' (snd . canonicalizeNormal)
+              >>= badLint
+          badLint t = case lintBCP47 (NormalTag t) of
+            (w, NormalTag t')
+              | w == mempty && t == t' -> Nothing
+            _ -> Just t
       depNonCanon `shouldNotMatch` redundanttags
   describe "redundantDetails" $ do
     it "has the same number of entries as the Redundant type has constructors" $ do

@@ -121,14 +121,14 @@ fromStep :: Step a -> (Subtag, NonEmpty ([Subtag], a))
 fromStep (Step s t) = (s, fromTrie t)
 
 -- | Construct a 'Trie' with exactly the given node as content
-singleton :: [Subtag] -> a -> Trie a
-singleton l = raise l . Leaf
+singleton :: a -> [Subtag] -> Trie a
+singleton = raise . Leaf
 
 -- | Construct a 'Trie' with exactly the given sub-'Trie' at the end
 -- of the path
-raise :: [Subtag] -> Trie a -> Trie a
-raise (st : sts) t = Branch Nil (Step st $ raise sts t) mempty
-raise [] t = t
+raise :: Trie a -> [Subtag] -> Trie a
+raise t (st : sts) = Branch Nil (Step st $ raise t sts) mempty
+raise t [] = t
 
 -- | Modify, create, or delete the sub-'Trie' at the given position,
 -- returning 'Nothing' if this action would result in an empty 'Trie'
@@ -143,7 +143,7 @@ alterSub f (st : sts) tr@(Branch n (Step k t) m) =
       Just t' -> Just $ Branch n (Step k t') m
     GT -> Just $ Branch n (Step k t) $ M.update (alterSub f sts) st m
 alterSub f (st : sts) (Leaf n) = case f Nothing of
-  Just t -> Just $ Branch (Node n) (Step st $ raise sts t) mempty
+  Just t -> Just $ Branch (Node n) (Step st $ raise t sts) mempty
   Nothing -> Just $ Leaf n
 alterSub f [] tr = f $ Just tr
 
@@ -164,20 +164,20 @@ updateSub f [] tr = f tr
 modCreate :: (Maybe (Trie a) -> Trie a) -> [Subtag] -> Trie a -> Trie a
 modCreate f (st : sts) (Branch n (Step k t) m) =
   case compare st k of
-    LT -> Branch n (Step st $ raise sts $ f Nothing) $ M.insert k t m
+    LT -> Branch n (Step st $ raise (f Nothing) sts) $ M.insert k t m
     EQ -> Branch n (Step k $ modCreate f sts t) m
     GT -> Branch n (Step k t) $ M.alter go st m
   where
-    go Nothing = Just $ raise sts $ f Nothing
+    go Nothing = Just $ raise (f Nothing) sts
     go (Just x) = Just $ modCreate f sts x
 modCreate f (st : sts) (Leaf n) =
-  Branch (Node n) (Step st $ raise sts $ f Nothing) mempty
+  Branch (Node n) (Step st $ raise (f Nothing) sts) mempty
 modCreate f [] t = f $ Just t
 
 -- | Replace the content of the given node of the 'Trie' with the
 -- given value
-insert :: [Subtag] -> a -> Trie a -> Trie a
-insert l a = modCreate go l
+insert :: a -> [Subtag] -> Trie a -> Trie a
+insert a = modCreate go
   where
     go (Just (Branch _ s m)) = Branch (Node a) s m
     go _ = Leaf a

@@ -58,7 +58,6 @@ library
     Text.LanguageTag.BCP47.Syntax
     Text.LanguageTag.BCP47.Syntax.Trie
     Text.LanguageTag.BCP47.Validation
-    Text.LanguageTag.Internal.BCP47.Canonicalization
     Text.LanguageTag.Internal.BCP47.Registry.DataConShow
     Text.LanguageTag.Internal.BCP47.Registry.ExtlangRecords
     Text.LanguageTag.Internal.BCP47.Registry.GrandfatheredRecords

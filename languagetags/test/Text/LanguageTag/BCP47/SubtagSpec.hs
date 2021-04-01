@@ -13,6 +13,8 @@ import Test.Hspec.QuickCheck
 import Test.QuickCheck
   ( forAllShrink,
     shrink,
+    suchThat,
+    vectorOf,
     (===),
   )
 import Text.LanguageTag.BCP47.Subtag
@@ -67,6 +69,8 @@ spec = do
           fixBad _ = Nothing
       forAllShrink genSubtagText shrinkSubtagText $ \t ->
         fixBad (popSubtag $ t <> "-") === collapseLeft (fst <$> popSubtag t)
+    it "fails to parse empty input correctly" $
+      popSubtag "" === Left EmptyInput
     prop "is case-insensitive on initial well-formed subtags" $ do
       let fixPop (Right (s, t)) = Right (s, T.toLower t)
           fixPop (Left e) = Left e
@@ -94,8 +98,27 @@ spec = do
           fixError x = x
       forAllShrink genSubtagishText shrinkText $ \t ->
         fixError (parseSubtag t) === parseSubtag (T.toLower t)
+    prop "fails to parse tags that are too long" $ do
+      let genLarge = do
+            t <- T.pack <$> vectorOf 8 genSubtagChar
+            let p x = case T.uncons x of
+                  Just (c, _) -> c /= '-'
+                  Nothing -> False
+            t' <- genSubtagishText `suchThat` p
+            pure $ t <> t'
+          shrinkLarge t = case T.splitAt 8 t of
+            (start, rest) -> (start <>) <$> (filter (not . T.null) $ shrinkText rest)
+      forAllShrink genLarge shrinkLarge $ \t ->
+        parseSubtag t === Left TagTooLong
+    it "fails to parse empty input correctly" $
+      parseSubtag "" === Left EmptyInput
     prop "generates subtags acceptable to wrapSubtag" $
       forAllShrink genSubtagText shrinkSubtagText $ \t ->
+        let mst = collapseLeft $ parseSubtag t
+            wrapst = mst >>= (wrapSubtag . unwrapSubtag)
+         in mst === wrapst
+    prop "generates subtags acceptable to wrapSubtag on candidates" $
+      forAllShrink genSubtagishText shrinkText $ \t ->
         let mst = collapseLeft $ parseSubtag t
             wrapst = mst >>= (wrapSubtag . unwrapSubtag)
          in mst === wrapst

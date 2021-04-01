@@ -67,9 +67,9 @@ mnode Nil = Nothing
 
 -- FIXME: may have more efficient implementation?
 toTrie :: NonEmpty ([Subtag], a) -> Trie a
-toTrie ((sts, a) :| xs) = foldl' go (singleton sts a) xs
+toTrie ((sts, a) :| xs) = foldl' go (singleton a sts) xs
   where
-    go t (sts', a') = insert sts' a' t
+    go t (sts', a') = insert a' sts' t
 
 -- | Construct a 'Step' by gathering paths with common indices
 -- together, preferring the rightmost path if there are duplicates
@@ -96,7 +96,7 @@ leaf s = Step s . root
 -- | Construct a 'Step' consisting of the given path with the given
 -- element at its end
 path :: NonEmpty Subtag -> a -> Step a
-path (x :| xs) = Step x . singleton xs
+path (x :| xs) = Step x . flip singleton xs
 
 -- | Construct a trie from its children, preferring the rightmost
 -- child if there are duplicates
@@ -132,13 +132,13 @@ lookupSub [] t = Just t
 lookupLax :: [Subtag] -> Trie a -> Maybe a
 lookupLax = go Nothing
   where
-    go mn (x : xs) (Branch n (Step s t) m) =
-      let mn' = mn <|> mnode n
+    go !mn (x : xs) (Branch n (Step s t) m) =
+      let mn' = mnode n <|> mn
        in case compare x s of
             LT -> mn'
             EQ -> go mn' xs t
             GT -> case M.lookup x m of
               Nothing -> mn'
               Just t' -> go mn' xs t'
-    go mn [] (Branch n _ _) = mn <|> mnode n
+    go mn [] (Branch n _ _) = mnode n <|> mn
     go _ _ (Leaf a) = Just a

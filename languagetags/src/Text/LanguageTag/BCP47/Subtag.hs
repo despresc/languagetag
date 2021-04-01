@@ -182,17 +182,19 @@ popSubtag inp = case T.uncons inp of
       | otherwise -> Left $ InvalidChar 0 c
   Nothing -> Left EmptyInput
   where
-    go !pos !l !sc t = case T.uncons t of
-      Just (c, t')
-        | pos > 8 -> Left TagTooLong
-        | c == '-' ->
-          if T.null t'
-            then Left $ TrailingTerminator $ recordSeen sc $ readSubtag (fromIntegral pos) $ l []
-            else Right (recordSeen sc $ readSubtag (fromIntegral pos) $ l [], t')
-        | otherwise -> case packCharDetail c of
-          Just (w, sc') -> go (pos + 1) (l . (w :)) (reportChar sc' sc) t'
-          Nothing -> Left $ InvalidChar pos c
-      Nothing -> Right (recordSeen sc $ readSubtag (fromIntegral pos) $ l [], "")
+    go !len !l !sc t
+      | len > 8 = Left TagTooLong
+      | otherwise = case T.uncons t of
+        Just (c, t')
+          | c == '-' ->
+            if T.null t'
+              then Left $ TrailingTerminator $ recordSeen sc $ readSubtag (fromIntegral len) $ l []
+              else Right (recordSeen sc $ readSubtag (fromIntegral len) $ l [], t')
+          | len == 8 -> Left TagTooLong
+          | otherwise -> case packCharDetail c of
+            Just (w, sc') -> go (len + 1) (l . (w :)) (reportChar sc' sc) t'
+            Nothing -> Left $ InvalidChar len c
+        Nothing -> Right (recordSeen sc $ readSubtag (fromIntegral len) $ l [], "")
 
 ----------------------------------------------------------------
 -- Subtag characters

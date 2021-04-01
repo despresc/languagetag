@@ -8,9 +8,9 @@ module Text.LanguageTag.BCP47.Registry.LanguageSpec (spec) where
 import qualified Data.Vector as V
 import Test.Common
 import Test.Hspec
-import Text.LanguageTag.BCP47.Canonicalization (canonicalizeLanguage)
 import Text.LanguageTag.BCP47.Registry
   ( Scope (..),
+    Deprecation(..),
   )
 import Text.LanguageTag.BCP47.Registry.Language
   ( Language,
@@ -21,9 +21,13 @@ import Text.LanguageTag.BCP47.Registry.Language
 import Text.LanguageTag.BCP47.Validation (validateLanguage)
 import Text.LanguageTag.Internal.BCP47.Registry.LanguageRecords (languageDetails)
 
+
 spec :: Spec
 spec = do
   let langtags = [minBound .. maxBound :: Language]
+  let canonLang x = case languageDeprecation $ lookupLanguageRecord x of
+        NotDeprecated -> Just x
+        _ -> Nothing
   describe "languageToSubtag" $ do
     it "composes on the right with validateLanguage correctly" $ do
       badRound (validateLanguage . languageToSubtag) `shouldNotMatch` langtags
@@ -31,7 +35,7 @@ spec = do
     it "has a canonical preferred value, if applicable" $ do
       let depNonCanon x =
             maybePreferred (languageDeprecation $ lookupLanguageRecord x)
-              >>= badRound' (snd . canonicalizeLanguage)
+              >>= badRound canonLang
       depNonCanon `shouldNotMatch` langtags
     it "has a macrolanguage macrolanguage, if applicable" $ do
       let getMacroScope x =
