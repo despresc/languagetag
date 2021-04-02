@@ -23,6 +23,7 @@ import Text.LanguageTag.BCP47.Subtag
     containsLetter,
     containsOnlyDigits,
     containsOnlyLetters,
+    isSubtagChar,
     packChar,
     parseSubtag,
     popSubtag,
@@ -50,6 +51,17 @@ TODO:
 
 spec :: Spec
 spec = do
+  let isAsciiAlphaNum c = Char.isDigit c || Char.isAsciiUpper c || Char.isAsciiLower c
+  -- limited down-casing, since toLower can map non-ASCII
+  -- alphanumerics to ASCII alphanumerics (as the \8490 "Kelvin
+  -- symbol" reminded me). renders the relevant tests a little less
+  -- informative, unfortunately.
+  let limitedDownCase c
+        | isSubtagChar c' && not (isSubtagChar c) = c
+        | otherwise = c'
+        where
+          c' = Char.toLower c
+  let mapDownCase = T.map limitedDownCase
   describe "popSubtag" $ do
     -- Note that this test and the failing trailing terminator test
     -- are important for the correctness of parseSubtag, since it
@@ -77,11 +89,11 @@ spec = do
       forAllShrink genPopSubtagText shrinkPopSubtagText $ \t ->
         fixPop (popSubtag t) === popSubtag (T.toLower t)
     prop "is case-insensitive on any candidate subtag" $ do
-      let fixUp (Left (InvalidChar n c)) = Left $ InvalidChar n $ Char.toLower c
+      let fixUp (Left (InvalidChar n c)) = Left $ InvalidChar n $ limitedDownCase c
           fixUp (Left e) = Left e
-          fixUp (Right (s, t)) = Right (s, T.toLower t)
+          fixUp (Right (s, t)) = Right (s, mapDownCase t)
       forAllShrink genSubtagishText shrinkText $ \t ->
-        fixUp (popSubtag t) === popSubtag (T.toLower t)
+        fixUp (popSubtag t) === popSubtag (mapDownCase t)
     prop "generates subtags acceptable to wrapSubtag" $
       forAllShrink genPopSubtagText shrinkPopSubtagText $ \t ->
         let mst = collapseLeft $ fst <$> popSubtag t
@@ -94,10 +106,10 @@ spec = do
       forAllShrink genSubtagText shrinkSubtagText $ \t ->
         parseSubtag t === parseSubtag (T.toLower t)
     prop "is case-insensitive on any candidate subtag" $ do
-      let fixError (Left (InvalidChar n c)) = Left $ InvalidChar n $ Char.toLower c
+      let fixError (Left (InvalidChar n c)) = Left $ InvalidChar n $ limitedDownCase c
           fixError x = x
       forAllShrink genSubtagishText shrinkText $ \t ->
-        fixError (parseSubtag t) === parseSubtag (T.toLower t)
+        fixError (parseSubtag t) === parseSubtag (mapDownCase t)
     prop "fails to parse tags that are too long" $ do
       let genLarge = do
             t <- T.pack <$> vectorOf 8 genSubtagChar
@@ -198,3 +210,7 @@ spec = do
     prop "unpacks subtags correctly" $
       forAllShrink genSubtag shrinkSubtag $ \st ->
         T.pack (unpackCharLower <$> unpackSubtag st) === renderSubtagLower st
+  describe "isSubtagChar" $ do
+    prop "behaves like isAsciiAlphaNum" $
+      forAllShrink genSubtagishChar shrink $ \c ->
+        isSubtagChar c === isAsciiAlphaNum c

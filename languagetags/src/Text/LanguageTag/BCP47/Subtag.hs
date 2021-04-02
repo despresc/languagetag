@@ -42,6 +42,7 @@ module Text.LanguageTag.BCP47.Subtag
     SubtagChar,
     packChar,
     unpackCharLower,
+    isSubtagChar,
 
     -- * Additional rendering functions
     renderSubtagUpper,
@@ -69,6 +70,7 @@ import Control.DeepSeq (NFData (..))
 import qualified Data.Bits as Bit
 import Data.Char (ord)
 import qualified Data.List as List
+import Data.Maybe (isJust)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
@@ -244,6 +246,11 @@ packCharDetail = onChar Nothing low high dig
 -- lower case if it is not already
 packChar :: Char -> Maybe SubtagChar
 packChar = fmap fst . packCharDetail
+
+-- | Tests whether or not the 'Char' is a valid subtag character (an
+-- ASCII alphanumeric character)
+isSubtagChar :: Char -> Bool
+isSubtagChar = isJust . packCharDetail
 
 data SeenChar
   = OnlyLetter

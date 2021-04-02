@@ -21,7 +21,8 @@ import Test.QuickCheck
 import Text.LanguageTag.BCP47.Quasi
 import Text.LanguageTag.BCP47.Registry (ExtensionChar (..), Grandfathered (..))
 import Text.LanguageTag.BCP47.Subtag
-  ( renderSubtagLower,
+  ( isSubtagChar,
+    renderSubtagLower,
     unpackCharLower,
   )
 import qualified Text.LanguageTag.BCP47.Syntax as Syn
@@ -86,6 +87,13 @@ syntaxFailures =
 
 spec :: Spec
 spec = do
+  -- see SubtagSpec
+  let limitedDownCase c
+        | isSubtagChar c' && not (isSubtagChar c) = c
+        | otherwise = c'
+        where
+          c' = Char.toLower c
+  let mapDownCase = T.map limitedDownCase
   describe "parseBCP47" $ do
     prop "parses any well-formed tag" $
       forAllShrink genTagText shrinkTagText $ isRight . Syn.parseBCP47
@@ -94,10 +102,10 @@ spec = do
         Syn.parseBCP47 t === Syn.parseBCP47 (T.toLower t)
     prop "is case-sensitive on near-well-formed tags" $ do
       let fixErr (Left (Syn.UnparsableSubtag p a (Just (n, c)) t)) =
-            Left $ Syn.UnparsableSubtag p a (Just (n, Char.toLower c)) t
+            Left $ Syn.UnparsableSubtag p a (Just (n, limitedDownCase c)) t
           fixErr x = x
       forAllShrink genTagishText shrinkTagishText $ \t ->
-        fixErr (Syn.parseBCP47 t) === Syn.parseBCP47 (T.toLower t)
+        fixErr (Syn.parseBCP47 t) === Syn.parseBCP47 (mapDownCase t)
     describe "fails correctly on" $ do
       let test (l, e) =
             it (T.unpack l) $
