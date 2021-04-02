@@ -1,8 +1,8 @@
 cabal-version: 2.4
-name:          languagetags-gen
+name:          languagetag-gen
 version:       0.1.0
-synopsis:      Code generation for languagetags
-bug-reports:   https://github.com/despresc/languagetags/issues
+synopsis:      Code generation for languagetag
+bug-reports:   https://github.com/despresc/languagetag/issues
 license:       BSD-2-Clause
 license-file:  LICENSE
 author:        Christian Despres
@@ -11,13 +11,11 @@ copyright:     Copyright 2021 Christian Despres
 category:      Text
 description:
   This package is responsible for generating internal modules in the
-  languagetags library using the registry information in the
+  languagetag project using the registry information in the
   @registry\/@ directory. At the moment we only process the IANA
   language subtag registry, an up-to-date copy of which is available
   at
   <https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry>.
-tested-with:
-  GHC ==8.6.5 || ==8.8.4 || ==8.10.4 || ==9.0.1
 
 extra-source-files:
   README.md
@@ -27,7 +25,7 @@ library
   default-language: Haskell2010
   ghc-options: -Wall
   build-depends:
-    languagetags == 0.1.0,
+    languagetag-bcp47 == 0.1.0,
     base,
     text,
     containers,
@@ -44,13 +42,13 @@ library
     Text.LanguageTag.Gen.BCP47.Render
     Text.LanguageTag.Gen.Jar
 
-executable languagetags-gen
+executable languagetag-gen
   hs-source-dirs: app
   default-language: Haskell2010
   main-is: Main.hs
   build-depends:
     base,
-    languagetags-gen
+    languagetag-gen
   ghc-options: -Wall
 
 
@@ -61,8 +59,8 @@ test-suite test
   hs-source-dirs:
     test
   build-depends:
-    languagetags,
-    languagetags-gen,
+    languagetag-bcp47,
+    languagetag-gen,
     base,
     text,
     hspec,

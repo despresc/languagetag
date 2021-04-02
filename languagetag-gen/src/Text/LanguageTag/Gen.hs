@@ -59,9 +59,9 @@ readLocalRegistry pref = T.readFile (pref <> "/registry/bcp47") >>= parseRegistr
 -- | Read the BCP47 registry, then write the internal modules
 defaultMain :: IO ()
 defaultMain = do
-  b <- doesDirectoryExist "./languagetags-gen"
-  let prefgen = if b then "./languagetags-gen" else "../languagetags-gen"
-  let preflang = if b then "./languagetags" else "../languagetags"
+  b <- doesDirectoryExist "./languagetag-gen"
+  let prefgen = if b then "./languagetag-gen" else "../languagetag-gen"
+  let preflang = if b then "./languagetag-bcp47" else "../languagetag-bcp47"
   (u, r) <- readLocalRegistry prefgen
   unless (null u) $ do
     putStrLn "Unrecognized BCP47 registry tag fields:"

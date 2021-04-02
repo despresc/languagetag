@@ -1,8 +1,8 @@
 cabal-version: 2.4
-name:          languagetags
+name:          languagetag-bcp47
 version:       0.1.0
-synopsis:      Language tag parsing and analysis
-bug-reports:   https://github.com/despresc/languagetags/issues 
+synopsis:      BCP47 language tag parsing and analysis
+bug-reports:   https://github.com/despresc/languagetag/issues
 license:       BSD-2-Clause
 license-file:  LICENSE
 author:        Christian Despres
@@ -10,14 +10,12 @@ maintainer:    christian.j.j.despres@gmail.com
 copyright:     Copyright 2021 Christian Despres
 category:      Text
 description:
-  This library aims to provide tools for parsing and analyzing a
-  variety of different language tags, /language tag/ meaning some code
-  in a standard for identifying human languages. Currently it only
-  supports the processing of [BCP47 language
-  tags](https://tools.ietf.org/html/bcp47) as of the current 2009
-  version of that standard. The registered tag and subtag types and
-  other relevant registry functions are statically generated using
-  data from the IANA Language Subtag Registry, available from
+  This library provides tools for parsing and analyzing [BCP47
+  language tags](https://tools.ietf.org/html/bcp47) and their
+  components, as of the current 2009 version of that standard. The
+  registered tag and subtag types and other relevant registry
+  functions are statically generated using data from the IANA Language
+  Subtag Registry, available from
   <https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry>. See
   the Registry submodule for the exact registry version this library
   uses.
@@ -91,7 +89,7 @@ test-suite test
   hs-source-dirs:
     test
   build-depends:
-    languagetags,
+    languagetag-bcp47,
     base,
     text,
     containers,

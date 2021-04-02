@@ -1,2 +1,2 @@
-packages: ./languagetags
-          ./languagetags-gen
+packages: ./languagetag-bcp47
+          ./languagetag-gen
