@@ -1,0 +1,31 @@
+name: Registry Monitor
+on:
+  schedule:
+  - cron: '* * 1,15 * *'
+  push:
+jobs:
+  bcp47-monitor:
+    name: BCP47 Registry Monitor
+    runs-on: ubuntu-latest
+    steps:
+      - name: apt
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends curl git
+      - name: checkout
+        uses: actions/checkout@v2
+        with:
+          path: source
+      - name: fetch registry
+        run: |
+          curl -sL https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry > net-registry
+      - name: compare registry hashes
+        run: |
+          localsha=($(sha256sum source/languagetag-gen/registry/bcp47))
+          remotesha=($(sha256sum net-registry))
+          if [[ $localsha == $remotesha ]]; then
+            exit 0
+          else
+            echo 'detected difference in local and source BCP47 registries'
+            exit 1
+          fi
