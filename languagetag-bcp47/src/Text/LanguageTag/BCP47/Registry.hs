@@ -14,7 +14,9 @@
 -- <https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry>.
 module Text.LanguageTag.BCP47.Registry
   ( BCP47 (..),
+    simpleTag,
     Normal (..),
+    simpleNormal,
     toSyntaxTag,
     toSubtags,
 
@@ -61,6 +63,7 @@ import qualified Data.Set as S
 import Data.Text (Text)
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Builder as TB
+import Text.LanguageTag.BCP47.Canonicalization
 import Text.LanguageTag.BCP47.Registry.Extlang
 import Text.LanguageTag.BCP47.Registry.Grandfathered
 import Text.LanguageTag.BCP47.Registry.Language
@@ -75,7 +78,6 @@ import Text.LanguageTag.BCP47.Subtag
     renderSubtagBuilderLower,
   )
 import qualified Text.LanguageTag.BCP47.Syntax as Syn
-import Text.LanguageTag.BCP47.Canonicalization
 import Text.LanguageTag.Internal.BCP47.Registry.Date
 import Text.LanguageTag.Internal.BCP47.Registry.Types
 import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn
@@ -146,6 +148,24 @@ renderBCP47Builder (PrivateUseTag sts) =
   mconcat $ List.intersperse "-" $ "x" : toList (renderSubtagBuilderLower <$> sts)
 renderBCP47Builder (GrandfatheredTag t) =
   renderGrandfatheredBuilder t
+
+-- | Create a language tag with only the given primary language subtag
+simpleTag :: Language -> BCP47
+simpleTag = NormalTag . simpleNormal
+
+-- | Create a 'Normal' language tag with only the given primary
+-- language subtag
+simpleNormal :: Language -> Normal
+simpleNormal l =
+  Normal
+    { language = l,
+      extlang = Nothing,
+      script = Nothing,
+      region = Nothing,
+      variants = mempty,
+      extensions = mempty,
+      privateUse = mempty
+    }
 
 -- | Convert a 'BCP47' tag to its component subtags, in the same order
 -- as they would appear in 'renderBCP47'. This is not equal to

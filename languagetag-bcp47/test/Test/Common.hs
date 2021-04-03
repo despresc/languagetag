@@ -652,15 +652,28 @@ badRoundWith' p f = badRoundWith p (Just . f)
 badRound' :: Eq a => (a -> a) -> a -> Maybe a
 badRound' = badRoundWith' (==)
 
--- TODO: here and with other utilities, might want to check against
--- the bad match value as well
-shouldNotMatch :: (HasCallStack, Show a, Eq a) => (b -> Maybe a) -> [b] -> Expectation
-shouldNotMatch f l = mapMaybe f l `shouldBe` []
+findMaybe :: (a -> Maybe b) -> [a] -> Maybe (a, b)
+findMaybe f (x : xs) = case f x of
+  Just y -> Just (x, y)
+  Nothing -> findMaybe f xs
+findMaybe _ [] = Nothing
+
+shouldNotMatch ::
+  ( HasCallStack,
+    Show a,
+    Show b,
+    Eq a,
+    Eq b
+  ) =>
+  (b -> Maybe a) ->
+  [b] ->
+  Expectation
+shouldNotMatch f l = findMaybe f l `shouldBe` Nothing
 
 infix 1 `shouldNotMatch`
 
 shouldNotFind :: (HasCallStack, Show a, Eq a) => (a -> Bool) -> [a] -> Expectation
-shouldNotFind f l = List.filter f l `shouldBe` []
+shouldNotFind f l = List.find f l `shouldBe` Nothing
 
 infix 1 `shouldNotFind`
 

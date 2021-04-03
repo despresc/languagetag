@@ -54,10 +54,8 @@ import Text.LanguageTag.BCP47.Registry
     lookupRedundantRecord,
     orderNormalVariants,
     redundantToValidTag,
+    simpleTag,
   )
-
--- TODO: more unit testing of canonicalization (not just the redundant
--- tags)
 
 redundantTags :: [(Redundant, Text)]
 redundantTags =
@@ -130,62 +128,95 @@ redundantTags =
     (ZhYue, "zh-yue")
   ]
 
-lintWarningExamples :: [(BCP47, LintWarnings)]
-lintWarningExamples =
+lintExamples :: [(BCP47, (BCP47, LintWarnings))]
+lintExamples =
   [ ( [validtag|de-1996-1901|],
-      LintWarnings
-        { canonicalWarnings = mempty,
-          scriptWarning = mempty,
-          variantWarnings =
-            VariantWarnings
-              { variantPrefixCollisions = PrefixCollision (Var1901 :| []) ((Var1996 :| []) :| []),
-                variantPrefixMismatches = mempty
-              }
-        }
+      ( [validtag|de-1996-1901|],
+        LintWarnings
+          { canonicalWarnings = mempty,
+            scriptWarning = mempty,
+            variantWarnings =
+              VariantWarnings
+                { variantPrefixCollisions = PrefixCollision (Var1901 :| []) ((Var1996 :| []) :| []),
+                  variantPrefixMismatches = mempty
+                }
+          }
+      )
     ),
     ( [validtag|zh-cmn|],
-      LintWarnings
-        { canonicalWarnings =
-            CanonicalWarnings
-              { deprecatedComponents = S.singleton $ DeprecatedRedundant ZhCmn,
-                extlangWarning = UsedExtlang ExtCmn
-              },
-          scriptWarning = mempty,
-          variantWarnings = mempty
-        }
+      ( [validtag|cmn|],
+        LintWarnings
+          { canonicalWarnings =
+              CanonicalWarnings
+                { deprecatedComponents = S.singleton $ DeprecatedRedundant ZhCmn,
+                  extlangWarning = UsedExtlang ExtCmn
+                },
+            scriptWarning = mempty,
+            variantWarnings = mempty
+          }
+      )
     ),
     ( [validtag|en-cmn|],
-      LintWarnings
-        { canonicalWarnings =
-            CanonicalWarnings
-              { deprecatedComponents = mempty,
-                extlangWarning = ExtlangPrefixMismatch ExtCmn
-              },
-          scriptWarning = mempty,
-          variantWarnings = mempty
-        }
+      ( [validtag|en-cmn|],
+        LintWarnings
+          { canonicalWarnings =
+              CanonicalWarnings
+                { deprecatedComponents = mempty,
+                  extlangWarning = ExtlangPrefixMismatch ExtCmn
+                },
+            scriptWarning = mempty,
+            variantWarnings = mempty
+          }
+      )
     ),
     ( [validtag|en-Latn|],
-      LintWarnings
-        { canonicalWarnings = mempty,
-          scriptWarning = SuperfluousLanguageScript Latn En,
-          variantWarnings = mempty
-        }
+      ( [validtag|en|],
+        LintWarnings
+          { canonicalWarnings = mempty,
+            scriptWarning = SuperfluousLanguageScript Latn En,
+            variantWarnings = mempty
+          }
+      )
     ),
     ( [validtag|en-1606nict|],
-      LintWarnings
-        { canonicalWarnings = mempty,
-          scriptWarning = mempty,
-          variantWarnings = VariantWarnings mempty $ S.singleton Var1606nict
-        }
+      ( [validtag|en-1606nict|],
+        LintWarnings
+          { canonicalWarnings = mempty,
+            scriptWarning = mempty,
+            variantWarnings = VariantWarnings mempty $ S.singleton Var1606nict
+          }
+      )
     )
   ]
 
+-- | A list of @(inittag, finaltag)@ examples
+canonicalizationExamples :: [(BCP47, BCP47)]
+canonicalizationExamples =
+  [ ( [validtag|art-lojban|],
+      simpleTag Jbo
+    ),
+    ( [validtag|zh-min-nan|],
+      simpleTag Nan
+    ),
+    ( [validtag|zh-cmn|],
+      simpleTag Cmn
+    ),
+    ( [validtag|zh-yue|],
+      simpleTag Yue
+    )
+  ]
+
+-- | The relative order of two elements @x@ and @y@ in a list of paths
+-- of elements
 data PathOrder
-  = Before
-  | After
-  | Both
-  | Incomparable
+  = -- | there is a path where @x@ comes before @y@
+    Before
+  | -- | there is a path where @y@ comes before @x@
+    After
+  | -- | both 'Before' and 'After' hold
+    Both
+  | -- | neither 'Before' nor 'After' hold
+    Incomparable
 
 -- Get the path order of two _distinct_ elements
 getPathOrder :: Eq a => [[a]] -> a -> a -> PathOrder
@@ -230,6 +261,13 @@ spec = do
             it (T.unpack l) $
               snd (canonicalizeBCP47 r) `shouldBe` canon
       traverse_ test redundantTags'
+    it "canonicalizes the examples correctly" $ do
+      let badPair (x, y)
+            | y == x' = Nothing
+            | otherwise = Just (x, y, x')
+            where
+              (_, x') = canonicalizeBCP47 x
+      badPair `shouldNotMatch` canonicalizationExamples
   describe "extlangFormBCP47" $ do
     prop "should be idempotent" $
       forAllShrink genValidTag shrinkValidTag $ \tg ->
@@ -292,8 +330,8 @@ spec = do
          in w' === w
     it "gives the correct warnings for the examples" $ do
       let badPair (x, y)
-            | y == w = Nothing
-            | otherwise = Just (x, y, w)
+            | y == y' = Nothing
+            | otherwise = Just (x, y, y')
             where
-              (w, _) = lintBCP47 x
-      badPair `shouldNotMatch` lintWarningExamples
+              y' = (\(a, b) -> (b, a)) $ lintBCP47 x
+      badPair `shouldNotMatch` lintExamples
