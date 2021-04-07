@@ -25,7 +25,7 @@ module Text.LanguageTag.Internal.BCP47.Syntax
     unsafeSubtagCharToExtension,
     extensionCharToSubtag,
     grandfatheredToSubtags,
-    subtagX
+    subtagX,
   )
 where
 

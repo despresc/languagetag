@@ -144,13 +144,13 @@ readSubtag len = fixup . List.foldl' go (len, 57, False, False)
 data SyntaxError
   = -- | the input was empty
     EmptyInput
-  | -- | a @\'-\'@ was found at the beginning of the subtag
+  | -- | a @\'-\'@ was found at the beginning of the input
     EmptySubtag
   | -- | the subtag continued for more than 8 characters
     TagTooLong
-  | -- | a @\'-\'@ was found at the end of an otherwise well-formed subtag
+  | -- | a @\'-\'@ followed by the end of input was found at the end of an otherwise well-formed subtag
     TrailingTerminator Subtag
-  | -- | an invalid 'Char' was found at that offset
+  | -- | an invalid 'Char' was found at some position
     InvalidChar Int Char
   deriving (Eq, Ord, Show)
 
@@ -207,7 +207,7 @@ unwrapChar :: SubtagChar -> Word8
 unwrapChar (SubtagChar w) = w
 
 -- | Convert the internal representation of a 'SubtagChar' back to a
--- 'SubtagChar'.
+-- 'SubtagChar'
 wrapChar :: Word8 -> Maybe SubtagChar
 wrapChar w
   | w > 122 = Nothing
@@ -231,10 +231,9 @@ onChar bad f g h c
   | c <= '9' && c >= '0' = h $! c2w c
   | otherwise = bad
 
--- | Pack an ASCII alphanumeric character into the first 7 bits of a
--- 'Word8', if it is valid for a tag. This function also converts all
--- letters to lower case, and reports whether the character was a
--- letter or digit.
+-- | Convert an ASCII alphanumeric 'Char' to a 'SubtagChar'. This
+-- function also converts all letters to lower case, and reports
+-- whether the character was a letter or digit.
 packCharDetail :: Char -> Maybe (SubtagChar, Bool)
 packCharDetail = onChar Nothing low high dig
   where
@@ -242,8 +241,8 @@ packCharDetail = onChar Nothing low high dig
     high w = Just (SubtagChar $ w + 32, False)
     dig w = Just (SubtagChar w, True)
 
--- | Pack a normal 'Char' into a 'SubtagChar', converting it it to
--- lower case if it is not already
+-- | Convert an ASCII alphanumeric 'Char' to a 'SubtagChar',
+-- converting it it to lower case if it is not already
 packChar :: Char -> Maybe SubtagChar
 packChar = fmap fst . packCharDetail
 

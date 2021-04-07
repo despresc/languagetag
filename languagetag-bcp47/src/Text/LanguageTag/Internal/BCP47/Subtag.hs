@@ -10,12 +10,12 @@
 -- License     : BSD-2-Clause
 -- Maintainer  : Christian Despres
 --
--- Warning\: this is an internal module and may change or disappear
--- without regard to the PVP. The data constructors exported from this
--- module are also unsafe to use: the values they take are expected by
--- the rest of the library to satisfy particular invariants that the
--- type does not enforce. Other components of the library may
--- misbehave if ill-formed values are given to them.
+-- Warning\: the data constructors exported from this module are
+-- unsafe to use. The values they take are expected by the rest of the
+-- library to satisfy particular invariants that the type does not
+-- enforce. Parts of this library may misbehave (e.g., throw an
+-- 'Control.Exception.ArithException') if ill-formed values are given
+-- to them.
 module Text.LanguageTag.Internal.BCP47.Subtag
   ( -- * Subtags
     Subtag (..),
@@ -39,9 +39,9 @@ module Text.LanguageTag.Internal.BCP47.Subtag
     SubtagChar (..),
     unpackCharLower,
     unpackCharUpper,
-    unsafeUnpackUpperLetter,
 
     -- * Unsafe functions
+    unsafeUnpackUpperLetter,
     unsafeIndexSubtag,
   )
 where
@@ -220,22 +220,18 @@ nullSubtag = MaybeSubtag (Subtag 0)
 newtype SubtagChar = SubtagChar {unSubtagChar :: Word8}
   deriving (Eq, Ord, Show, Hashable)
 
--- | Unpack an ASCII alphanumeric character from a 'SubtagChar' to a
--- lower case 'Char'
-
--- N.B. will want unpackChar if the scope of Subtag ever expands
+-- | Convert a 'SubtagChar' to a lower case 'Char'
 unpackCharLower :: SubtagChar -> Char
 unpackCharLower (SubtagChar w) = w2c w
 
--- | Unpack an ASCII alphanumeric character from a 'SubtagChar' to an
--- upper case 'Char'
+-- | Convert a 'SubtagChar' to an upper case 'Char'
 unpackCharUpper :: SubtagChar -> Char
 unpackCharUpper (SubtagChar w)
   | w >= 97 = w2c $ w - 32
   | otherwise = w2c w
 
--- | Convert a packed letter to an unpacked upper case letter. The
--- input must be a letter.
+-- | Convert a 'SubtagChar' to an upper case 'Char'. The input must be
+-- a letter.
 unsafeUnpackUpperLetter :: SubtagChar -> Char
 unsafeUnpackUpperLetter (SubtagChar w) =
   w2c $ w - 32
@@ -271,20 +267,17 @@ unpackSubtag w = List.unfoldr go 0
          in Just (c, idx + 1)
 {-# INLINE unpackSubtag #-}
 
--- | Render a subtag to a lazy text builder in lower case
-
--- N.B. will want a plain renderSubtagBuilder and renderSubtag if the
--- scope of Subtag ever expands
+-- | Render a 'Subtag' to a lazy text builder in lower case
 renderSubtagBuilderLower :: Subtag -> TB.Builder
 renderSubtagBuilderLower = TB.fromString . fmap unpackCharLower . unpackSubtag
 {-# INLINE renderSubtagBuilderLower #-}
 
--- | Render a subtag to a lazy text builder in upper case
+-- | Render a 'Subtag' to a lazy text builder in upper case
 renderSubtagBuilderUpper :: Subtag -> TB.Builder
 renderSubtagBuilderUpper = TB.fromString . fmap unpackCharUpper . unpackSubtag
 {-# INLINE renderSubtagBuilderUpper #-}
 
--- | Render a subtag to a lazy text builder in title case
+-- | Render a 'Subtag' to a lazy text builder in title case
 renderSubtagBuilderTitle :: Subtag -> TB.Builder
 renderSubtagBuilderTitle = TB.fromString . go . unpackSubtag
   where
