@@ -105,7 +105,7 @@ renderSubtagModuleWith tyname tydescription docnote proj sel reg =
       "import Data.Hashable (Hashable(..), hashUsing)"
     ]
       <> [ "",
-           "-- | The BCP47 " <> tydescription <> " tags as of " <> T.pack (show $ date reg) <> "." <> docnote',
+           "-- | The BCP47 " <> tydescription <> " subtags as of " <> T.pack (show $ date reg) <> "." <> docnote',
            "data " <> tyname
          ]
       <> theConstructors
@@ -552,7 +552,7 @@ renderSplitRegistry pref sr = do
     rendextlang = renderSubtagModuleWith
       "Extlang"
       "extended language"
-      "These are prefixed with \"Ext\" because they would otherwise overlap with the primary language subtags. Note that the preferred values of these subtags refer to primary language subtags."
+      "These are prefixed with \\\"Ext\\\" because they would otherwise overlap with their corresponding primary language subtags. Note that the preferred values of these subtags refer to primary language subtags."
       extlangRecords
       $ \(ExtlangRecord a x y z _ _ _ _) ->
         ( a,

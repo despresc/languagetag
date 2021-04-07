@@ -165,7 +165,7 @@ data LanguageRecord = LanguageRecord
 
 -- | An extended language subtag record. In these records, a preferred
 -- value always appears and is always equal to the subtag, so the
--- 'extlangDeprecation' is a simple 'Bool' ('True' being "is
+-- 'extlangDeprecation' is a simple 'Bool' ('True' meaning "is
 -- deprecated"). Note also that these records are the only exception
 -- to the general rule that a preferred value (whether tag or subtag)
 -- will never be deprecated: these will have a deprecated
