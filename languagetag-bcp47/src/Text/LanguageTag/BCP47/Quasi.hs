@@ -530,32 +530,3 @@ guardNoLintWarnings w = case lintWarningsErr w of
 
 quoteText :: Text -> Text
 quoteText t = "\"" <> t <> "\""
-
-{-
-lintWarningErr :: LintWarning -> Text
-lintWarningErr (UsedDeprecated d) =
-  "used deprecated " <> case d of
-    DeprecatedLanguage l -> "language subtag " <> quoteText (renderLanguage l)
-    DeprecatedExtlang e -> "extended language subtag " <> quoteText (renderExtlang e)
-    DeprecatedScript s -> "script subtag " <> quoteText (renderScript s)
-    DeprecatedRegion r -> "region subtag " <> quoteText (renderRegion r)
-    DeprecatedVariant v -> "variant subtag " <> quoteText (renderVariant v)
-    DeprecatedRedundant r -> "redundant tag " <> quoteText (renderRedundant r)
-    DeprecatedGrandfathered r -> "grandfathered tag " <> quoteText (renderGrandfathered r)
-lintWarningErr (SuperfluousScript l s) =
-  "script subtag " <> quoteText (renderScript s) <> " is implied by the language subtag "
-    <> quoteText (renderLanguage l)
-lintWarningErr (PrefixMismatch c) = case c of
-  PrefixedExtlang e ->
-    "used extended language subtag " <> quoteText (renderExtlang e)
-      <> " without its registered prefix"
-  PrefixedVariant v ->
-    "used variant subtag " <> quoteText (renderVariant v)
-      <> " without one of its registered prefixes"
-lintWarningErr (PrefixCollision _ _) =
-  "used multiple variants with registered prefixes that cannot be satisfied simultaneously"
-lintWarningErr (UsedExtlang e) =
-  "used the extended language subtag " <> quoteText (renderExtlang e)
-    <> " instead of its replacement primary language subtag "
-    <> quoteText (renderExtlang e)
--}

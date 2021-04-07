@@ -9,13 +9,11 @@
 -- This module provides the 'canonicalizeBCP47' function to
 -- canonicalize 'BCP47' tags according to the [relevant
 -- section](https://tools.ietf.org/html/bcp47#section-4.5) of the
--- BCP47 specification. It also exports various helper functions used
+-- BCP47 specification. It also provides various helper functions used
 -- in that function; these detect and replace tags and subtags with
--- their preferred values.
---
--- More broadly, this module also provides the 'lintBCP47' function
--- and related functions to check other aspects of the tag against the
--- standard's recommendations.
+-- their preferred values. The 'lintBCP47' function and related
+-- functions are also exported; these check that a given tag follows
+-- various other recommendations in the standard.
 module Text.LanguageTag.BCP47.Canonicalization
   ( -- * General linting
     lintBCP47,
@@ -166,7 +164,7 @@ data ExtlangWarning
   | -- | used a primary and extended language pair instead of the
     -- preferred primary language replacement
     UsedExtlang !Extlang
-  | -- | no warning present
+  | -- | no warning issued
     NoExtlangWarning
   deriving (Eq, Ord, Show)
 
@@ -182,10 +180,10 @@ instance Monoid ExtlangWarning where
 -- subtag equivalents and replacing any deprecated tags (grandfathered
 -- or redundant) or subtags with their non-deprecated preferred
 -- values, whenever possible. This function will not do anything to a
--- 'PrivateUseTag'.
---
--- See 'extlangFormBCP47' for an alternate canonical form for language
--- tags.
+-- 'PrivateUseTag'. See [section
+-- 4.5](https://tools.ietf.org/html/bcp47#section-4.5) of the standard
+-- for details. Also see 'extlangFormBCP47' for an alternate canonical
+-- form for language tags.
 canonicalizeBCP47 :: BCP47 -> (CanonicalWarnings, BCP47)
 canonicalizeBCP47 (NormalTag t) = NormalTag <$> canonicalizeNormal t
 canonicalizeBCP47 (PrivateUseTag t) = (mempty, PrivateUseTag t)
@@ -271,16 +269,16 @@ canonicalizeGrandfathered t =
 -- | Transform a language tag into "extlang form", a variant of the
 -- canonical form in which extlang subtags are preserved or added
 -- wherever possible, so that, e.g., the tags @cmn@ and @zh-cmn@ will
--- both be transformed into the tag @zh-cmn@ (which is incidentally a
--- deprecated redundant tag, as of this writing). This form is
--- otherwise identical to canonical form, and applications should
--- treat the two forms as equivalent; this is most easily accomplished
--- by picking a particular form and uniformly converting all tags to
--- it.
+-- both be transformed into the tag @zh-cmn@ (the latter of which is,
+-- incidentally, a deprecated redundant tag, as of this writing). This
+-- form is otherwise identical to canonical form, and applications
+-- should treat the two forms as equivalent; this is most easily
+-- accomplished by picking a particular form and uniformly converting
+-- all tags to it.
 --
 -- Extlang form may be useful in matching or lookup, so that, for
 -- example, a query for @zh@ materials will return things tagged with
--- @cmn@ or @yue@, since those tag will have been transformed into
+-- @cmn@ or @yue@, since those tags will have been transformed into
 -- @zh-cmn@ and @zh-yue@, respectively. Note that applications can
 -- operate on canonicalized tags and still have good matching
 -- behaviour by considering things like the macrolanguage
@@ -293,9 +291,7 @@ canonicalizeGrandfathered t =
 -- subtag whose prefix conflicts with the tag's primary language
 -- subtag. In these cases no replacement is performed and, e.g., the
 -- tag @en-cmn@ will remain unchanged by this function. This will
--- still be noted in the returned 'CanonicalWarnings'. Any
--- 'UsedExtlang' warning from 'canonicalizeBCP47' will, however, be
--- suppressed.
+-- still be noted in the returned 'CanonicalWarnings'.
 extlangFormBCP47 :: BCP47 -> (CanonicalWarnings, BCP47)
 extlangFormBCP47 x = go $ canonicalizeBCP47 x
   where
@@ -318,7 +314,7 @@ extlangFormBCP47 x = go $ canonicalizeBCP47 x
 -- Superfluous script suppression
 ----------------------------------------------------------------
 
--- | A warning recording the use of a superfluous script in a tag
+-- | A warning that records the use of a superfluous script in a tag
 data SuperfluousScriptWarning
   = SuperfluousLanguageScript !Script !Language
   | SuperfluousExtlangScript !Script !Extlang
@@ -333,7 +329,19 @@ instance Monoid SuperfluousScriptWarning where
   mempty = NoSuperfluousScript
 
 -- | Suppress the script subtag of a tag if it appears in the
--- @Suppress-Script@ field of the tag's primary language subtag
+-- @Suppress-Script@ field of the tag's primary language subtag. See
+-- [section 3.1.9](https://tools.ietf.org/html/bcp47#section-3.1.9) of
+-- the standard for details.
+--
+-- It is a little unclear what should happen if an extended language
+-- subtag with an unsatisfied prefix and a script suppression is
+-- present; one might argue that no suppression should take place,
+-- since the extended language subtag does not make sense without its
+-- one @Prefix@. This function, on the other hand, suppresses the
+-- script associated to an extended language subtag
+-- unconditionally. There are (as of this writing) no extended
+-- language subtags in the registry with a @Suppress-Script@, so this
+-- will, for now, not be an issue either way.
 suppressScript :: BCP47 -> (SuperfluousScriptWarning, BCP47)
 suppressScript t@(NormalTag n@Normal {language = l, extlang = me, script = Just s})
   | languageScriptSuppression (lookupLanguageRecord l) == Just s =
@@ -393,8 +401,8 @@ instance Monoid PrefixCollision where
 -- occur in a tag, organized by grouping together the common prefixes
 -- of the chains. Here, a "chain" of variants is a list of variants
 -- with prefixes such that the last variant has a prefix in the
--- registry that includes all of the other variants and the rest of
--- the tag.
+-- registry that includes all of the other variants in the chain and
+-- matches the entire tag before the variant subtag section.
 newtype VariantChains = VariantChains [(Variant, VariantChains)]
   deriving (Eq, Ord, Show)
 
@@ -500,19 +508,15 @@ splitPrefixedVariants :: Set Variant -> (Set Variant, Set Variant)
 splitPrefixedVariants =
   S.partition $ not . null . variantPrefixes . lookupVariantRecord
 
--- | The 'categorizeVariants' function serves the niche role of
--- analyzing the variants of a BCP47 tag. Most tags have no variants
--- at all, and the remainder that also follow the standard's
--- recommendations will normally have at most three variants (two
--- variants with satisfied prefixes and one variant without a prefix),
--- though tags with more than one variant are very rare. This function
--- deals with the tags that have at least two variants with prefixes
--- in the registry: the result of @'categorizeVariants' n@ is the
--- triple @(chains, prefs, noprefs)@, where
+-- | The 'categorizeVariants' function analyzes the variants of a
+-- BCP47 tag, categorizing them by whether or not they have prefixes
+-- in the registry, and by how their prefixes compare to the rest of
+-- the tag. The result of @'categorizeVariants' n@ is the triple
+-- @(chains, prefs, noprefs)@, where
 --
 -- * @chains@ is the list of maximal chains of variants from
 --   @'variants' n@ according to their prefix fields in the registry,
---   organized into a tree by common prefixes (with children sorted
+--   organized into a tree by common prefixes (with siblings sorted
 --   alphabetically);
 --
 -- * @prefs@ is the set of variants in @'variants' n@ that have at
@@ -530,14 +534,14 @@ splitPrefixedVariants =
 -- @sl-rozaj-biske-njiva-1994-alalc97-1606nict@. The variant @alalc97@
 -- has no prefix in the registry, so it would appear in the @noprefs@
 -- set. The variants @rozaj@, @biske@, @njiva@, @1994@, and @1606nict@
--- all have prefixes in the registry. The variant @1606nict@ has at
--- least one prefix, and none of its prefixes contain @sl@ (as of
--- writing this, though it is extremely unlikely that @sl@ will ever
--- be added to its prefixes), so it would not appear in the any of the
--- chains. The other variants with prefixes can be arranged in chains
--- so that their prefixes are satisfied: the maximal chains are
--- @rozaj-biske-1994@ and @rozaj-njiva-1994@, and so the @chains@
--- output would be
+-- all have prefixes in the registry, so these would be the content of
+-- @prefs@. None of the prefixes in the registry entry for @1606nict@
+-- contain @sl@ (as of writing this, though it is extremely unlikely
+-- that @sl@ will ever be added to its prefixes), so it would not
+-- appear in the any of the chains. The other variants with prefixes
+-- can be arranged in chains so that their prefixes are satisfied: the
+-- maximal chains are @rozaj-biske-1994@ and @rozaj-njiva-1994@, and
+-- so the @chains@ output would be
 --
 -- @
 -- 'VariantChains'
@@ -548,33 +552,12 @@ splitPrefixedVariants =
 --       ])]
 -- @
 --
--- This function exists in part to satisfy the standard's recommended
--- presentation of variants in a tag, given in [item 6, page
--- 57](https://tools.ietf.org/html/bcp47#page-1-57) and
--- elsewhere. Since the standard is not totally precise about the
--- ordering of variants that don't satisfy its recommendations, this
--- library uses the ordering:
---
--- @
--- 'concat' [ 'enumerateChainVariants' chains
---        , 'S.toAscList' noprefs
---        , 'S.toAscList' $ prefs 'S.\\' 'variantsInChains' chains ]
--- @
---
--- This should result in the best matching behaviour for tags with
--- variants that clash with each other or have unsatisfied
--- prefixes. Thus
---
--- > "sl-rozaj-biske-njiva-1994-alalc97-1606nict"
---
--- would be the ordering chosen by
--- 'Text.LanguageTag.BCP47.Registry.renderBCP47' for the example tag
--- above.
---
 -- (You may notice that @sl-rozaj@ comes up a lot when discussing
 -- variant subtags. That is because the only non-deprecated variant
 -- subtags that can appear in a chain with other variant subtags are
--- @rozaj@ and its five sub-variants.)
+-- @rozaj@ and its five sub-variants. In fact, most tags that occur in
+-- practice have no variants at all, and most of the remainder have
+-- just one.)
 categorizeVariants :: Normal -> (VariantChains, Set Variant, Set Variant)
 categorizeVariants n = (growVariantChains matchInit, hasPrefs, noPrefs)
   where
@@ -589,11 +572,31 @@ categorizeVariants n = (growVariantChains matchInit, hasPrefs, noPrefs)
         && (isNothing r || r == region n)
 
 -- | Order the variants in a 'Normal' tag according to the standard's
--- recommendations. This cannot be implemented as an 'Ord' instance
--- for a newtype over 'Variant' because the ordering in the standard
--- is context-sensitive. This function is used to implement
+-- recommendations in [item 6, page
+-- 57](https://tools.ietf.org/html/bcp47#page-1-57). This cannot be
+-- implemented as an 'Ord' instance for a newtype over 'Variant'
+-- because the ordering in the standard is context-sensitive. Since
+-- the standard is not totally precise about the ordering of variants
+-- that don't satisfy its recommendations, this function uses the
+-- ordering
+--
+-- @
+-- 'concat' [ 'enumerateChainVariants' chains
+--        , 'S.toAscList' noprefs
+--        , 'S.toAscList' $ prefs 'S.\\' 'variantsInChains' chains ]
+-- @
+--
+-- where @(chains, prefs, noprefs)@ is the output of
+-- 'categorizeVariants' on the given 'Normal' tag. This order should
+-- result in the best matching behaviour for tags with variants that
+-- clash with each other or have unsatisfied prefixes. This function,
+-- and so this order, is used to implement
 -- 'Text.LanguageTag.BCP47.Registry.renderBCP47' and
 -- 'Text.LanguageTag.BCP47.Registry.toSubtags'.
+--
+-- As an example, the tag @sl-rozaj-biske-njiva-1994-alalc97-1606nict@
+-- used in the documentation of 'categorizeVariants' has its variants
+-- ordered exactly as they would be by this function.
 orderNormalVariants :: Normal -> [Variant]
 orderNormalVariants n = firstVariants <> midVariants <> endVariants
   where
