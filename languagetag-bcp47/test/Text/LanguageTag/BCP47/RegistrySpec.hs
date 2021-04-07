@@ -85,6 +85,10 @@ spec = do
             ( fmap renderSubtagLower $
                 toList $ toSubtags tg
             )
+    prop "equals the toSyntaxTag implementation up to case" $
+      forAllShrink genValidTag shrinkValidTag $ \tg ->
+        renderBCP47 tg
+          === Syn.renderBCP47 (toSyntaxTag tg)
     prop "generates text that validates to the same tag" $
       forAllShrink genValidTag shrinkValidTag $ \tg ->
         let tg' = fmap validateBCP47 $ Syn.parseBCP47 $ renderBCP47 tg
