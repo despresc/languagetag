@@ -9,7 +9,8 @@ in future to add support for other language tag resources, like ISO
 639 or Glottolog.
 
 Also included in the project is the `languagetag-gen` package, which
-generates code in `languagetag-bcp47` related to validation,
-canonicalization, and various other registry queries and
-processing. This is an internal package and you shouldn't need to use
-it unless you are developing `languagetag-bcp47`.
+generates certain types and functions in `languagetag-bcp47`
+automatically from a local copy of the [IANA subtag
+registry](https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry). It
+is an internal package, and you shouldn't need to use it unless you
+are developing `languagetag-bcp47`.
