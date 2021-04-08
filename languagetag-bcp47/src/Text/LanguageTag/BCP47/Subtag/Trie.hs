@@ -86,7 +86,7 @@ joinNonEmpty _ TrieNil = TrieNil
 toTrie :: [([Subtag], a)] -> Trie a
 toTrie = List.foldl' go empty
   where
-    go t (sts, a) = insert a sts t
+    go t (sts, a) = insert sts a t
 
 -- | Construct a 'Step' by gathering paths with common indices
 -- together, preferring the rightmost path if there are duplicates
@@ -98,32 +98,32 @@ empty :: Trie a
 empty = TrieNil
 
 -- | Insert a node into a 'Trie' at the end of the given 'Subtag' path
-insert :: a -> [Subtag] -> Trie a -> Trie a
-insert a l = Trie . insertToNonEmpty a l
+insert :: [Subtag] -> a -> Trie a -> Trie a
+insert l a = Trie . insertToNonEmpty l a
 
 -- | Modify, create, or delete the sub-'Trie' at the given path
 alterSub :: (Trie a -> Trie a) -> [Subtag] -> Trie a -> Trie a
 alterSub f l (Trie t) = possiblyEmpty $ NET.alterSub (nonEmpty . f . possiblyEmpty) l t
 alterSub f l TrieNil = case f TrieNil of
-  Trie t -> Trie $ NET.raise t l
+  Trie t -> Trie $ NET.raise l t
   TrieNil -> TrieNil
 
 -- | Transform the sub-'Trie' at the given path into a non-empty
 -- 'NET.Trie', or create a 'NET.Trie' there, returning the non-empty
--- result. (Note that the return trie types are different from the
+-- result. (Note that the output trie types are different from the
 -- input trie types).
 modCreate :: (Trie a -> NET.Trie a) -> [Subtag] -> Trie a -> NET.Trie a
 modCreate f l (Trie n) = NET.modCreate go l n
   where
     go Nothing = f TrieNil
     go (Just t) = f $ Trie t
-modCreate f l TrieNil = NET.raise (f TrieNil) l
+modCreate f l TrieNil = NET.raise l (f TrieNil)
 
 -- | Insert a node into a 'Trie' at the end of the given 'Subtag'
 -- path, returning a non-empty 'NET.Trie'
-insertToNonEmpty :: a -> [Subtag] -> Trie a -> NET.Trie a
-insertToNonEmpty a l (Trie x) = NET.insert a l x
-insertToNonEmpty a l TrieNil = NET.singleton a l
+insertToNonEmpty :: [Subtag] -> a -> Trie a -> NET.Trie a
+insertToNonEmpty l a (Trie x) = NET.insert l a x
+insertToNonEmpty l a TrieNil = NET.singleton l a
 
 -- | Construct a 'Step' with the given element at its end and with no
 -- children
@@ -143,7 +143,7 @@ branch s x = Step s . stepTrie x
 -- | Construct a 'Step' consisting of the given path with the given
 -- element at its end
 path :: Subtag -> [Subtag] -> a -> Step a
-path x xs = Step x . flip singleton xs
+path x xs = Step x . singleton xs
 
 -- | Construct a 'Trie' from its children, preferring the rightmost
 -- child if there are duplicates
@@ -173,14 +173,14 @@ lookupSub _ TrieNil = TrieNil
 
 -- | Construct a 'Trie' with the given element at the end of the given
 -- path
-singleton :: a -> [Subtag] -> Trie a
-singleton a = Trie . NET.singleton a
+singleton :: [Subtag] -> a -> Trie a
+singleton l = Trie . NET.singleton l
 
 -- | Construct a 'Trie' with exactly the given sub-'Trie' at the end
 -- of the path
-raise :: Trie a -> [Subtag] -> Trie a
-raise (Trie t) l = Trie $ NET.raise t l
-raise TrieNil _ = TrieNil
+raise :: [Subtag] -> Trie a -> Trie a
+raise l (Trie t) = Trie $ NET.raise l t
+raise _ TrieNil = TrieNil
 
 -- | Delete the given node if it exists
 delete :: [Subtag] -> Trie a -> Trie a

@@ -64,12 +64,10 @@ mnode Nil = Nothing
 
 -- | Construct a 'Trie' by gathering paths with common indices
 -- together, preferring the rightmost path if there are duplicates
-
--- FIXME: may have more efficient implementation?
 toTrie :: NonEmpty ([Subtag], a) -> Trie a
-toTrie ((sts, a) :| xs) = foldl' go (singleton a sts) xs
+toTrie ((sts, a) :| xs) = foldl' go (singleton sts a) xs
   where
-    go t (sts', a') = insert a' sts' t
+    go t (sts', a') = insert sts' a' t
 
 -- | Construct a 'Step' by gathering paths with common indices
 -- together, preferring the rightmost path if there are duplicates
@@ -96,7 +94,7 @@ leaf s = Step s . root
 -- | Construct a 'Step' consisting of the given path with the given
 -- element at its end
 path :: NonEmpty Subtag -> a -> Step a
-path (x :| xs) = Step x . flip singleton xs
+path (x :| xs) = Step x . singleton xs
 
 -- | Construct a trie from its children, preferring the rightmost
 -- child if there are duplicates

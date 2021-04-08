@@ -53,7 +53,7 @@ forAllSemi = forAllShrink (liftGenTrie arbitrary) (liftShrinkTrie shrink)
 addNodes :: Trie a -> [(Maybe a, [Subtag])] -> Trie a
 addNodes !x ((mn, p) : ps) = case mn of
   Nothing -> addNodes x ps
-  Just n -> addNodes (Trie.insert n p x) ps
+  Just n -> addNodes (Trie.insert p n x) ps
 addNodes x [] = x
 
 -- Perhaps not the cleanest. This exists because sometimes we want to
@@ -92,18 +92,18 @@ spec = do
     prop "inserts in the correct place according to lookup" $
       forAll' $ \t ->
         forAllShrink genP shrinkP $ \(p, a) ->
-          Trie.lookup p (Trie.insert a p t) === Just a
+          Trie.lookup p (Trie.insert p a t) === Just a
     prop "disturbs nothing else according to delete" $
       forAll' $ \t ->
         forAllShrink genP shrinkP $ \(p, a) ->
-          Trie.delete p (Trie.insert a p t) === Trie.delete p t
+          Trie.delete p (Trie.insert p a t) === Trie.delete p t
   describe "singleton" $ do
     prop "composes with lookup correctly" $
       forAllShrink genP shrinkP $ \(p, a) ->
-        Trie.lookup p (Trie.singleton a p) === Just a
+        Trie.lookup p (Trie.singleton p a) === Just a
     prop "composes with delete correctly" $
       forAllShrink genP shrinkP $ \(p, a) ->
-        Trie.delete p (Trie.singleton a p) === Trie.TrieNil
+        Trie.delete p (Trie.singleton p a) === Trie.TrieNil
   describe "(<>)" $ do
     prop "is associative" $
       forAllSemi $ \t1 ->
@@ -121,14 +121,14 @@ spec = do
       forAll' $ \t ->
         forAllEntry $ \(p, a) ->
           perturbPath arbitrary shrink p t $ \t' ->
-            let t'' = Trie.insert a p t'
+            let t'' = Trie.insert p a t'
              in Trie.lookupLax p t'' === Just a
     prop "composes with insert correctly after pruning" $
       forAll' $ \t ->
         forAllEntry $ \(p, a) ->
           perturbPath arbitrary shrink p t $ \t' ->
             forAllPath $ \p' ->
-              Trie.lookupLax (p <> p') (Trie.prunePast p $ Trie.insert a p t') === Just a
+              Trie.lookupLax (p <> p') (Trie.prunePast p $ Trie.insert p a t') === Just a
     -- tests that the accumulator in lookupLax actually does what it's
     -- intended to do, by ensuring that we look up a Nothing node in a
     -- branch that looks like
@@ -142,7 +142,7 @@ spec = do
                   pBefore = p
                   pAfter = p <> [x, y]
                in perturbPath arbitrary shrink pAfter t $ \t' ->
-                    let t'' = Trie.insert a pBefore $ Trie.insert a' pAfter $ Trie.delete pAt t'
+                    let t'' = Trie.insert pBefore a $ Trie.insert pAfter a' $ Trie.delete pAt t'
                      in Trie.lookupLax pAt t'' === Just a
   -- A small test of the manual Foldable instance, and I suppose of
   -- the semigroup instance too
