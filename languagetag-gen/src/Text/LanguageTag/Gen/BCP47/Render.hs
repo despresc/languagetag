@@ -167,10 +167,7 @@ renderRecordModuleWith tyname imps proj rend reg =
   T.unlines $
     moduleDoc
       (tyname <> " record definitions")
-      [ "Warning\\: this is an internal module and may change or disappear",
-        "without regard to the PVP.",
-        "",
-        "Internal definitions for the records in the registry for '" <> tyname <> "' subtags."
+      [ "Internal definitions for the records in the registry for '" <> tyname <> "' subtags."
       ]
       <> [ "",
            warning,
@@ -264,10 +261,7 @@ renderRedundantRecordModule tyname imps proj rend reg =
   T.unlines $
     moduleDoc
       (tyname <> " record definitions")
-      [ "Warning\\: this is an internal module and may change or disappear",
-        "without regard to the PVP.",
-        "",
-        "Internal definitions for the records in the registry for '" <> tyname <> "' tags"
+      [ "Internal definitions for the records in the registry for '" <> tyname <> "' tags"
       ]
       <> [ "",
            warning,
@@ -365,10 +359,7 @@ renderGrandfatheredRecordModule tyname imps proj rend reg =
   T.unlines $
     moduleDoc
       ("Internal " <> tyname <> " records")
-      [ "Warning\\: this is an internal module and may change or disappear",
-        "without regard to the PVP.",
-        "",
-        "Internal definitions for the records in the registry for '" <> tyname <> "' tags"
+      [ "Internal definitions for the records in the registry for '" <> tyname <> "' tags"
       ]
       <> [ "",
            warning,

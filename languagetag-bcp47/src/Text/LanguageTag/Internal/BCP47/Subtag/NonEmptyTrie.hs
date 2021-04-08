@@ -8,12 +8,14 @@
 -- License     : BSD-2-Clause
 -- Maintainer  : Christian Despres
 --
--- Warning\: this is an internal module and may change or disappear
--- without regard to the PVP. The data constructors exported from this
--- module are also unsafe to use: the values they take are expected by
--- the rest of the library to satisfy particular invariants that the
--- type does not enforce. Other components of the library may
--- misbehave if ill-formed values are given to them.
+-- Warning\: the data constructors exported from this module are
+-- unsafe to use: the values they take are expected by the rest of the
+-- library to satisfy particular invariants that the type does not
+-- enforce. Other components of the library may misbehave if
+-- ill-formed values are given to them.
+--
+-- This module exports the non-empty 'Trie' types and basic functions
+-- to create and manipulate them.
 module Text.LanguageTag.Internal.BCP47.Subtag.NonEmptyTrie
   ( Trie (..),
     Node (..),
@@ -53,11 +55,9 @@ import qualified Data.Map.Strict as M
 import Text.LanguageTag.Internal.BCP47.Subtag (Subtag)
 
 -- | A strict, non-empty trie indexed by 'Subtag' values
-
--- Invariant: the Subtag in the Step must be less than all of the keys
--- in the Map
 data Trie a
-  = Branch !(Node a) !(Step a) !(Map Subtag (Trie a))
+  = -- | invariant: the 'Subtag' in the 'Step' must be less than all of the keys in the 'Map'
+    Branch !(Node a) !(Step a) !(Map Subtag (Trie a))
   | Leaf !a
   deriving (Eq, Ord)
 

@@ -4,9 +4,6 @@
 -- License     : BSD-2-Clause
 -- Maintainer  : Christian Despres
 --
--- Warning\: this is an internal module and may change or disappear
--- without regard to the PVP.
---
 -- Internal definitions for the records in the registry for 'Script' subtags.
 
 -- This is an auto-generated file. Do not edit by hand.

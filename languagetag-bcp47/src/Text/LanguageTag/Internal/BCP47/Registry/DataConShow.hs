@@ -6,15 +6,15 @@
 -- License     : BSD-2-Clause
 -- Maintainer  : Christian Despres
 --
--- Warning\: this is an internal module and may change or disappear
--- without regard to the PVP.
---
 -- This module exists because, as it turns out, deriving a 'Show'
 -- instance for a data type with over eight thousand constructors
 -- takes a very long time. Writing the registered subtag types' show
 -- instances manually using the functions in this module shaves off a
 -- decent amount of compilation time, and these functions can also be
 -- used to render the constructors during code generation.
+--
+-- This module is otherwise not useful, since the all of these
+-- functions are (nearly by definition) equal to 'show'.
 module Text.LanguageTag.Internal.BCP47.Registry.DataConShow where
 
 import Data.Char (isDigit)

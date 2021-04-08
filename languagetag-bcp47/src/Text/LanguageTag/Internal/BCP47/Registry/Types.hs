@@ -2,13 +2,13 @@
 {-# OPTIONS_HADDOCK not-home #-}
 
 -- |
--- Description : Subtag record types
+-- Description : Registry types
 -- Copyright   : 2021 Christian Despres
 -- License     : BSD-2-Clause
 -- Maintainer  : Christian Despres
 --
--- Warning\: this is an internal module and may change or disappear
--- without regard to the PVP.
+-- Warning\: some of the data constructors in this module are unsafe
+-- to use directly.
 module Text.LanguageTag.Internal.BCP47.Registry.Types
   ( BCP47 (..),
     Normal (..),
@@ -271,7 +271,7 @@ data Deprecation a
 -- given projection function and return its index. The vector must be
 -- sorted with respect to the projection (otherwise the function will
 -- not work properly) and must be non-empty (otherwise the function
--- will segfault).
+-- will cause a segfault).
 unsafeBinSearchIndexOn :: Ord b => (a -> b) -> b -> Vector a -> Maybe Int
 unsafeBinSearchIndexOn proj b v = go 0 (V.length v)
   where

@@ -8,8 +8,9 @@
 -- License     : BSD-2-Clause
 -- Maintainer  : Christian Despres
 --
--- Warning\: this is an internal module and may change or disappear
--- without regard to the PVP.
+-- This module exports the possibly-empty 'Trie' type and basic
+-- functions to create and manipulate them. Note: everything in this
+-- module is re-exported by "Text.LanguageTag.BCP47.Subtag.Trie".
 module Text.LanguageTag.Internal.BCP47.Subtag.Trie
   ( Trie (..),
     Step (..),
