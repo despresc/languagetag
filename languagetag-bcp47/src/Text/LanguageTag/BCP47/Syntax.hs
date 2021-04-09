@@ -12,6 +12,18 @@
 -- (but not necessarily valid) BCP47 language tags as of the current
 -- 2009 version of the standard, a copy of which is available at
 -- <https://tools.ietf.org/html/bcp47>.
+--
+-- Note that it is, generally speaking, easier to work with valid tags
+-- represented by the 'Text.LanguageTag.BCP47.Registry.BCP47' type in
+-- "Text.LanguageTag.BCP47.Registry", since the invariants required by
+-- the 'BCP47' type in this module are difficult to guarantee
+-- statically without the interface becoming very unwieldy. Valid tags
+-- can be constructed from these tags with
+-- 'Text.LanguageTag.BCP47.Registry.validateBCP47', or with
+-- 'Text.LanguageTag.BCP47.Quasi.tag' and the related quasi-quoters in
+-- that module. This module is provided for applications that only
+-- need to verify well-formedness of tags, without analyzing them
+-- further.
 module Text.LanguageTag.BCP47.Syntax
   ( -- * Parsing and rendering tags
     BCP47,
@@ -69,8 +81,9 @@ toSubtags (NormalTag (Normal p e1 e2 e3 s r vs es ps)) =
 toSubtags (PrivateUse x) = subtagX :| NE.toList x
 toSubtags (GrandfatheredTag g) = grandfatheredToSubtags g
 
--- | Parse a 'BCP47' tag from a list of subtags by first rendering the
--- list to a 'Text' tag then parsing that tag
+-- | Parse a 'BCP47' tag from a list of subtags
+
+-- Could be more efficient, of course
 parseBCP47FromSubtags :: NonEmpty Subtag -> Either SyntaxError BCP47
 parseBCP47FromSubtags = parseBCP47 . T.intercalate "-" . NE.toList . fmap renderSubtagLower
 
@@ -356,16 +369,16 @@ instance Finishing BCP47 where
 -- | The parser's current location in the tag, named after the most
 -- recent component that was successfully parsed, more or less. What
 -- it really indicates is what subtags the parser expects to occur
--- next: 'AtPrimaryShort' means that it expects anything from an
--- extended language subtag to the start of the private use section,
--- while 'AtPrivateUse' indicates that it expects only private use
--- subtags.
+-- next: being 'AtPrimaryShort', for instance, means that we just
+-- parsed a short primary language subtag and so the next tag
+-- component we expect to see is anything from an extended language
+-- subtag to the start of the private use section or end of input.
 --
 -- The positions corresponding to a singleton subtag (the start of an
 -- extension or private use section) are not represented because only
 -- an 'EmptySingleton' error can happen at those positions.
 data AtComponent
-  = -- | just started
+  = -- | start of input
     AtBeginning
   | -- | primary language subtag of length at least four
     AtPrimaryLong
@@ -375,7 +388,7 @@ data AtComponent
     AtExtl1
   | -- | second extended language subtag
     AtExtl2
-  | -- | second extended language subtag
+  | -- | third extended language subtag
     AtExtl3
   | -- | script subtag
     AtScript
@@ -403,7 +416,7 @@ instance NFData AtComponent where
 --
 -- * for 'BadSubtag', the start of the inappropriate 'Subtag'
 --
--- * for 'EmptySubtag', the position of the @'-'@
+-- * for 'EmptySubtag', the position of the second @\'-\'@
 --
 -- * for 'EmptySingleton', the start of the empty extension or private
 --   use section that was encountered
@@ -420,15 +433,16 @@ data SyntaxError
     EmptyInput
   | -- | an empty subtag was found
     EmptySubtag Pos AtComponent (Maybe BCP47)
-  | -- | a trailing @-@ terminator was found after a well-formed tag
+  | -- | a trailing @\'-\'@ terminator was found after a well-formed
+    -- tag
     TrailingTerminator BCP47
-  | -- | an empty extension (@Just extensionchar@) or private use
+  | -- | an empty extension (@Just extchar@) or private use
     -- section (@Nothing@) was encountered
     EmptySingleton Pos (Maybe ExtensionChar) (Maybe BCP47)
   | -- | an irregular grandfathered tag was encountered that had more
     -- input after it
     IrregNum Grandfathered
-  | -- | No tag was found after an initial @i-@
+  | -- | no tag was found after an initial @i-@
     EmptyIrregI
   deriving (Eq, Ord, Show)
 
@@ -467,7 +481,7 @@ data SubtagCategory
     PrivateUseSingleton
   | -- | private use section subtag
     PrivateUseSubtag
-  | -- | singleton subtag @i@ or @I@
+  | -- | singleton subtag @i@ or @I@ at the beginning of a tag
     GrandfatheredIStart
   | -- | one of the subtags that can follow an initial @i@ in a
     -- 'Grandfathered' tag
@@ -478,6 +492,11 @@ instance NFData SubtagCategory where
   rnf = rwhnf
 
 -- | A description of what was just parsed for each 'AtComponent'
+--
+-- >>> atComponentDescription AtPrimaryShort
+-- "short primary language subtag"
+-- >>> atComponentDescription AtPrivateUse
+-- "private use subtag"
 atComponentDescription :: AtComponent -> Text
 atComponentDescription AtBeginning = "beginning of the tag"
 atComponentDescription AtPrimaryShort = "short primary language subtag"
@@ -494,6 +513,11 @@ atComponentDescription AtIrregI = "grandfathered \"i\" subtag"
 
 -- | The categories of subtag that are expected at any position within
 -- a tag, for use with 'BadSubtag' errors
+--
+-- >>> expectedCategories AtPrimaryShort
+-- ExtendedLanguage :| [Script, Region, Variant, Singleton]
+-- >>> expectedCategories AtPrivateUse
+-- PrivateUseSubtag :| []
 expectedCategories :: AtComponent -> NonEmpty SubtagCategory
 expectedCategories AtBeginning =
   PrimaryLanguage :| [GrandfatheredIStart, PrivateUseSingleton]
@@ -518,7 +542,12 @@ expectedCategories AtExtension =
 expectedCategories AtPrivateUse = PrivateUseSubtag :| []
 expectedCategories AtIrregI = GrandfatheredIFollower :| []
 
--- | The names of each 'SubtagCategory', for use as an expectation
+-- | The names of each 'SubtagCategory', for use as an expectation.
+--
+-- >>> subtagCategoryName PrimaryLanguage
+-- "primary language subtag"
+-- >>> subtagCategoryName PrivateUseSingleton
+-- "start of private use section"
 subtagCategoryName :: SubtagCategory -> Text
 subtagCategoryName PrimaryLanguage = "primary language subtag"
 subtagCategoryName ExtendedLanguage = "extended language subtag"
@@ -532,14 +561,19 @@ subtagCategoryName PrivateUseSubtag = "private use subtag"
 subtagCategoryName GrandfatheredIStart = "start of irregular grandfathered tag"
 subtagCategoryName GrandfatheredIFollower = "end of irregular grandfathered tag"
 
--- | A brief description of the syntax of each 'SubtagCategory'
+-- | A brief description of the syntax of each 'SubtagCategory'.
+--
+-- >>> subtagCategorySyntax PrimaryLanguage
+-- "two to eight letters"
+-- >>> subtagCategorySyntax PrivateUseSingleton
+-- "x or X"
 subtagCategorySyntax :: SubtagCategory -> Text
 subtagCategorySyntax PrimaryLanguage = "two to eight letters"
 subtagCategorySyntax ExtendedLanguage = "three letters"
 subtagCategorySyntax Script = "four letters"
 subtagCategorySyntax Region = "two letters or three digits"
-subtagCategorySyntax Variant = "four to eight letters or characters, starting with a digit if four"
-subtagCategorySyntax Singleton = "single letter or digit"
+subtagCategorySyntax Variant = "four to eight letters or characters (starting with a digit if four)"
+subtagCategorySyntax Singleton = "one letter or digit"
 subtagCategorySyntax ExtensionSubtag = "two to eight letters or digits"
 subtagCategorySyntax PrivateUseSingleton = "x or X"
 subtagCategorySyntax PrivateUseSubtag = "any subtag"
