@@ -7,13 +7,12 @@ registry](https://www.iana.org/assignments/language-subtag-registry/language-sub
 is generated automatically from a local copy in
 `../languagetag-gen/registry/bcp47`. The date of the repository that
 is used can be found at the top of that file, or in the documentation
-for `Text.LanguageTag.BCP47.Registry.bcp47RegistryDate` in the
-`languagetag-bcp47` package here.
+for `Text.LanguageTag.BCP47.Registry.bcp47RegistryDate`.
 
-## An overview of the package
+## The structure of the package
 
 The modules are organized under the `Text.LanguageTag.BCP47`
-hierarchy. The main ones are:
+namespace. The main ones are:
 
 - `Subtag`: defines a compact representation of a BCP47 subtag. In a
   full tag, these can represent languages (`en`, `fr`, `cmn`, `ja`),
@@ -45,6 +44,10 @@ hierarchy. The main ones are:
   subtags and tags. The main `tag` quasi-quoter ensures that its input
   passes linting without any warnings, but there are also other, less
   strict, quasi-quoters in the module.
+
+Note that matching based on language ranges (basic or extended) has
+not yet been added to the package. The remainder of the standard,
+however, is fully supported.
 
 ## Package update policy
 
