@@ -1,8 +1,7 @@
 name: Registry Monitor
 on:
   schedule:
-  - cron: '0 0 1,15 * *'
-  push:
+  - cron: '0 0 * * 0'
 jobs:
   bcp47-monitor:
     name: BCP47 Registry Monitor
