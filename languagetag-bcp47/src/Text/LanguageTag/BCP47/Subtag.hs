@@ -16,6 +16,7 @@ module Text.LanguageTag.BCP47.Subtag
     -- ** Parsing and construction
     parseSubtag,
     popSubtag,
+    popSubtagLax,
     singleton,
 
     -- ** Rendering and conversion
@@ -125,20 +126,16 @@ indexSubtag t idx
   | subtagLength t >= idx = Nothing
   | otherwise = Just $ unsafeIndexSubtag t idx
 
--- read a subtag given its length and constituent characters
-readSubtag :: Word64 -> [SubtagChar] -> Subtag
-readSubtag len = fixup . List.foldl' go (len, 57, False, False)
-  where
-    toSeen z w
-      | z = if w then Both else OnlyLetter
-      | otherwise = OnlyDigit
-    fixup (x, _, z, w) = recordSeen (toSeen z w) $ Subtag x
-    go (!acc, !idx, !seenLetter, !seenDigit) (SubtagChar !n) =
-      (acc + Bit.shiftL (fromIntegral n) idx, idx - 7, seenLetter', seenDigit')
-      where
-        (seenLetter', seenDigit')
-          | n <= 57 = (seenLetter, True)
-          | otherwise = (True, seenDigit)
+-- | Write a character starting at the given bit position. That bit
+-- and the following six bits must not be set, and the position must
+-- be of the form @57 - k * 7@ for @k@ between 0 and 7.
+unsafeSetChar :: Word8 -> SubtagChar -> Word64 -> Word64
+unsafeSetChar idx (SubtagChar c) n = n Bit..|. Bit.shiftL (fromIntegral c) (fromIntegral idx)
+
+-- | Set the 'Subtag' length. There cannot be any other length
+-- information recorded.
+unsafeSetLen :: Word8 -> Word64 -> Word64
+unsafeSetLen len w = w Bit..|. fromIntegral len
 
 -- | A possible syntax error that may be detected during parsing
 data SyntaxError
@@ -174,29 +171,55 @@ parseSubtag t = case popSubtag t of
 
 -- | Attempt to parse a 'Subtag' from the input 'Text'
 -- stream. Consumes the trailing @\'-\'@ character if it exists and is
--- not followed by the end of input.
+-- not followed by the end of input. The 'popSubtagLax' function is a
+-- more tolerant alternative to this function.
 popSubtag :: Text -> Either SyntaxError (Subtag, Text)
 popSubtag inp = case T.uncons inp of
   Just (c, t) -> case packCharDetail c of
-    Just (w, sc) -> go 1 (w :) (toSeenChar sc) t
+    Just (w, sc) -> go 1 50 (unsafeSetChar 57 w 0) (toSeenChar sc) t
     Nothing
       | c == '-' -> Left EmptySubtag
       | otherwise -> Left $ InvalidChar 0 c
   Nothing -> Left EmptyInput
   where
-    go !len !l !sc t
+    finish sc len stw = recordSeen sc $ Subtag $ unsafeSetLen len stw
+    go !len !bitIdx !stw !sc t
       | len > 8 = Left TagTooLong
       | otherwise = case T.uncons t of
         Just (c, t')
           | c == '-' ->
             if T.null t'
-              then Left $ TrailingTerminator $ recordSeen sc $ readSubtag (fromIntegral len) $ l []
-              else Right (recordSeen sc $ readSubtag (fromIntegral len) $ l [], t')
+              then Left $ TrailingTerminator $ finish sc len stw
+              else Right (finish sc len stw, t')
           | len == 8 -> Left TagTooLong
           | otherwise -> case packCharDetail c of
-            Just (w, sc') -> go (len + 1) (l . (w :)) (reportChar sc' sc) t'
-            Nothing -> Left $ InvalidChar len c
-        Nothing -> Right (recordSeen sc $ readSubtag (fromIntegral len) $ l [], "")
+            Just (w, sc') ->
+              go
+                (len + 1)
+                (bitIdx - 7)
+                (unsafeSetChar bitIdx w stw)
+                (reportChar sc' sc)
+                t'
+            Nothing -> Left $ InvalidChar (fromIntegral len) c
+        Nothing -> Right (finish sc len stw, "")
+
+-- | Attempt to parse a 'Subtag' from the input 'Text' stream. This
+-- function will take as many 'Subtag' characters as possible from the
+-- input, stopping when either an invalid character is encountered or
+-- eight such characters have been parsed. This function returns
+-- 'Nothing' when there are no initial 'Subtag' characters.
+popSubtagLax :: Text -> Maybe (Subtag, Text)
+popSubtagLax inp = do
+  (c, t) <- T.uncons inp
+  (w, sc) <- packCharDetail c
+  pure $ go 1 50 (unsafeSetChar 57 w 0) (toSeenChar sc) t
+  where
+    go !len !bitIdx !stw !sc t
+      | len < 8,
+        Just (c, t') <- T.uncons t,
+        Just (w, sc') <- packCharDetail c =
+        go (len + 1) (bitIdx - 7) (unsafeSetChar bitIdx w stw) (reportChar sc' sc) t'
+      | otherwise = (recordSeen sc $ Subtag $ unsafeSetLen len stw, t)
 
 ----------------------------------------------------------------
 -- Subtag characters
