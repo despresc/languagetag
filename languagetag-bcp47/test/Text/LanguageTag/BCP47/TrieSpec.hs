@@ -122,16 +122,17 @@ spec = do
         forAllEntry $ \(p, a) ->
           perturbPath arbitrary shrink p t $ \t' ->
             let t'' = Trie.insert p a t'
-             in Trie.lookupLax p t'' === Just a
+             in Trie.lookupLax p t'' === Just (a, [])
     prop "composes with insert correctly after pruning" $
       forAll' $ \t ->
         forAllEntry $ \(p, a) ->
           perturbPath arbitrary shrink p t $ \t' ->
             forAllPath $ \p' ->
-              Trie.lookupLax (p <> p') (Trie.prunePast p $ Trie.insert p a t') === Just a
+              Trie.lookupLax (p <> p') (Trie.prunePast p $ Trie.insert p a t')
+                === Just (a, p')
     -- tests that the accumulator in lookupLax actually does what it's
-    -- intended to do, by ensuring that we look up a Nothing node in a
-    -- branch that looks like
+    -- intended to do, by ensuring that the path in the lookup ends at
+    -- a Nothing in a branch that looks like:
     --- Just a ---> Nothing ---> Just a'. again, not the cleanest.
     prop "composes with insert correctly on a near-miss" $
       forAll' $ \t ->
@@ -143,7 +144,7 @@ spec = do
                   pAfter = p <> [x, y]
                in perturbPath arbitrary shrink pAfter t $ \t' ->
                     let t'' = Trie.insert pBefore a $ Trie.insert pAfter a' $ Trie.delete pAt t'
-                     in Trie.lookupLax pAt t'' === Just a
+                     in Trie.lookupLax pAt t'' === Just (a, [x])
   -- A small test of the manual Foldable instance, and I suppose of
   -- the semigroup instance too
   describe "length" $ do

@@ -13,6 +13,7 @@ module Text.LanguageTag.BCP47.Syntax.Trie where
 
 import Data.Bifunctor (first)
 import Data.Foldable (toList)
+import Text.LanguageTag.BCP47.Subtag (Subtag)
 import qualified Text.LanguageTag.BCP47.Subtag.Trie as Trie
 import Text.LanguageTag.BCP47.Syntax (BCP47, toSubtags)
 import Text.LanguageTag.Internal.BCP47.Subtag.Trie (Trie (..))
@@ -33,6 +34,7 @@ lookupBCP47Trie = Trie.lookup . toList . toSubtags
 -- tag, like 'Text.LanguageTag.BCP47.Subtag.lookupTrieLax'. Note that
 -- this does not perform any canonicalization or consider other
 -- information like macrolanguage relationships that might improve
--- matching.
-lookupBCP47TrieLax :: BCP47 -> Trie a -> Maybe a
+-- matching. This function also returns the subtags that were dropped
+-- from the tag in order to find the match.
+lookupBCP47TrieLax :: BCP47 -> Trie a -> Maybe (a, [Subtag])
 lookupBCP47TrieLax = Trie.lookupLax . toList . toSubtags

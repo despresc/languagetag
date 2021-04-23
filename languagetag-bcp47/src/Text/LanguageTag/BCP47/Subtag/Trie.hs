@@ -158,11 +158,12 @@ lookup :: [Subtag] -> Trie a -> Maybe a
 lookup l (Trie x) = NET.lookup l x
 lookup _ TrieNil = Nothing
 
--- | Find the entry in a 'Trie' that best matches the given list
--- of subtags. This is "lookup" in the sense of BCP47: in effect,
--- subtags are successively dropped from the end of the list until an
--- entry is found.
-lookupLax :: [Subtag] -> Trie a -> Maybe a
+-- | Find the entry in a 'Trie' that best matches the given list of
+-- subtags. This is "lookup" in the sense of BCP47: in effect, subtags
+-- are successively dropped from the end of the list until an entry is
+-- found. The entries that were dropped in order to find a match are
+-- also returned.
+lookupLax :: [Subtag] -> Trie a -> Maybe (a, [Subtag])
 lookupLax l (Trie n) = NET.lookupLax l n
 lookupLax _ TrieNil = Nothing
 

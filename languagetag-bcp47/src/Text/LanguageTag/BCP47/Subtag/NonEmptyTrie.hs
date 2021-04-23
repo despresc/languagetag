@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
 -- |
@@ -123,20 +124,22 @@ lookupSub (x : xs) (Branch _ (Step s t) m) = case compare x s of
 lookupSub (_ : _) (Leaf _) = Nothing
 lookupSub [] t = Just t
 
--- | Find the entry in a 'Trie' that best matches the given list
--- of subtags. This is "lookup" in the sense of BCP47: in effect,
--- subtags are successively dropped from the end of the list until an
--- entry is found.
-lookupLax :: [Subtag] -> Trie a -> Maybe a
+-- | Find the entry in a 'Trie' that best matches the given list of
+-- subtags. This is "lookup" in the sense of BCP47: in effect, subtags
+-- are successively dropped from the end of the list until an entry is
+-- found. Also returned is the list of subtags that were dropped in
+-- order to find a match.
+lookupLax :: [Subtag] -> Trie a -> Maybe (a, [Subtag])
 lookupLax = go Nothing
   where
-    go !mn (x : xs) (Branch n (Step s t) m) =
-      let mn' = mnode n <|> mn
+    go !mn stl@(x : xs) (Branch n (Step s t) m) =
+      let mn' = addL stl (mnode n) <|> mn
        in case compare x s of
             LT -> mn'
             EQ -> go mn' xs t
             GT -> case M.lookup x m of
               Nothing -> mn'
               Just t' -> go mn' xs t'
-    go mn [] (Branch n _ _) = mnode n <|> mn
-    go _ _ (Leaf a) = Just a
+    go mn [] (Branch n _ _) = addL [] (mnode n) <|> mn
+    go _ stl (Leaf a) = Just (a, stl)
+    addL l = fmap (,l)
