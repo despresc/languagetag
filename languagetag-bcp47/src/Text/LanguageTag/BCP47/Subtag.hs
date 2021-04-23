@@ -70,7 +70,6 @@ where
 import Control.DeepSeq (NFData (..))
 import qualified Data.Bits as Bit
 import Data.Char (ord)
-import qualified Data.List as List
 import Data.Maybe (isJust)
 import Data.Text (Text)
 import qualified Data.Text as T

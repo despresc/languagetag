@@ -11,7 +11,9 @@ import Test.Common
 import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck
-  ( forAllShrink,
+  ( arbitrary,
+    forAll,
+    forAllShrink,
     shrink,
     suchThat,
     vectorOf,
@@ -27,6 +29,7 @@ import Text.LanguageTag.BCP47.Subtag
     packChar,
     parseSubtag,
     popSubtag,
+    popSubtagLax,
     renderSubtagLower,
     singleton,
     subtagHead,
@@ -99,6 +102,19 @@ spec = do
         let mst = collapseLeft $ fst <$> popSubtag t
             wrapst = mst >>= (wrapSubtag . unwrapSubtag)
          in mst === wrapst
+  describe "popSubtagLax" $ do
+    let genNonSubtag = arbitrary `suchThat` (not . isSubtagChar)
+    let addTail t = fmap $ \(x, _) -> (x, t)
+    prop "ignores trailing garbage correctly" $
+      forAllShrink genSubtagText shrinkSubtagText $ \t ->
+        forAll genNonSubtag $ \c ->
+          forAllShrink genSubtagishText shrinkText $ \t' ->
+            let inpTail = T.singleton c <> t'
+             in popSubtagLax (t <> inpTail) === addTail inpTail (popSubtagLax t)
+    prop "behaves like parseSubtag" $ do
+      let collapseJust = fmap fst
+      forAllShrink genSubtagText shrinkSubtagText $ \t ->
+        collapseJust (popSubtagLax t) === collapseLeft (parseSubtag t)
   describe "parseSubtag" $ do
     prop "parses any well-formed subtag" $
       forAllShrink genSubtagText shrinkSubtagText $ isRight . parseSubtag
