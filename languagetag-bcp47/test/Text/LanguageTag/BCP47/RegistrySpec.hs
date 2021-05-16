@@ -42,11 +42,30 @@ import Text.LanguageTag.Internal.BCP47.Registry.Types (unsafeBinSearchIndexOn)
 
 -- TODO: unit testing of validation (good and bad)
 
--- TODO: add to me
+-- TODO: add to me - should also indicate exactly which example fails
+-- in the test instead of using shouldNotFind.
 renderingExamples :: [(BCP47, Text)]
 renderingExamples =
   [ ( [validtag|sl-cmn-hant-us-njiva-rozaj-biske-1994-alalc97-1606nict-b-and-a-tag-x-more|],
       "sl-cmn-Hant-US-rozaj-biske-njiva-1994-alalc97-1606nict-a-tag-b-and-x-more"
+    ),
+    ( [validtag|oc-vivaraup-aranes-nicard-grmistr|],
+      "oc-aranes-nicard-vivaraup-grmistr"
+    ),
+    ( [validtag|oc-grmistr-vivaraup-aranes-nicard|],
+      "oc-aranes-nicard-vivaraup-grmistr"
+    ),
+    ( [validtag|oc-lemosin-aranes-lengadoc-grclass|],
+      "oc-aranes-lemosin-lengadoc-grclass"
+    ),
+    ( [validtag|oc-grclass-lemosin-aranes-lengadoc|],
+      "oc-aranes-lemosin-lengadoc-grclass"
+    ),
+    ( [validtag|oc-cisaup-provenc-grital|],
+      "oc-cisaup-provenc-grital"
+    ),
+    ( [validtag|oc-provenc-grital-cisaup|],
+      "oc-cisaup-provenc-grital"
     )
   ]
 

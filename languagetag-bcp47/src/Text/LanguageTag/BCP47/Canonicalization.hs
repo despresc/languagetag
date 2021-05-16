@@ -551,13 +551,6 @@ splitPrefixedVariants =
 --        ('Text.LanguageTag.BCP47.Registry.Variant.Njiva', 'VariantChains' [('Text.LanguageTag.BCP47.Registry.Variant.Var1994', 'VariantChains' [])])
 --       ])]
 -- @
---
--- (You may notice that @sl-rozaj@ comes up a lot when discussing
--- variant subtags. That is because the only non-deprecated variant
--- subtags that can appear in a chain with other variant subtags are
--- @rozaj@ and its five sub-variants. In fact, most tags that occur in
--- practice have no variants at all, and most of the remainder have
--- just one.)
 categorizeVariants :: Normal -> (VariantChains, Set Variant, Set Variant)
 categorizeVariants n = (growVariantChains matchInit, hasPrefs, noPrefs)
   where
