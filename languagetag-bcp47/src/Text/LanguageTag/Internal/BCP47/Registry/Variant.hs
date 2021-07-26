@@ -9,7 +9,7 @@ import Prelude hiding (LT, GT)
 import Control.DeepSeq (NFData(..), rwhnf)
 import Data.Hashable (Hashable(..), hashUsing)
 
--- | The BCP47 variant subtags as of 2021-05-11. The names of variant constructors come from the corresponding subtag, except that they are in title case and subtags beginning with a number are prefixed with @Var@.
+-- | The BCP47 variant subtags as of 2021-07-21. The names of variant constructors come from the corresponding subtag, except that they are in title case and subtags beginning with a number are prefixed with @Var@.
 data Variant
   = Var1606nict -- ^ @1606nict@. Description: Late Middle French (to 1606).
   | Var1694acad -- ^ @1694acad@. Description: Early Modern French.
@@ -103,6 +103,7 @@ data Variant
   | Surmiran -- ^ @surmiran@. Description: Surmiran idiom of Romansh.
   | Sursilv -- ^ @sursilv@. Description: Sursilvan idiom of Romansh.
   | Sutsilv -- ^ @sutsilv@. Description: Sutsilvan idiom of Romansh.
+  | Synnejyl -- ^ @synnejyl@. Description: Synnejysk; South Jutish.
   | Tarask -- ^ @tarask@. Description: Belarusian in Taraskievica orthography.
   | Tongyong -- ^ @tongyong@. Description: Tongyong Pinyin romanization.
   | Tunumiit -- ^ @tunumiit@. Description: Tunumiisiut; East Greenlandic; Østgrønlandsk.

@@ -123,6 +123,7 @@ variantDetails = V.fromList
   ,(Subtag 16705987219704311320, VariantRecord ("Surmiran idiom of Romansh" :| []) NotDeprecated [Normal Rm Nothing Nothing Nothing (S.fromList []) M.empty []])
   ,(Subtag 16705987631996665879, VariantRecord ("Sursilvan idiom of Romansh" :| []) NotDeprecated [Normal Rm Nothing Nothing Nothing (S.fromList []) M.empty []])
   ,(Subtag 16706005224182710295, VariantRecord ("Sutsilvan idiom of Romansh" :| []) NotDeprecated [Normal Rm Nothing Nothing Nothing (S.fromList []) M.empty []])
+  ,(Subtag 16710455701498817560, VariantRecord ("Synnejysk" :| ["South Jutish"]) NotDeprecated [Normal Da Nothing Nothing Nothing (S.fromList []) M.empty []])
   ,(Subtag 16827583590345736214, VariantRecord ("Belarusian in Taraskievica orthography" :| []) NotDeprecated [Normal Be Nothing Nothing Nothing (S.fromList []) M.empty []])
   ,(Subtag 16843311420227938072, VariantRecord ("Tongyong Pinyin romanization" :| []) NotDeprecated [Normal Zh Nothing (Just Latn) Nothing (S.fromList []) M.empty []])
   ,(Subtag 16850067775273890840, VariantRecord ("Tunumiisiut" :| ["East Greenlandic","\216stgr\248nlandsk"]) NotDeprecated [Normal Kl Nothing Nothing Nothing (S.fromList []) M.empty []])
