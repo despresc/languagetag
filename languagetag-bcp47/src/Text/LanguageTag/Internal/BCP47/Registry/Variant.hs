@@ -9,7 +9,7 @@ import Prelude hiding (LT, GT)
 import Control.DeepSeq (NFData(..), rwhnf)
 import Data.Hashable (Hashable(..), hashUsing)
 
--- | The BCP47 variant subtags as of 2021-07-21. The names of variant constructors come from the corresponding subtag, except that they are in title case and subtags beginning with a number are prefixed with @Var@.
+-- | The BCP47 variant subtags as of 2021-08-06. The names of variant constructors come from the corresponding subtag, except that they are in title case and subtags beginning with a number are prefixed with @Var@.
 data Variant
   = Var1606nict -- ^ @1606nict@. Description: Late Middle French (to 1606).
   | Var1694acad -- ^ @1694acad@. Description: Early Modern French.
@@ -50,6 +50,7 @@ data Variant
   | Fonnapa -- ^ @fonnapa@. Description: North American Phonetic Alphabet; Americanist Phonetic Notation.
   | Fonupa -- ^ @fonupa@. Description: Uralic Phonetic Alphabet.
   | Fonxsamp -- ^ @fonxsamp@. Description: X-SAMPA transcription.
+  | Gallo -- ^ @gallo@. Description: Gallo.
   | Gascon -- ^ @gascon@. Description: Gascon.
   | Grclass -- ^ @grclass@. Description: Classical Occitan orthography.
   | Grital -- ^ @grital@. Description: Italian-inspired Occitan orthography.

@@ -9,7 +9,7 @@ import Prelude hiding (LT, GT)
 import Control.DeepSeq (NFData(..), rwhnf)
 import Data.Hashable (Hashable(..), hashUsing)
 
--- | The BCP47 grandfathered tags as of 2021-07-21.
+-- | The BCP47 grandfathered tags as of 2021-08-06.
 data Grandfathered
   = ArtLojban -- ^ @art-lojban@. Description: Lojban. Deprecated. Preferred value: jbo.
   | CelGaulish -- ^ @cel-gaulish@. Description: Gaulish. Deprecated.
