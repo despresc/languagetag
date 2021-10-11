@@ -25,6 +25,7 @@ module Text.LanguageTag.Internal.BCP47.Syntax
     extensionCharToSubtag,
     grandfatheredToSubtags,
     subtagX,
+    PartialBCP47 (..),
   )
 where
 
@@ -77,7 +78,7 @@ renderScript = maybeSubtag "" $ \s -> TB.fromString $ '-' : List.unfoldr (go s) 
 -- lower than grandfathered tags, which are lower than private use
 -- tags.
 data BCP47
-  = NormalTag {-# UNPACK #-} !Normal
+  = NormalTag !Normal
   | GrandfatheredTag !Grandfathered
   | PrivateUse !(NonEmpty Subtag)
   deriving (Eq, Ord)
@@ -270,12 +271,12 @@ grandfatheredToSubtags ZhXiang =
 --
 -- * the extension subtags must all have length at least two
 data Normal = Normal
-  { primlang :: {-# UNPACK #-} !Subtag,
-    extlang1 :: {-# UNPACK #-} !MaybeSubtag,
-    extlang2 :: {-# UNPACK #-} !MaybeSubtag,
-    extlang3 :: {-# UNPACK #-} !MaybeSubtag,
-    script :: {-# UNPACK #-} !MaybeSubtag,
-    region :: {-# UNPACK #-} !MaybeSubtag,
+  { primlang :: !Subtag,
+    extlang1 :: !MaybeSubtag,
+    extlang2 :: !MaybeSubtag,
+    extlang3 :: !MaybeSubtag,
+    script :: !MaybeSubtag,
+    region :: !MaybeSubtag,
     variants :: ![Subtag],
     extensions :: ![Extension],
     privateUse :: ![Subtag]
@@ -415,3 +416,42 @@ instance NFData Extension where
 instance Hashable Extension where
   hashWithSalt s (Extension c t) =
     s `hashWithSalt` c `hashWithSalt` t
+
+-- | A partially-parsed BCP47 tag
+data PartialBCP47
+  = -- | up to a short primary language
+    PartialPrimaryShort !Normal
+  | -- | up to the first extlang
+    PartialExtlang1 !Normal
+  | -- | up to the second extlang
+    PartialExtlang2 !Normal
+  | -- | up to the third extlang
+    PartialExtlang3 !Normal
+  | -- | up to a long primary language
+    PartialPrimaryLong !Normal
+  | -- | up to the script
+    PartialScript !Normal
+  | -- | up to the region
+    PartialRegion !Normal
+  | -- | up to a variant
+    PartialVariant !Normal ([Subtag] -> [Subtag])
+  | -- | up to the start of an extension section
+    PartialStartExtension !Normal ([Extension] -> [Extension]) !ExtensionChar
+  | -- | up to a subtag in an extension section
+    PartialExtension
+      !Normal
+      ([Extension] -> [Extension])
+      !ExtensionChar
+      ([Subtag] -> NonEmpty Subtag)
+  | -- | up to the start of the private use section
+    PartialStartPrivateUseSection !Normal
+  | -- | up to a subtag in the private use section
+    PartialPrivateUseSection !Normal ([Subtag] -> [Subtag])
+  | -- | up to an initial @i@
+    PartialStartI
+  | -- | up to a complete grandfathered tag
+    PartialGrandfathered !Grandfathered
+  | -- | up to the start of a private use tag
+    PartialStartPrivateUse
+  | -- | up to at least the second subtag in a private use tag
+    PartialPrivateUse ([Subtag] -> NonEmpty Subtag)
