@@ -59,7 +59,7 @@ import Text.LanguageTag.BCP47.Subtag
     maybeSubtag,
     nullSubtag,
     packChar,
-    parseSubtag,
+    parseSubtagText,
     renderSubtagLower,
     unpackCharLower,
   )
@@ -71,6 +71,14 @@ import Text.LanguageTag.Internal.BCP47.Registry.Types
   )
 import qualified Text.LanguageTag.Internal.BCP47.Subtag.NonEmptyTrie as NET
 import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn
+
+-- | Parse a full 'Subtag' from the given input
+justFullSubtag :: Text -> Maybe Subtag
+justFullSubtag t = case parseSubtagText t of
+  Left _ -> Nothing
+  Right (st, t')
+    | T.null t' -> Just st
+    | otherwise -> Nothing
 
 ----------------------------------------------------------------
 -- Generating
@@ -135,7 +143,7 @@ genSubtagishText = do
 
 -- | A valid 'Subtag'
 genSubtag :: Gen Subtag
-genSubtag = genSubtagText `suchThatRight` parseSubtag
+genSubtag = genSubtagText `suchThatMap` justFullSubtag
 
 genMaybeSubtagWith :: Gen Subtag -> Gen MaybeSubtag
 genMaybeSubtagWith g = oneof [justSubtag <$> g, pure nullSubtag]
@@ -154,7 +162,7 @@ genLanguageText n = T.pack <$> vectorOf n genLetter
 
 -- | A language subtag of the given length
 genLanguageSubtag :: Int -> Gen Subtag
-genLanguageSubtag n = genLanguageText n `suchThatRight` parseSubtag
+genLanguageSubtag n = genLanguageText n `suchThatMap` justFullSubtag
 
 -- | An extlang subtag 'Text' value
 genExtlangText :: Gen Text
@@ -162,7 +170,7 @@ genExtlangText = T.pack <$> vectorOf 3 genLetter
 
 -- | An extlang 'Subtag'
 genExtlangSubtag :: Gen Subtag
-genExtlangSubtag = genExtlangText `suchThatRight` parseSubtag
+genExtlangSubtag = genExtlangText `suchThatMap` justFullSubtag
 
 -- | An script subtag 'Text' value
 genScriptText :: Gen Text
@@ -170,7 +178,7 @@ genScriptText = T.pack <$> vectorOf 4 genLetter
 
 -- | An script 'Subtag'
 genScriptSubtag :: Gen Subtag
-genScriptSubtag = genScriptText `suchThatRight` parseSubtag
+genScriptSubtag = genScriptText `suchThatMap` justFullSubtag
 
 -- | An region subtag 'Text' value
 genRegionText :: Gen Text
@@ -181,7 +189,7 @@ genRegionText = oneof [digReg, letReg]
 
 -- | An region 'Subtag'
 genRegionSubtag :: Gen Subtag
-genRegionSubtag = genRegionText `suchThatRight` parseSubtag
+genRegionSubtag = genRegionText `suchThatMap` justFullSubtag
 
 -- | An variant subtag 'Text' value
 genVariantText :: Gen Text
@@ -193,7 +201,7 @@ genVariantText = chooseInt (4, 8) >>= go
 
 -- | An variant 'Subtag'
 genVariantSubtag :: Gen Subtag
-genVariantSubtag = genVariantText `suchThatRight` parseSubtag
+genVariantSubtag = genVariantText `suchThatMap` justFullSubtag
 
 -- | An extension character
 genExtensionChar :: Gen Char
@@ -211,7 +219,7 @@ genExtensionSubtagText = do
 
 -- | An extension subtag (other than the initial singleton)
 genExtensionSubtag :: Gen Subtag
-genExtensionSubtag = genExtensionSubtagText `suchThatRight` parseSubtag
+genExtensionSubtag = genExtensionSubtagText `suchThatMap` justFullSubtag
 
 genExtensionSubtag' :: Gen ExtensionSubtag
 genExtensionSubtag' = ExtensionSubtag <$> genExtensionSubtag
@@ -240,7 +248,7 @@ genPrivateUseSubtagText = do
 
 -- | A private use subtag (other than the initial singleton)
 genPrivateUseSubtag :: Gen Subtag
-genPrivateUseSubtag = genPrivateUseSubtagText `suchThatRight` parseSubtag
+genPrivateUseSubtag = genPrivateUseSubtagText `suchThatMap` justFullSubtag
 
 -- | Generate an entire privateuse section, with initial singleton
 genPrivateUseSectionTexts :: Gen [Text]
@@ -504,7 +512,7 @@ shrinkPopSubtagText t =
 
 -- | Shrink a 'Subtag' value
 shrinkSubtag :: Subtag -> [Subtag]
-shrinkSubtag = mapEither parseSubtag . shrinkText . renderSubtagLower
+shrinkSubtag = mapMaybe justFullSubtag . shrinkText . renderSubtagLower
 
 -- | Shrink a 'SubtagChar' value
 shrinkSubtagChar :: SubtagChar -> [SubtagChar]

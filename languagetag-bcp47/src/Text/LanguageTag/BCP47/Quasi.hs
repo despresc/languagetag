@@ -66,7 +66,7 @@ import Text.LanguageTag.BCP47.Registry
     renderScript,
     renderVariant,
   )
-import Text.LanguageTag.BCP47.Subtag (parseSubtag)
+import Text.LanguageTag.BCP47.Subtag (parseSubtagText)
 import qualified Text.LanguageTag.BCP47.Subtag as Sub
 import qualified Text.LanguageTag.BCP47.Syntax as Syn
 import Text.LanguageTag.BCP47.Validation (ValidationError (..), validateBCP47)
@@ -243,23 +243,25 @@ subtag =
       quoteDec = const $ fail "Cannot be used in a declaration context"
     }
   where
-    prettyErrorSuggestion Sub.EmptyInput =
-      "subtags must contain at least one character"
-    prettyErrorSuggestion Sub.EmptySubtag =
-      "subtags have at least one character before ending"
-    prettyErrorSuggestion Sub.TagTooLong =
-      "subtags must be at most eight characters long"
-    prettyErrorSuggestion (Sub.TrailingTerminator _) =
-      "lone subtags cannot end in a dash character"
-    prettyErrorSuggestion (Sub.InvalidChar _ c) =
-      "contains character '" <> T.singleton c
-        <> "' that is not an ASCII letter or number"
-    qe s = case parseSubtag (T.pack s) of
-      Left e -> fail $ "Invalid subtag: " <> T.unpack (prettyErrorSuggestion e)
-      Right x -> pure $ subtagE x
-    qp s = case parseSubtag (T.pack s) of
-      Left e -> fail $ "Invalid subtag: " <> T.unpack (prettyErrorSuggestion e)
-      Right x -> pure $ subtagP x
+    withPrettyError con s = case parseSubtagText s' of
+      Left Sub.EmptyInput -> case T.uncons s' of
+        Just (c, _) ->
+          prefFail $
+            "contains character '" <> [c]
+              <> "that is not an ascii letter or number"
+        Nothing -> prefFail "subtags must contain at least one character"
+      Left Sub.SubtagTooLong {} -> prefFail "subtags must be at most eight characters long"
+      Right (st, s'') -> case T.uncons s'' of
+        Just (c, _) ->
+          prefFail $
+            "contains character '" <> [c]
+              <> "' that is not an ascii letter or number"
+        Nothing -> pure $ con st
+      where
+        prefFail e = fail $ "Invalid subtag: " <> e
+        s' = T.pack s
+    qe = withPrettyError subtagE
+    qp = withPrettyError subtagP
 
 -- | Create a merely well-formed 'Syn.BCP47' value from a raw tag
 -- string. Examples:

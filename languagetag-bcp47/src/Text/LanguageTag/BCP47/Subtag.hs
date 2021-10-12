@@ -14,10 +14,9 @@ module Text.LanguageTag.BCP47.Subtag
     Subtag,
 
     -- ** Parsing and construction
-    parseSubtag,
-    popSubtag,
-    popSubtagLax,
+    parseSubtagText,
     singleton,
+    parseSubtagWith,
 
     -- ** Rendering and conversion
     renderSubtagLower,
@@ -59,17 +58,11 @@ module Text.LanguageTag.BCP47.Subtag
     wrapChar,
 
     -- * Errors
-    SyntaxError (..),
+    SubtagError (..),
 
     -- * Unsafe functions
     unsafeUnpackUpperLetter,
     unsafeIndexSubtag,
-
-    -- * Temporary subtag stream exports
-    SubtagErr (..),
-    parseSubtagWith,
-    parseSubtagText,
-    popSubtagCompat,
   )
 where
 
@@ -143,88 +136,27 @@ unsafeSetLen :: Word8 -> Word64 -> Word64
 unsafeSetLen len w = w Bit..|. fromIntegral len
 
 -- | A possible syntax error that may be detected during parsing
-data SyntaxError
+data SubtagError s
   = -- | the input was empty
     EmptyInput
-  | -- | a @\'-\'@ was found at the beginning of the input
-    EmptySubtag
-  | -- | the subtag continued for more than 8 characters
-    TagTooLong
-  | -- | a @\'-\'@ followed by the end of input was found at the end of an otherwise well-formed subtag
-    TrailingTerminator Subtag
-  | -- | an invalid 'Char' was found at some position
-    InvalidChar Int Char
+  | -- | an eight-character subtag, the ninth subtag character encountered, the
+    --  stream after that ninth character
+    SubtagTooLong !Subtag !SubtagChar s
   deriving (Eq, Ord, Show)
 
-instance NFData SyntaxError where
+instance NFData s => NFData (SubtagError s) where
   rnf EmptyInput = ()
-  rnf EmptySubtag = ()
-  rnf TagTooLong = ()
-  rnf (TrailingTerminator s) = rnf s
-  rnf (InvalidChar n c) = rnf n `seq` rnf c
+  rnf (SubtagTooLong _ _ s) = rnf s
 
--- | Attempt to parse an entire text string as a 'Subtag'
-
--- Observe that popSubtag only ever succeeds on the inputs <subtag><eof>
--- and <subtag> '-' <char>+.
-parseSubtag :: Text -> Either SyntaxError Subtag
-parseSubtag t = case popSubtag t of
-  Left e -> Left e
-  Right (s, t')
-    | T.null t' -> Right s
-    | otherwise -> Left $ InvalidChar (subtagLength' s) '-'
-
--- | Attempt to parse a 'Subtag' from the input 'Text'
--- stream. Consumes the trailing @\'-\'@ character if it exists and is
--- not followed by the end of input. The 'popSubtagLax' function is a
--- more tolerant alternative to this function.
-popSubtag :: Text -> Either SyntaxError (Subtag, Text)
-popSubtag inp = case T.uncons inp of
-  Just (c, t) -> case packCharDetail c of
-    Just (w, sc) -> go 1 50 (unsafeSetChar 57 w 0) (toSeenChar sc) t
-    Nothing
-      | c == '-' -> Left EmptySubtag
-      | otherwise -> Left $ InvalidChar 0 c
-  Nothing -> Left EmptyInput
+-- | Parse a 'Subtag' from a 'Text' stream, stopping either at the end of input
+-- or the first non-subtag character encountered. Uses 'parseSubtagWith'.
+parseSubtagText :: Text -> Either (SubtagError Text) (Subtag, Text)
+parseSubtagText = parseSubtagWith go
   where
-    finish sc len stw = recordSeen sc $ Subtag $ unsafeSetLen len stw
-    go !len !bitIdx !stw !sc t
-      | len > 8 = Left TagTooLong
-      | otherwise = case T.uncons t of
-        Just (c, t')
-          | c == '-' ->
-            if T.null t'
-              then Left $ TrailingTerminator $ finish sc len stw
-              else Right (finish sc len stw, t')
-          | len == 8 -> Left TagTooLong
-          | otherwise -> case packCharDetail c of
-            Just (w, sc') ->
-              go
-                (len + 1)
-                (bitIdx - 7)
-                (unsafeSetChar bitIdx w stw)
-                (reportChar sc' sc)
-                t'
-            Nothing -> Left $ InvalidChar (fromIntegral len) c
-        Nothing -> Right (finish sc len stw, "")
-
--- | Attempt to parse a 'Subtag' from the input 'Text' stream. This
--- function will take as many 'Subtag' characters as possible from the
--- input, stopping when either an invalid character is encountered or
--- eight such characters have been parsed. This function returns
--- 'Nothing' when there are no initial 'Subtag' characters.
-popSubtagLax :: Text -> Maybe (Subtag, Text)
-popSubtagLax inp = do
-  (c, t) <- T.uncons inp
-  (w, sc) <- packCharDetail c
-  pure $ go 1 50 (unsafeSetChar 57 w 0) (toSeenChar sc) t
-  where
-    go !len !bitIdx !stw !sc t
-      | len < 8,
-        Just (c, t') <- T.uncons t,
-        Just (w, sc') <- packCharDetail c =
-        go (len + 1) (bitIdx - 7) (unsafeSetChar bitIdx w stw) (reportChar sc' sc) t'
-      | otherwise = (recordSeen sc $ Subtag $ unsafeSetLen len stw, t)
+    go t = do
+      (c, t') <- T.uncons t
+      w <- packChar c
+      pure (w, t')
 
 ----------------------------------------------------------------
 -- Subtag characters
@@ -310,15 +242,6 @@ singleton (SubtagChar c) = recordSeen sc $ Subtag $ recordLen $ Bit.shiftL (from
 
 --------- New stream-agnostic parser
 
--- | A possible error that may occur during subtag parsing
-data SubtagErr s
-  = -- | input was empty
-    ErrEmptyInput
-  | -- | an eight-character subtag, the ninth subtag character encountered, the
-    -- stream after that ninth character
-    ErrSubtagTooLong !Subtag !SubtagChar s
-  deriving (Eq, Ord, Show)
-
 -- TODO: perhaps create variants of parseSubtagText (e.g. for bytestring), maybe
 -- also unsafe ones (i.e. ones that assume that the input is already
 -- well-formed), maybe attempt a monadic one again?
@@ -326,11 +249,11 @@ data SubtagErr s
 -- | Parse a subtag from the given stream using the given function to pop bytes
 -- from the stream, returning the resulting 'Subtag' and the remainder of the
 -- stream if successful.
-parseSubtagWith :: (s -> Maybe (SubtagChar, s)) -> s -> Either (SubtagErr s) (Subtag, s)
+parseSubtagWith :: (s -> Maybe (SubtagChar, s)) -> s -> Either (SubtagError s) (Subtag, s)
 parseSubtagWith unc = \s -> case unc s of
   Just (w, s') ->
     go 1 50 (unsafeSetChar 57 w 0) (toSeenChar' w) s'
-  Nothing -> Left ErrEmptyInput
+  Nothing -> Left EmptyInput
   where
     toSeenChar' (SubtagChar w)
       | w < 97 = OnlyDigit
@@ -341,7 +264,7 @@ parseSubtagWith unc = \s -> case unc s of
     finish !sc !len !stw = recordSeen sc $ Subtag $ unsafeSetLen len stw
     go !len !bitIdx !stw !sc s = case unc s of
       Just (w, s')
-        | len == 8 -> Left $ ErrSubtagTooLong (finish sc len stw) w s'
+        | len == 8 -> Left $ SubtagTooLong (finish sc len stw) w s'
         | otherwise ->
           go
             (len + 1)
@@ -351,15 +274,7 @@ parseSubtagWith unc = \s -> case unc s of
             s'
       Nothing -> Right (finish sc len stw, s)
 
--- | Parse a 'Subtag' from a 'Text' stream
-parseSubtagText :: Text -> Either (SubtagErr Text) (Subtag, Text)
-parseSubtagText = parseSubtagWith go
-  where
-    go t = do
-      (c, t') <- T.uncons t
-      w <- packChar c
-      pure (w, t')
-
+{-
 -- | Temporary compatibility function so we can use the new 'parseSubtagText'
 -- with the old interface
 popSubtagCompat :: Text -> Either SyntaxError (Subtag, Text)
@@ -375,3 +290,4 @@ popSubtagCompat inp = case parseSubtagText inp of
     Just (c, t')
       | c == '-' -> if T.null t' then Left $ TrailingTerminator st else Right (st, t')
       | otherwise -> Left $ InvalidChar (subtagLength' st) c
+-}

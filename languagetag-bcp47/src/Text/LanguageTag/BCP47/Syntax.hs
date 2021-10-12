@@ -66,7 +66,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Word (Word8)
 import Text.LanguageTag.BCP47.Registry.Grandfathered
-import Text.LanguageTag.BCP47.Subtag hiding (SyntaxError (..))
+import Text.LanguageTag.BCP47.Subtag hiding (SubtagError (..))
 import qualified Text.LanguageTag.BCP47.Subtag as Sub
 import Text.LanguageTag.Internal.BCP47.Subtag (Subtag (..), SubtagChar (..))
 import Text.LanguageTag.Internal.BCP47.Syntax
@@ -110,15 +110,23 @@ tagPop ::
   Either SyntaxError BCP47 ->
   (Subtag -> Text -> Either SyntaxError BCP47) ->
   Either SyntaxError BCP47
-tagPop inp atlast pos end more = case popSubtagCompat inp of
-  Right (st, t) -> more st t
-  Left (Sub.TrailingTerminator st) -> case more st "" of
-    Left e -> Left e
-    Right a -> Left $ TrailingTerminator a
-  Left Sub.EmptyInput -> end
-  Left Sub.EmptySubtag -> Left $ EmptySubtag pos atlast mcon
-  Left Sub.TagTooLong -> Left $ UnparsableSubtag pos atlast Nothing mcon
-  Left (Sub.InvalidChar n c) -> Left $ UnparsableSubtag pos atlast (Just (pos + n, c)) mcon
+tagPop inp atlast pos end more = case parseSubtagText inp of
+  -- TODO: this is temporarily written a little weirdly because of compatibility
+  -- issues with the new parseSubtagText
+  Left Sub.EmptyInput -> case T.uncons inp of
+    Just (c, _)
+      | c == '-' -> Left $ EmptySubtag pos atlast mcon
+      | otherwise -> Left $ UnparsableSubtag pos atlast (Just (pos, c)) mcon
+    Nothing -> end
+  Left Sub.SubtagTooLong {} -> Left $ UnparsableSubtag pos atlast Nothing mcon
+  Right (st, t) -> case T.uncons t of
+    Just (c, t')
+      | c == '-' && T.null t' -> case more st "" of
+        Left e -> Left e
+        Right a -> Left $ TrailingTerminator a
+      | c == '-' -> more st t'
+      | otherwise -> Left $ UnparsableSubtag pos atlast (Just (pos + subtagLength' st, c)) mcon
+    Nothing -> more st t
   where
     collapseLeft (Left _) = Nothing
     collapseLeft (Right a) = Just a
@@ -911,7 +919,7 @@ initNormal st = Normal st nullSubtag nullSubtag nullSubtag nullSubtag nullSubtag
 -- where the error occurred. Note that the offset of an 'InvalidChar' error in a
 -- 'SubtagError' is relative to the offset of the 'SubtagError' itself.
 data SyntaxError'
-  = SubtagError Int Sub.SyntaxError
+  = SubtagError Int (Sub.SubtagError Text)
   | SyntaxError' Int StepError
   deriving (Eq, Ord, Show)
 
@@ -927,7 +935,7 @@ parseBCP47Alt :: Text -> Either SyntaxError' BCP47
 parseBCP47Alt initinp = popSubtag' 0 initinp >>= startParse
   where
     posUpdate st pos = pos + 1 + subtagLength' st
-    popSubtag' n t = case popSubtagCompat t of
+    popSubtag' n t = case parseSubtagText t of
       Left e -> Left $ SubtagError n e
       Right a -> Right a
     startParse (st, t) = case startBCP47 st of

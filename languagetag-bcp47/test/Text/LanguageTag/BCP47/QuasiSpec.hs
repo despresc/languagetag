@@ -10,7 +10,7 @@ import Test.Hspec
 import Text.LanguageTag.BCP47.Canonicalization (canonicalizeBCP47)
 import Text.LanguageTag.BCP47.Quasi (canontag, subtag, syntag, validtag)
 import Text.LanguageTag.BCP47.Registry (BCP47)
-import Text.LanguageTag.BCP47.Subtag (Subtag, parseSubtag)
+import Text.LanguageTag.BCP47.Subtag (Subtag, SubtagError (..), parseSubtagText)
 import qualified Text.LanguageTag.BCP47.Syntax as Syn
 import Text.LanguageTag.BCP47.Validation (validateBCP47)
 
@@ -53,7 +53,14 @@ canontagExamples =
 -- that the quasi-quotes parse the examples like the functions do.
 spec :: Spec
 spec = do
-  let pSub = orExplode "failed to parse subtag" parseSubtag
+  let parseSubtagText' t = case parseSubtagText t of
+        Left e -> Left e
+        Right (st, t')
+          | T.null t' -> Right st
+          | -- unprincipled, but we don't need a finer distinction
+            otherwise ->
+            Left EmptyInput
+  let pSub = orExplode "failed to parse subtag" parseSubtagText'
   let pSyn = orExplode "failed to parse tag" Syn.parseBCP47
   let pVal = orExplode "failed to validate subtag" (validateBCP47 . pSyn)
   describe "subtag" $ do

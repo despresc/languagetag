@@ -4,7 +4,6 @@
 module Text.LanguageTag.BCP47.SubtagSpec (spec) where
 
 import qualified Data.Char as Char
-import Data.Either (isRight)
 import qualified Data.List as List
 import qualified Data.Text as T
 import Test.Common
@@ -20,16 +19,14 @@ import Test.QuickCheck
     (===),
   )
 import Text.LanguageTag.BCP47.Subtag
-  ( SyntaxError (..),
+  ( SubtagError (..),
     containsDigit,
     containsLetter,
     containsOnlyDigits,
     containsOnlyLetters,
     isSubtagChar,
     packChar,
-    parseSubtag,
-    popSubtag,
-    popSubtagLax,
+    parseSubtagText,
     renderSubtagLower,
     singleton,
     subtagHead,
@@ -50,6 +47,12 @@ TODO:
 
 - add some ill-formed subtag parsing property/unit tests now that the
   error type is richer
+
+- tests of parseSubtagWith? or perhaps the tests of the derived functions are
+  enough.
+
+- maybe add a parseSubtagTextFull or something to get rid of the fst's around
+  the parseSubtagText invocations
 -}
 
 spec :: Spec
@@ -65,91 +68,74 @@ spec = do
         where
           c' = Char.toLower c
   let mapDownCase = T.map limitedDownCase
-  describe "popSubtag" $ do
-    -- Note that this test and the failing trailing terminator test
-    -- are important for the correctness of parseSubtag, since it
-    -- shows that popSubtag succeeds precisely on the inputs
-    -- <subtag><eof> and <subtag> '-' <chars>.
-    prop "pops initial well-formed subtags" $ do
-      let pop' t = case T.break (== '-') t of
-            (start, rest) -> case T.uncons rest of
-              Just (c, t')
-                | c /= '-' -> Nothing
-                | otherwise -> (,t') <$> collapseLeft (parseSubtag start)
-              _ -> (,"") <$> collapseLeft (parseSubtag start)
-      forAllShrink genPopSubtagText shrinkPopSubtagText $ \t ->
-        collapseLeft (popSubtag t) === pop' t
-    prop "fails to parse trailing terminator subtags correctly" $ do
-      let fixBad (Left (TrailingTerminator st)) = Just st
-          fixBad _ = Nothing
-      forAllShrink genSubtagText shrinkSubtagText $ \t ->
-        fixBad (popSubtag $ t <> "-") === collapseLeft (fst <$> popSubtag t)
+  let genSubtagThenGarbage = do
+        t <- genSubtagText
+        c <- arbitrary `suchThat` (not . isSubtagChar)
+        t' <- genSubtagishText
+        b <- arbitrary
+        pure $ if b then t <> T.singleton c <> t' else t
+  describe "parseSubtagText" $ do
+    prop "acts as if subsequent invalid characters are absent" $ do
+      let parse' t = case parseSubtagText start of
+            Left EmptyInput -> Left EmptyInput
+            Left (SubtagTooLong st c s) -> Left $ SubtagTooLong st c (s <> rest)
+            Right (st, _) -> Right (st, rest)
+            where
+              (start, rest) = T.span isSubtagChar t
+      forAllShrink genSubtagishText shrinkText $ \t ->
+        parseSubtagText t === parse' t
     it "fails to parse empty input correctly" $
-      popSubtag "" === Left EmptyInput
+      parseSubtagText "" === Left EmptyInput
+    prop "fails to parse input starting with an invalid character correctly" $ do
+      let gen = do
+            c <- arbitrary `suchThat` (not . isSubtagChar)
+            t <- genSubtagishText
+            pure $ T.cons c t
+      forAll gen $ \t ->
+        parseSubtagText t === Left EmptyInput
+    prop "parses well-formed subtags completely" $ do
+      let fixBad (Left e) = Just (Left e)
+          fixBad (Right (st, t))
+            | T.null t = Nothing
+            | otherwise = Just (Right (st, t))
+      forAllShrink genSubtagText shrinkSubtagText $ \t ->
+        fixBad (parseSubtagText t) === Nothing
+    prop "pops initial well-formed subtags correctly" $ do
+      forAll genSubtagThenGarbage $ \t ->
+        fmap snd (parseSubtagText t) === Right (T.dropWhile isSubtagChar t)
     prop "is case-insensitive on initial well-formed subtags" $ do
       let fixPop (Right (s, t)) = Right (s, T.toLower t)
-          fixPop (Left e) = Left e
-      forAllShrink genPopSubtagText shrinkPopSubtagText $ \t ->
-        fixPop (popSubtag t) === popSubtag (T.toLower t)
+          fixPop (Left EmptyInput) = Left EmptyInput
+          fixPop (Left (SubtagTooLong st c s)) = Left $ SubtagTooLong st c $ T.toLower s
+      forAll genSubtagThenGarbage $ \t ->
+        fixPop (parseSubtagText t) === parseSubtagText (T.toLower t)
     prop "is case-insensitive on any candidate subtag" $ do
-      let fixUp (Left (InvalidChar n c)) = Left $ InvalidChar n $ limitedDownCase c
-          fixUp (Left e) = Left e
+      let fixUp (Left (SubtagTooLong st c s)) = Left $ SubtagTooLong st c $ mapDownCase s
+          fixUp (Left EmptyInput) = Left EmptyInput
           fixUp (Right (s, t)) = Right (s, mapDownCase t)
       forAllShrink genSubtagishText shrinkText $ \t ->
-        fixUp (popSubtag t) === popSubtag (mapDownCase t)
+        fixUp (parseSubtagText t) === parseSubtagText (mapDownCase t)
     prop "generates subtags acceptable to wrapSubtag" $
-      forAllShrink genPopSubtagText shrinkPopSubtagText $ \t ->
-        let mst = collapseLeft $ fst <$> popSubtag t
-            wrapst = mst >>= (wrapSubtag . unwrapSubtag)
-         in mst === wrapst
-  describe "popSubtagLax" $ do
-    let genNonSubtag = arbitrary `suchThat` (not . isSubtagChar)
-    let addTail t = fmap $ \(x, _) -> (x, t)
-    prop "ignores trailing garbage correctly" $
-      forAllShrink genSubtagText shrinkSubtagText $ \t ->
-        forAll genNonSubtag $ \c ->
-          forAllShrink genSubtagishText shrinkText $ \t' ->
-            let inpTail = T.singleton c <> t'
-             in popSubtagLax (t <> inpTail) === addTail inpTail (popSubtagLax t)
-    prop "behaves like parseSubtag" $ do
-      let collapseJust = fmap fst
-      forAllShrink genSubtagText shrinkSubtagText $ \t ->
-        collapseJust (popSubtagLax t) === collapseLeft (parseSubtag t)
-  describe "parseSubtag" $ do
-    prop "parses any well-formed subtag" $
-      forAllShrink genSubtagText shrinkSubtagText $ isRight . parseSubtag
-    prop "is case-insensitive on well-formed subtags" $
-      forAllShrink genSubtagText shrinkSubtagText $ \t ->
-        parseSubtag t === parseSubtag (T.toLower t)
-    prop "is case-insensitive on any candidate subtag" $ do
-      let fixError (Left (InvalidChar n c)) = Left $ InvalidChar n $ limitedDownCase c
-          fixError x = x
-      forAllShrink genSubtagishText shrinkText $ \t ->
-        fixError (parseSubtag t) === parseSubtag (mapDownCase t)
-    prop "fails to parse tags that are too long" $ do
-      let genLarge = do
-            t <- T.pack <$> vectorOf 8 genSubtagChar
-            let p x = case T.uncons x of
-                  Just (c, _) -> c /= '-'
-                  Nothing -> False
-            t' <- genSubtagishText `suchThat` p
-            pure $ t <> t'
-          shrinkLarge t = case T.splitAt 8 t of
-            (start, rest) -> (start <>) <$> (filter (not . T.null) $ shrinkText rest)
-      forAllShrink genLarge shrinkLarge $ \t ->
-        parseSubtag t === Left TagTooLong
-    it "fails to parse empty input correctly" $
-      parseSubtag "" === Left EmptyInput
-    prop "generates subtags acceptable to wrapSubtag" $
-      forAllShrink genSubtagText shrinkSubtagText $ \t ->
-        let mst = collapseLeft $ parseSubtag t
+      forAll genSubtagThenGarbage $ \t ->
+        let mst = collapseLeft $ fst <$> parseSubtagText t
             wrapst = mst >>= (wrapSubtag . unwrapSubtag)
          in mst === wrapst
     prop "generates subtags acceptable to wrapSubtag on candidates" $
       forAllShrink genSubtagishText shrinkText $ \t ->
-        let mst = collapseLeft $ parseSubtag t
+        let mst = collapseLeft $ fst <$> parseSubtagText t
             wrapst = mst >>= (wrapSubtag . unwrapSubtag)
          in mst === wrapst
+    prop "fails to parse tags that are too long" $ do
+      let genLarge = do
+            t <- T.pack <$> vectorOf 9 genSubtagChar
+            t' <- genSubtagishText
+            pure $ t <> t'
+          shrinkLarge t = case T.splitAt 9 t of
+            (start, rest) -> (start <>) <$> (filter (not . T.null) $ shrinkText rest)
+      let fixup (Left SubtagTooLong {}) = True
+          fixup _ = False
+      forAllShrink genLarge shrinkLarge $ \t ->
+        fixup (parseSubtagText t) === True
   describe "unpackCharLower" $ do
     prop "is the right inverse of packChar, mostly" $
       forAllShrink genSubtagSubtagChar shrinkSubtagChar $ \c ->
@@ -160,10 +146,10 @@ spec = do
   describe "renderSubtagLower" $ do
     prop "composes on the right with parseSubtag correctly" $
       forAllShrink genSubtag shrinkSubtag $ \st ->
-        parseSubtag (renderSubtagLower st) === Right st
+        (fst <$> parseSubtagText (renderSubtagLower st)) === Right st
     prop "composes on the left with parseSubtag correctly" $
       forAllShrink genSubtagText shrinkSubtagText $ \t ->
-        (renderSubtagLower <$> parseSubtag t) === Right (T.toLower t)
+        (renderSubtagLower . fst <$> parseSubtagText t) === Right (T.toLower t)
     prop "is an order homomorphism" $
       forAllShrink genSubtag shrinkSubtag $ \st1 ->
         forAllShrink genSubtag shrinkSubtag $ \st2 ->
@@ -171,11 +157,12 @@ spec = do
   describe "subtagLength" $ do
     prop "equals the text length of well-formed tags" $
       forAllShrink genSubtagText shrinkSubtagText $ \t ->
-        (subtagLength' <$> parseSubtag t) === Right (T.length t)
+        (subtagLength' . fst <$> parseSubtagText t) === Right (T.length t)
   describe "subtagHead" $ do
     prop "equals the text head of well-formed tags" $
       forAllShrink genSubtagText shrinkSubtagText $ \t ->
-        (unpackCharLower . subtagHead <$> parseSubtag t) === Right (Char.toLower $ T.head t)
+        (unpackCharLower . subtagHead . fst <$> parseSubtagText t)
+          === Right (Char.toLower $ T.head t)
   describe "unsafeIndexSubtag" $ do
     prop "equals the text index of well-formed tags" $
       forAllShrink genSubtag shrinkSubtag $ \st ->
@@ -208,20 +195,20 @@ spec = do
     let isLetter c = Char.isAsciiUpper c || Char.isAsciiLower c
     prop "behaves like the Text implementation" $
       forAllShrink genSubtagText shrinkSubtagText $ \t ->
-        (containsLetter <$> parseSubtag t) === Right (T.any isLetter t)
+        (containsLetter . fst <$> parseSubtagText t) === Right (T.any isLetter t)
   describe "containsOnlyLetters" $ do
     let isLetter c = Char.isAsciiUpper c || Char.isAsciiLower c
     prop "behaves like the Text implementation" $
       forAllShrink genSubtagText shrinkSubtagText $ \t ->
-        (containsOnlyLetters <$> parseSubtag t) === Right (T.all isLetter t)
+        (containsOnlyLetters . fst <$> parseSubtagText t) === Right (T.all isLetter t)
   describe "containsDigit" $ do
     prop "behaves like the Text implementation" $
       forAllShrink genSubtagText shrinkSubtagText $ \t ->
-        (containsDigit <$> parseSubtag t) === Right (T.any Char.isDigit t)
+        (containsDigit . fst <$> parseSubtagText t) === Right (T.any Char.isDigit t)
   describe "containsOnlyDigits" $ do
     prop "behaves like the Text implementation" $
       forAllShrink genSubtagText shrinkSubtagText $ \t ->
-        (containsOnlyDigits <$> parseSubtag t) === Right (T.all Char.isDigit t)
+        (containsOnlyDigits . fst <$> parseSubtagText t) === Right (T.all Char.isDigit t)
   describe "unpackSubtag" $ do
     prop "unpacks subtags correctly" $
       forAllShrink genSubtag shrinkSubtag $ \st ->
