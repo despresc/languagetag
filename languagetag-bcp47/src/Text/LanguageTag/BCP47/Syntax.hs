@@ -110,7 +110,7 @@ tagPop ::
   Either SyntaxError BCP47 ->
   (Subtag -> Text -> Either SyntaxError BCP47) ->
   Either SyntaxError BCP47
-tagPop inp atlast pos end more = case popSubtag inp of
+tagPop inp atlast pos end more = case popSubtagCompat inp of
   Right (st, t) -> more st t
   Left (Sub.TrailingTerminator st) -> case more st "" of
     Left e -> Left e
@@ -927,7 +927,7 @@ parseBCP47Alt :: Text -> Either SyntaxError' BCP47
 parseBCP47Alt initinp = popSubtag' 0 initinp >>= startParse
   where
     posUpdate st pos = pos + 1 + subtagLength' st
-    popSubtag' n t = case popSubtag t of
+    popSubtag' n t = case popSubtagCompat t of
       Left e -> Left $ SubtagError n e
       Right a -> Right a
     startParse (st, t) = case startBCP47 st of

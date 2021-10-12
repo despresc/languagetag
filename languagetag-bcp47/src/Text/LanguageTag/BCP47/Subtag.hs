@@ -69,6 +69,7 @@ module Text.LanguageTag.BCP47.Subtag
     SubtagErr (..),
     parseSubtagWith,
     parseSubtagText,
+    popSubtagCompat,
   )
 where
 
@@ -318,6 +319,10 @@ data SubtagErr s
     ErrSubtagTooLong !Subtag !SubtagChar s
   deriving (Eq, Ord, Show)
 
+-- TODO: perhaps create variants of parseSubtagText (e.g. for bytestring), maybe
+-- also unsafe ones (i.e. ones that assume that the input is already
+-- well-formed), maybe attempt a monadic one again?
+
 -- | Parse a subtag from the given stream using the given function to pop bytes
 -- from the stream, returning the resulting 'Subtag' and the remainder of the
 -- stream if successful.
@@ -346,6 +351,7 @@ parseSubtagWith unc = \s -> case unc s of
             s'
       Nothing -> Right (finish sc len stw, s)
 
+-- | Parse a 'Subtag' from a 'Text' stream
 parseSubtagText :: Text -> Either (SubtagErr Text) (Subtag, Text)
 parseSubtagText = parseSubtagWith go
   where
@@ -353,3 +359,19 @@ parseSubtagText = parseSubtagWith go
       (c, t') <- T.uncons t
       w <- packChar c
       pure (w, t')
+
+-- | Temporary compatibility function so we can use the new 'parseSubtagText'
+-- with the old interface
+popSubtagCompat :: Text -> Either SyntaxError (Subtag, Text)
+popSubtagCompat inp = case parseSubtagText inp of
+  Left ErrEmptyInput -> case T.uncons inp of
+    Just (c, _)
+      | c == '-' -> Left EmptySubtag
+      | otherwise -> Left $ InvalidChar 0 c
+    Nothing -> Left EmptyInput
+  Left ErrSubtagTooLong {} -> Left TagTooLong
+  Right (st, t) -> case T.uncons t of
+    Nothing -> Right (st, t)
+    Just (c, t')
+      | c == '-' -> if T.null t' then Left $ TrailingTerminator st else Right (st, t')
+      | otherwise -> Left $ InvalidChar (subtagLength' st) c
