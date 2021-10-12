@@ -64,6 +64,11 @@ module Text.LanguageTag.BCP47.Subtag
     -- * Unsafe functions
     unsafeUnpackUpperLetter,
     unsafeIndexSubtag,
+
+    -- * Temporary subtag stream exports
+    SubtagErr (..),
+    parseSubtagWith,
+    parseSubtagText,
   )
 where
 
@@ -301,3 +306,50 @@ singleton (SubtagChar c) = recordSeen sc $ Subtag $ recordLen $ Bit.shiftL (from
     sc
       | c <= 57 = OnlyDigit
       | otherwise = OnlyLetter
+
+--------- New stream-agnostic parser
+
+-- | A possible error that may occur during subtag parsing
+data SubtagErr s
+  = -- | input was empty
+    ErrEmptyInput
+  | -- | an eight-character subtag, the ninth subtag character encountered, the
+    -- stream after that ninth character
+    ErrSubtagTooLong !Subtag !SubtagChar s
+  deriving (Eq, Ord, Show)
+
+-- | Parse a subtag from the given stream using the given function to pop bytes
+-- from the stream, returning the resulting 'Subtag' and the remainder of the
+-- stream if successful.
+parseSubtagWith :: (s -> Maybe (SubtagChar, s)) -> s -> Either (SubtagErr s) (Subtag, s)
+parseSubtagWith unc = \s -> case unc s of
+  Just (w, s') ->
+    go 1 50 (unsafeSetChar 57 w 0) (toSeenChar' w) s'
+  Nothing -> Left ErrEmptyInput
+  where
+    toSeenChar' (SubtagChar w)
+      | w < 97 = OnlyDigit
+      | otherwise = OnlyLetter
+    reportChar' (SubtagChar w) OnlyLetter | w < 97 = Both
+    reportChar' (SubtagChar w) OnlyDigit | w > 57 = Both
+    reportChar' _ s = s
+    finish !sc !len !stw = recordSeen sc $ Subtag $ unsafeSetLen len stw
+    go !len !bitIdx !stw !sc s = case unc s of
+      Just (w, s')
+        | len == 8 -> Left $ ErrSubtagTooLong (finish sc len stw) w s'
+        | otherwise ->
+          go
+            (len + 1)
+            (bitIdx - 7)
+            (unsafeSetChar bitIdx w stw)
+            (reportChar' w sc)
+            s'
+      Nothing -> Right (finish sc len stw, s)
+
+parseSubtagText :: Text -> Either (SubtagErr Text) (Subtag, Text)
+parseSubtagText = parseSubtagWith go
+  where
+    go t = do
+      (c, t') <- T.uncons t
+      w <- packChar c
+      pure (w, t')
