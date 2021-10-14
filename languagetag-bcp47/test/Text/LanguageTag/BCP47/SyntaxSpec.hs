@@ -34,6 +34,10 @@ TODO:
 
 - add more ill-formed subtag parsing property/unit tests now that the
   error type is richer
+
+- add a few unit tests (e.g. of the tags in quasi), which will need to be
+  recorded as the types themselves (not as quasi-quoted values, which would be
+  cheating)
 -}
 
 irregularTags :: [(Text, Grandfathered)]

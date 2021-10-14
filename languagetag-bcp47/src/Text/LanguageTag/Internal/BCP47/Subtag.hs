@@ -46,7 +46,7 @@ module Text.LanguageTag.Internal.BCP47.Subtag
   )
 where
 
-import Control.DeepSeq (NFData)
+import Control.DeepSeq (NFData (..))
 import qualified Data.Bits as Bit
 import Data.Hashable (Hashable (..))
 import qualified Data.List as List
@@ -219,6 +219,9 @@ nullSubtag = MaybeSubtag (Subtag 0)
 -- ASCII alphabetic character or digit)
 newtype SubtagChar = SubtagChar {unSubtagChar :: Word8}
   deriving (Eq, Ord, Show, Hashable)
+
+instance NFData SubtagChar where
+  rnf (SubtagChar _) = ()
 
 -- | Convert a 'SubtagChar' to a lower case 'Char'
 unpackCharLower :: SubtagChar -> Char

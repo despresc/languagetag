@@ -59,7 +59,7 @@ import Text.LanguageTag.BCP47.Subtag
     maybeSubtag,
     nullSubtag,
     packChar,
-    parseSubtagText,
+    popSubtagText,
     renderSubtagLower,
     unpackCharLower,
   )
@@ -74,7 +74,7 @@ import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn
 
 -- | Parse a full 'Subtag' from the given input
 justFullSubtag :: Text -> Maybe Subtag
-justFullSubtag t = case parseSubtagText t of
+justFullSubtag t = case popSubtagText t of
   Left _ -> Nothing
   Right (st, t')
     | T.null t' -> Just st

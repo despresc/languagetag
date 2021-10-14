@@ -54,7 +54,7 @@ module Text.LanguageTag.BCP47.Syntax
     stepBCP47,
     finalizeBCP47,
     SyntaxError' (..),
-    parseBCP47Alt,
+    popBCP47Len,
   )
 where
 
@@ -66,7 +66,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Word (Word8)
 import Text.LanguageTag.BCP47.Registry.Grandfathered
-import Text.LanguageTag.BCP47.Subtag hiding (SubtagError (..))
+import Text.LanguageTag.BCP47.Subtag hiding (PopSubtagError (..))
 import qualified Text.LanguageTag.BCP47.Subtag as Sub
 import Text.LanguageTag.Internal.BCP47.Subtag (Subtag (..), SubtagChar (..))
 import Text.LanguageTag.Internal.BCP47.Syntax
@@ -110,15 +110,15 @@ tagPop ::
   Either SyntaxError BCP47 ->
   (Subtag -> Text -> Either SyntaxError BCP47) ->
   Either SyntaxError BCP47
-tagPop inp atlast pos end more = case parseSubtagText inp of
+tagPop inp atlast pos end more = case popSubtagText inp of
   -- TODO: this is temporarily written a little weirdly because of compatibility
   -- issues with the new parseSubtagText
-  Left Sub.EmptyInput -> case T.uncons inp of
+  Left Sub.PopEmptySubtag -> case T.uncons inp of
     Just (c, _)
       | c == '-' -> Left $ EmptySubtag pos atlast mcon
       | otherwise -> Left $ UnparsableSubtag pos atlast (Just (pos, c)) mcon
     Nothing -> end
-  Left Sub.SubtagTooLong {} -> Left $ UnparsableSubtag pos atlast Nothing mcon
+  Left Sub.PopSubtagTooLong {} -> Left $ UnparsableSubtag pos atlast Nothing mcon
   Right (st, t) -> case T.uncons t of
     Just (c, t')
       | c == '-' && T.null t' -> case more st "" of
@@ -626,7 +626,7 @@ data StepErrorType
     ErrEmptyPrivateUse
   | -- | the subtag was not well-formed for the position at which it was
     -- encountered
-    ErrImproperSubtag AtComponent
+    ErrImproperSubtag Subtag AtComponent
   | -- TODO review ones below
     ErrStartI
   | ErrAfterStartI
@@ -736,6 +736,7 @@ stepBCP47 st partbcp47 = case partbcp47 of
     16827550474088480787 -> Right $ PartialGrandfathered ITao
     16827638435018702867 -> Right $ PartialGrandfathered ITay
     16847869448969781267 -> Right $ PartialGrandfathered ITsu
+    -- TODO: I think this should be a bad subtag error?
     _ -> Left $ StepError Nothing ErrAfterStartI
   PartialGrandfathered g -> case g of
     -- the regular grandfathered tags can all potentially have subtags appended
@@ -795,6 +796,7 @@ stepBCP47 st partbcp47 = case partbcp47 of
   where
     -- tests for the subtags in a normal tag (other than the primary language
     -- subtag and the singletons)
+
     isExtlang = containsOnlyLetters st && subtagLength st == 3
     isScript = subtagLength st == 4 && containsOnlyLetters st
     isRegion =
@@ -806,11 +808,12 @@ stepBCP47 st partbcp47 = case partbcp47 of
     isExtensionSubtag = subtagLength st >= 2
 
     -- handle a singleton given an accumulated list of extension sections
+
     handleSingleton loc n acc
       | subtagLength st /= 1 =
         Left $
           StepError (Just $ NormalTag nEnd) $
-            ErrImproperSubtag loc
+            ErrImproperSubtag st loc
       | st == subtagX = Right $ PartialStartPrivateUseSection nEnd
       | otherwise =
         Right $
@@ -820,7 +823,9 @@ stepBCP47 st partbcp47 = case partbcp47 of
             (unsafeSubtagCharToExtension $ subtagHead st)
       where
         nEnd = n {extensions = acc []}
+
     -- recognizing the regular grandfathered tags
+
     recognizeOn stGot stExpect res fallback
       | unwrapSubtag stGot == stExpect = Right $ PartialGrandfathered res
       | otherwise = Right fallback
@@ -848,6 +853,7 @@ stepBCP47 st partbcp47 = case partbcp47 of
         n' = PartialVariant n (st :)
 
     -- recognizing the four irregular grandfathered tags not starting with 'i'
+
     orElse (Right x) _ = Right x
     orElse (Left _) x = x
     -- doesn't test for emptiness of the unimportant subtags - that's done in
@@ -856,6 +862,9 @@ stepBCP47 st partbcp47 = case partbcp47 of
       primlang n == Subtag lang
         && region n == justSubtag (Subtag reg)
         && st == Subtag st'
+    -- we don't need to check for the emptiness of variants, extensions, or the
+    -- private use section, since this function is only relevant exactly at
+    -- AtRegion
     detectLateIrregular n
       | extlang1 n /= nullSubtag
           || extlang2 n /= nullSubtag
@@ -872,7 +881,7 @@ stepBCP47 st partbcp47 = case partbcp47 of
         Right $ PartialGrandfathered SgnChDe
       | otherwise = err
       where
-        err = Left $ StepError (Just $ NormalTag n) $ ErrImproperSubtag AtRegion
+        err = Left $ StepError (Just $ NormalTag n) $ ErrImproperSubtag st AtRegion
 
 -- | Attempt to interpret a partially-parsed BCP47 tag as a full tag. This
 -- function fails when the standard requires that at least one more 'Subtag' be
@@ -914,42 +923,61 @@ finalizeBCP47 (PartialPrivateUse f) = Right $ PrivateUse $ f []
 initNormal :: Subtag -> Normal
 initNormal st = Normal st nullSubtag nullSubtag nullSubtag nullSubtag nullSubtag [] [] []
 
--- | A syntax error that may occur when parsing a full BCP47 tag, including the
--- offest of the start of the subtag (or the start of the malformed subtag)
--- where the error occurred. Note that the offset of an 'InvalidChar' error in a
--- 'SubtagError' is relative to the offset of the 'SubtagError' itself.
+-- | An error that may occur when parsing a complete 'BCP47' tag
 data SyntaxError'
-  = SubtagError Int (Sub.SubtagError Text)
-  | SyntaxError' Int StepError
+  = -- | offset of the error in the input, the step error itself
+    SyntaxErrorStep Int StepError
+  | -- | offset of the error in the input, the tag parsed so far (if possible),
+    -- the subtag error itself
+    SyntaxErrorPop Int (Maybe BCP47) Sub.PopSubtagError
   deriving (Eq, Ord, Show)
 
--- TODO: really should fix the subtag errors - get rid of the trailing
--- terminator thing. I think the positions in the errors below may be broken
--- until we do actually change that. we also may want to inline the SubtagError
--- constructors, since here we have an additional licit character to consider
--- (the tag separator), though that may be solved by having the subtag parser no
--- longer care about the dash as such.
-
--- | Parse a complete 'BCP47' tag
-parseBCP47Alt :: Text -> Either SyntaxError' BCP47
-parseBCP47Alt initinp = popSubtag' 0 initinp >>= startParse
+-- | Parse a 'BCP47' tag at the beginning of the text stream, stopping at the
+-- end of input or the first invalid character encountered. Also returns the
+-- total length (according to the passed popping functions) of input that was
+-- consumed and whatever input was not consumed.
+popBCP47LenWith ::
+  -- | function to pop a 'SubtagChar' from @s@
+  (s -> Maybe (SubtagChar, s)) ->
+  -- | function to pop a dash separator from @s@
+  (s -> Maybe s) ->
+  -- | the input
+  s ->
+  Either SyntaxError' (BCP47, Int, s)
+popBCP47LenWith popChar popSep initinp = popSubtag' 0 Nothing initinp >>= startParse
   where
-    posUpdate st pos = pos + 1 + subtagLength' st
-    popSubtag' n t = case parseSubtagText t of
-      Left e -> Left $ SubtagError n e
+    collapseLeft (Left _) = Nothing
+    collapseLeft (Right a) = Just a
+    popSubtag' !pos bcpForErr t = case popSubtagWith popChar t of
+      Left e -> Left $ SyntaxErrorPop pos bcpForErr e
       Right a -> Right a
     startParse (st, t) = case startBCP47 st of
-      Left e -> Left $ SyntaxError' 0 e
-      Right a -> step startpos t a
-      where
-        startpos = posUpdate st 0
+      Left e -> Left $ SyntaxErrorStep 0 e
+      Right a -> step (subtagLength' st) t a
     step !startpos t acc
-      | T.null t = finalize acc startpos
-      | otherwise = do
-        (st, t') <- popSubtag' startpos t
+      | Just t' <- popSep t = do
+        let bcp47ForErr = collapseLeft $ finalizeBCP47 acc
+        let startpos' = startpos + 1
+        (st, t'') <- popSubtag' startpos' bcp47ForErr t'
         case stepBCP47 st acc of
-          Left e -> Left $ SyntaxError' startpos e
-          Right acc' -> step (posUpdate st startpos) t' acc'
-    finalize tag pos = case finalizeBCP47 tag of
-      Left e -> Left $ SyntaxError' pos e
-      Right a -> Right a
+          Left e -> Left $ SyntaxErrorStep startpos' e
+          Right acc' -> step (startpos' + subtagLength' st) t'' acc'
+      | otherwise = finalize startpos t acc
+    finalize pos t tag = case finalizeBCP47 tag of
+      Left e -> Left $ SyntaxErrorStep pos e
+      Right a -> Right (a, pos, t)
+
+-- | Parse a 'BCP47' tag at the beginning of the text stream, stopping at the
+-- end of input or the first invalid character encountered. Also returns the
+-- total length of input that was consumed and whatever input was not consumed.
+popBCP47Len :: Text -> Either SyntaxError' (BCP47, Int, Text)
+popBCP47Len = popBCP47LenWith popChar popSep
+  where
+    popChar t = do
+      (c, t') <- T.uncons t
+      w <- packChar c
+      pure (w, t')
+    popSep t
+      | Just ('-', t') <- T.uncons t =
+        Just t'
+      | otherwise = Nothing

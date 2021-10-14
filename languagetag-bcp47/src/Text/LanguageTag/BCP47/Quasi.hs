@@ -66,7 +66,7 @@ import Text.LanguageTag.BCP47.Registry
     renderScript,
     renderVariant,
   )
-import Text.LanguageTag.BCP47.Subtag (parseSubtagText)
+import Text.LanguageTag.BCP47.Subtag (popSubtagText)
 import qualified Text.LanguageTag.BCP47.Subtag as Sub
 import qualified Text.LanguageTag.BCP47.Syntax as Syn
 import Text.LanguageTag.BCP47.Validation (ValidationError (..), validateBCP47)
@@ -243,14 +243,15 @@ subtag =
       quoteDec = const $ fail "Cannot be used in a declaration context"
     }
   where
-    withPrettyError con s = case parseSubtagText s' of
-      Left Sub.EmptyInput -> case T.uncons s' of
+    withPrettyError con s = case popSubtagText s' of
+      Left Sub.PopEmptySubtag -> case T.uncons s' of
         Just (c, _) ->
           prefFail $
             "contains character '" <> [c]
               <> "that is not an ascii letter or number"
         Nothing -> prefFail "subtags must contain at least one character"
-      Left Sub.SubtagTooLong {} -> prefFail "subtags must be at most eight characters long"
+      Left Sub.PopSubtagTooLong {} ->
+        prefFail "subtags must be at most eight characters long"
       Right (st, s'') -> case T.uncons s'' of
         Just (c, _) ->
           prefFail $
