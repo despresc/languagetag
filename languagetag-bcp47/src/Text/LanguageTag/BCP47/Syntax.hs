@@ -932,10 +932,13 @@ data SyntaxError'
     SyntaxErrorPop Int (Maybe BCP47) Sub.PopSubtagError
   deriving (Eq, Ord, Show)
 
--- | Parse a 'BCP47' tag at the beginning of the text stream, stopping at the
--- end of input or the first invalid character encountered. Also returns the
--- total length (according to the passed popping functions) of input that was
--- consumed and whatever input was not consumed.
+-- | Parse a 'BCP47' tag at the beginning of the stream, stopping at the end of
+-- input or the first invalid character encountered. Also returns the total
+-- length (according to the passed popping functions) of input that was consumed
+-- and whatever input was not consumed. This function has the property that if
+-- it parses a 'BCP47' tag successfully and the input is composed only of subtag
+-- characters and dashes, then it will have consumed its entire input (i.e., the
+-- returned unconsumed input will be empty).
 popBCP47LenWith ::
   -- | function to pop a 'SubtagChar' from @s@
   (s -> Maybe (SubtagChar, s)) ->
@@ -967,9 +970,8 @@ popBCP47LenWith popChar popSep initinp = popSubtag' 0 Nothing initinp >>= startP
       Left e -> Left $ SyntaxErrorStep pos e
       Right a -> Right (a, pos, t)
 
--- | Parse a 'BCP47' tag at the beginning of the text stream, stopping at the
--- end of input or the first invalid character encountered. Also returns the
--- total length of input that was consumed and whatever input was not consumed.
+-- | Parse a 'BCP47' tag at the beginning of the text stream. See also the
+-- documentation for 'popBCP47LenWith'.
 popBCP47Len :: Text -> Either SyntaxError' (BCP47, Int, Text)
 popBCP47Len = popBCP47LenWith popChar popSep
   where

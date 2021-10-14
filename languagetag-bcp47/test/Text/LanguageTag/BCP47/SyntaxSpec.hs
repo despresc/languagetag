@@ -38,6 +38,11 @@ TODO:
 - add a few unit tests (e.g. of the tags in quasi), which will need to be
   recorded as the types themselves (not as quasi-quoted values, which would be
   cheating)
+
+- test that for an input that's entirely subtag characters and dashes, if
+  popSubtagLen successfully parses something then the returned unconsumed input
+  will be empty.
+
 -}
 
 irregularTags :: [(Text, Grandfathered)]
