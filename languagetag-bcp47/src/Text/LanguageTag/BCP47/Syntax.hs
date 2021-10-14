@@ -223,28 +223,28 @@ parseBCP47' = parsePrimary
           | T.null t -> pure $ GrandfatheredTag ZhHakka
         (17699146535566049298, 15827742560719208467) -> do
           let pos' = pos + fromIntegral (subtagLength st1) + 1
-          tagPop t AtExtl1 pos' (Right $ GrandfatheredTag ZhMin) $ \st2 t' ->
+          tagPop t AtExtlang1 pos' (Right $ GrandfatheredTag ZhMin) $ \st2 t' ->
             case unwrapSubtag st2 of
               15962850549540323347
                 | T.null t' -> pure $ GrandfatheredTag ZhMinNan
-              _ -> tryLext2 (con $ justSubtag st1) st2 AtExtl1 pos' t'
+              _ -> tryLext2 (con $ justSubtag st1) st2 AtExtlang1 pos' t'
         (17699146535566049298, 17412902894784479253)
           | T.null t -> pure $ GrandfatheredTag ZhXiang
         _ -> tryLext1 con st1 atlast pos t
 
     tryLext1 !con st atlast pos t
       | containsOnlyLetters st && subtagLength st == 3 =
-        mfinish (subtagLength st) AtExtl1 pos t (con $ justSubtag st) tryLext2
+        mfinish (subtagLength st) AtExtlang1 pos t (con $ justSubtag st) tryLext2
       | otherwise = tryScript (con nullSubtag nullSubtag nullSubtag) st atlast pos t
 
     tryLext2 !con st atlast pos t
       | containsOnlyLetters st && subtagLength st == 3 =
-        mfinish (subtagLength st) AtExtl2 pos t (con $ justSubtag st) tryLext3
+        mfinish (subtagLength st) AtExtlang2 pos t (con $ justSubtag st) tryLext3
       | otherwise = tryScript (con nullSubtag nullSubtag) st atlast pos t
 
     tryLext3 !con st atlast pos t
       | containsOnlyLetters st && subtagLength st == 3 =
-        mfinish (subtagLength st) AtExtl3 pos t (con $ justSubtag st) tryScript
+        mfinish (subtagLength st) AtExtlang3 pos t (con $ justSubtag st) tryScript
       | otherwise = tryScript (con nullSubtag) st atlast pos t
 
     tryScript !con st atlast pos t
@@ -401,11 +401,11 @@ data AtComponent
   | -- | primary language subtag of length at most three
     AtPrimaryShort
   | -- | first extended language subtag
-    AtExtl1
+    AtExtlang1
   | -- | second extended language subtag
-    AtExtl2
+    AtExtlang2
   | -- | third extended language subtag
-    AtExtl3
+    AtExtlang3
   | -- | script subtag
     AtScript
   | -- | region subtag
@@ -516,9 +516,9 @@ instance NFData SubtagCategory where
 atComponentDescription :: AtComponent -> Text
 atComponentDescription AtBeginning = "beginning of the tag"
 atComponentDescription AtPrimaryShort = "short primary language subtag"
-atComponentDescription AtExtl1 = "first extended language subtag"
-atComponentDescription AtExtl2 = "second extended language subtag"
-atComponentDescription AtExtl3 = "third extended language subtag"
+atComponentDescription AtExtlang1 = "first extended language subtag"
+atComponentDescription AtExtlang2 = "second extended language subtag"
+atComponentDescription AtExtlang3 = "third extended language subtag"
 atComponentDescription AtPrimaryLong = "long primary language subtag"
 atComponentDescription AtScript = "script subtag"
 atComponentDescription AtRegion = "region subtag"
@@ -539,11 +539,11 @@ expectedCategories AtBeginning =
   PrimaryLanguage :| [GrandfatheredIStart, PrivateUseSingleton]
 expectedCategories AtPrimaryShort =
   ExtendedLanguage :| [Script, Region, Variant, Singleton]
-expectedCategories AtExtl1 =
+expectedCategories AtExtlang1 =
   ExtendedLanguage :| [Script, Region, Variant, Singleton]
-expectedCategories AtExtl2 =
+expectedCategories AtExtlang2 =
   ExtendedLanguage :| [Script, Region, Variant, Singleton]
-expectedCategories AtExtl3 =
+expectedCategories AtExtlang3 =
   Script :| [Region, Variant, Singleton]
 expectedCategories AtPrimaryLong =
   Script :| [Region, Variant, Singleton]
@@ -627,14 +627,11 @@ data StepErrorType
   | -- | the subtag was not well-formed for the position at which it was
     -- encountered
     ErrImproperSubtag Subtag AtComponent
-  | -- TODO review ones below
-    ErrStartI
-  | ErrAfterStartI
-  | ErrStartContainsDigit
-  | ErrTooManyAfterIrreg
+  | -- | there was no subtag after an initial @i@ subtag
+    ErrEmptyStartI
+  | -- | a subtag was encountered after an irregular grandfathered tag
+    ErrSubtagAfterIrreg Subtag
   deriving (Eq, Ord, Show)
-
--- TODO: consider changing AtExtl1 et al to AtExtlang1
 
 -- | Parse the start of a BCP47 tag and return a 'PartialBCP47' result. This
 -- will fail if the given 'Subtag' cannot start a tag, which happens if it is
@@ -647,7 +644,7 @@ data StepErrorType
 -- * the subtag @i@, for irregular grandfathered tags beginning with that tag.
 startBCP47 :: Subtag -> Either StepError PartialBCP47
 startBCP47 st
-  | containsDigit st = Left $ StepError Nothing ErrStartContainsDigit
+  | containsDigit st = Left $ StepError Nothing $ ErrImproperSubtag st AtBeginning
   | st == subtagI = Right PartialStartI
   | st == subtagX = Right PartialStartPrivateUse
   | subtagLength st >= 4 = Right $ PartialPrimaryLong initcon
@@ -673,18 +670,18 @@ stepBCP47 st partbcp47 = case partbcp47 of
     | isScript -> Right $ PartialScript n {script = justSubtag st}
     | isRegion -> Right $ PartialRegion n {region = justSubtag st}
     | isVariant -> Right $ PartialVariant n (st :)
-    | otherwise -> handleSingleton AtExtl1 n id
+    | otherwise -> handleSingleton AtExtlang1 n id
   PartialExtlang2 n
     | isExtlang -> Right $ PartialExtlang3 n {extlang3 = justSubtag st}
     | isScript -> Right $ PartialScript n {script = justSubtag st}
     | isRegion -> Right $ PartialRegion n {region = justSubtag st}
     | isVariant -> Right $ PartialVariant n (st :)
-    | otherwise -> handleSingleton AtExtl2 n id
+    | otherwise -> handleSingleton AtExtlang2 n id
   PartialExtlang3 n
     | isScript -> Right $ PartialScript n {script = justSubtag st}
     | isRegion -> Right $ PartialRegion n {region = justSubtag st}
     | isVariant -> Right $ PartialVariant n (st :)
-    | otherwise -> handleSingleton AtExtl3 n id
+    | otherwise -> handleSingleton AtExtlang3 n id
   PartialPrimaryLong n
     | isScript -> Right $ PartialScript n {script = justSubtag st}
     | isRegion -> Right $ PartialRegion n {region = justSubtag st}
@@ -736,8 +733,7 @@ stepBCP47 st partbcp47 = case partbcp47 of
     16827550474088480787 -> Right $ PartialGrandfathered ITao
     16827638435018702867 -> Right $ PartialGrandfathered ITay
     16847869448969781267 -> Right $ PartialGrandfathered ITsu
-    -- TODO: I think this should be a bad subtag error?
-    _ -> Left $ StepError Nothing ErrAfterStartI
+    _ -> Left $ StepError Nothing $ ErrImproperSubtag st AtIrregI
   PartialGrandfathered g -> case g of
     -- the regular grandfathered tags can all potentially have subtags appended
     -- to them (turning them into normal tags), and in addition the tag "zh-min"
@@ -780,7 +776,7 @@ stepBCP47 st partbcp47 = case partbcp47 of
               }
     ZhXiang -> stepVariant 17699146535566049298 17412902894784479253
     where
-      err = Left $ StepError (Just $ GrandfatheredTag g) ErrTooManyAfterIrreg
+      err = Left $ StepError (Just $ GrandfatheredTag g) $ ErrSubtagAfterIrreg st
       fixErr x = case x of
         Left (StepError _ e) -> Left $ StepError (Just $ GrandfatheredTag g) e
         Right a -> Right a
@@ -913,7 +909,7 @@ finalizeBCP47 (PartialStartPrivateUseSection _) =
   Left $ StepError Nothing ErrEmptyPrivateUse
 finalizeBCP47 (PartialPrivateUseSection n f) =
   Right $ NormalTag $ n {privateUse = f []}
-finalizeBCP47 PartialStartI = Left $ StepError Nothing ErrStartI
+finalizeBCP47 PartialStartI = Left $ StepError Nothing ErrEmptyStartI
 finalizeBCP47 (PartialGrandfathered g) = Right $ GrandfatheredTag g
 finalizeBCP47 PartialStartPrivateUse = Left $ StepError Nothing ErrEmptyPrivateUse
 finalizeBCP47 (PartialPrivateUse f) = Right $ PrivateUse $ f []

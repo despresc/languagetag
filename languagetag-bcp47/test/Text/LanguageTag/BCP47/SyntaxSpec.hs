@@ -86,7 +86,7 @@ syntaxFailures =
     ("i-bnn-more", Syn.IrregNum IBnn),
     ("cmn*", Syn.UnparsableSubtag 0 Syn.AtBeginning (Just (3, '*')) Nothing),
     ("en-GB-oed-", Syn.TrailingTerminator [syntag|en-gb-oed|]),
-    ("zh-min-nan*", Syn.UnparsableSubtag 7 Syn.AtExtl1 (Just (10, '*')) (Just [syntag|zh-min|])),
+    ("zh-min-nan*", Syn.UnparsableSubtag 7 Syn.AtExtlang1 (Just (10, '*')) (Just [syntag|zh-min|])),
     ("cmn-more*", Syn.UnparsableSubtag 4 Syn.AtPrimaryShort (Just (8, '*')) (Just [syntag|cmn|])),
     ("cmnabcd--", Syn.EmptySubtag 8 Syn.AtPrimaryLong (Just [syntag|cmnabcd|])),
     ("cmn-lotsoftag*", Syn.UnparsableSubtag 4 Syn.AtPrimaryShort Nothing (Just [syntag|cmn|])),
