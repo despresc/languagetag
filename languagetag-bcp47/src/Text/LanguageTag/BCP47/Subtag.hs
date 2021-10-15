@@ -154,6 +154,8 @@ instance NFData PopSubtagError where
 popSubtagText :: Text -> Either PopSubtagError (Subtag, Text)
 popSubtagText = popSubtagWith go
   where
+    -- TODO: perhaps export this go as its own function? duplicated in
+    -- 'popBCP47Len'. esp. if we have a Text/ByteString hierarchy split.
     go t = do
       (c, t') <- T.uncons t
       w <- packChar c

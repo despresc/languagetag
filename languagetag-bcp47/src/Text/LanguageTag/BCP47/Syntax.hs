@@ -50,15 +50,22 @@ module Text.LanguageTag.BCP47.Syntax
 
     -- * Temp partial exports
     StepError (..),
+    StepErrorType (..),
     startBCP47,
     stepBCP47,
     finalizeBCP47,
     SyntaxError' (..),
     popBCP47Len,
+    isTagChar,
+    AtComponent' (..),
+    parseBCP47FromSubtags',
   )
 where
 
+import Control.Applicative ((<|>))
 import Control.DeepSeq (NFData (..), rwhnf)
+import Control.Monad (guard)
+import Data.Functor (($>))
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import Data.Maybe (mapMaybe)
@@ -613,7 +620,7 @@ subtagCategorySyntax GrandfatheredIFollower =
 -- * an @x@ (indicating a private use tag) or @i@ (indicating a type of
 --   grandfathered tag) was the first subtag, but no subsequent subtags were
 --   added to the 'PartialBCP47' tag before attempted finalization
-data StepError = StepError (Maybe BCP47) StepErrorType
+data StepError = StepError (Maybe BCP47) AtComponent' StepErrorType
   deriving (Eq, Ord, Show)
 
 -- | The types of errors that may occur when trying to append a 'Subtag' to a
@@ -626,7 +633,7 @@ data StepErrorType
     ErrEmptyPrivateUse
   | -- | the subtag was not well-formed for the position at which it was
     -- encountered
-    ErrImproperSubtag Subtag AtComponent
+    ErrImproperSubtag Subtag
   | -- | there was no subtag after an initial @i@ subtag
     ErrEmptyStartI
   | -- | a subtag was encountered after an irregular grandfathered tag
@@ -644,7 +651,7 @@ data StepErrorType
 -- * the subtag @i@, for irregular grandfathered tags beginning with that tag.
 startBCP47 :: Subtag -> Either StepError PartialBCP47
 startBCP47 st
-  | containsDigit st = Left $ StepError Nothing $ ErrImproperSubtag st AtBeginning
+  | containsDigit st = Left $ StepError Nothing AtBeginning' $ ErrImproperSubtag st
   | st == subtagI = Right PartialStartI
   | st == subtagX = Right PartialStartPrivateUse
   | subtagLength st >= 4 = Right $ PartialPrimaryLong initcon
@@ -664,46 +671,33 @@ stepBCP47 st partbcp47 = case partbcp47 of
     | isScript -> Right $ PartialScript n {script = justSubtag st}
     | isRegion -> Right $ PartialRegion n {region = justSubtag st}
     | isVariant -> handleVariantGrandfathered n
-    | otherwise -> handleSingleton AtPrimaryShort n id
-  PartialExtlang1 n
-    | isExtlang -> Right $ PartialExtlang2 n {extlang2 = justSubtag st}
-    | isScript -> Right $ PartialScript n {script = justSubtag st}
-    | isRegion -> Right $ PartialRegion n {region = justSubtag st}
-    | isVariant -> Right $ PartialVariant n (st :)
-    | otherwise -> handleSingleton AtExtlang1 n id
-  PartialExtlang2 n
-    | isExtlang -> Right $ PartialExtlang3 n {extlang3 = justSubtag st}
-    | isScript -> Right $ PartialScript n {script = justSubtag st}
-    | isRegion -> Right $ PartialRegion n {region = justSubtag st}
-    | isVariant -> Right $ PartialVariant n (st :)
-    | otherwise -> handleSingleton AtExtlang2 n id
-  PartialExtlang3 n
-    | isScript -> Right $ PartialScript n {script = justSubtag st}
-    | isRegion -> Right $ PartialRegion n {region = justSubtag st}
-    | isVariant -> Right $ PartialVariant n (st :)
-    | otherwise -> handleSingleton AtExtlang3 n id
-  PartialPrimaryLong n
-    | isScript -> Right $ PartialScript n {script = justSubtag st}
-    | isRegion -> Right $ PartialRegion n {region = justSubtag st}
-    | isVariant -> Right $ PartialVariant n (st :)
-    | otherwise -> handleSingleton AtPrimaryLong n id
-  PartialScript n
-    | isRegion -> Right $ PartialRegion n {region = justSubtag st}
-    | isVariant -> Right $ PartialVariant n (st :)
-    | otherwise -> handleSingleton AtScript n id
-  PartialRegion n
+    | otherwise -> handleSingleton AtPrimaryShort' n id
+  PartialExtlang1 n ->
+    (asExt2 n <|> asScr n <|> asReg n <|> asVar n id)
+      `andOtherwise` handleSingleton AtExtlang1' n id
+  PartialExtlang2 n ->
+    (asExt3 n <|> asScr n <|> asReg n <|> asVar n id)
+      `andOtherwise` handleSingleton AtExtlang2' n id
+  PartialExtlang3 n ->
+    (asScr n <|> asReg n <|> asVar n id)
+      `andOtherwise` handleSingleton AtExtlang3' n id
+  PartialPrimaryLong n ->
+    (asScr n <|> asReg n <|> asVar n id)
+      `andOtherwise` handleSingleton AtPrimaryLong' n id
+  PartialScript n ->
+    (asReg n <|> asVar n id)
+      `andOtherwise` handleSingleton AtScript' n id
+  PartialRegion n ->
     -- the last grandfathered tags are detected here (the four irregular
     -- grandfathered tags that look like normal tags at the start)
-    | isVariant -> Right $ PartialVariant n (st :)
-    | otherwise -> handleSingleton AtRegion n id `orElse` detectLateIrregular n
-  PartialVariant n f
-    | isVariant -> Right $ PartialVariant n (f . (st :))
-    | otherwise -> handleSingleton AtVariant (n {variants = f []}) id
+    asVar n id `andOtherwise` handleSingleton AtRegion' n id `orElse` detectLateIrregular n
+  PartialVariant n f ->
+    asVar n f `andOtherwise` handleSingleton AtVariant' (n {variants = f []}) id
   PartialStartExtension n exts c
     | isExtensionSubtag -> Right $ PartialExtension n exts c (st :|)
     | otherwise ->
       Left $
-        StepError (Just $ NormalTag n {extensions = exts []}) $
+        StepError (Just $ NormalTag n {extensions = exts []}) AtStartExtension' $
           ErrEmptyExtensionSection
             c
             (Just errC)
@@ -733,7 +727,7 @@ stepBCP47 st partbcp47 = case partbcp47 of
     16827550474088480787 -> Right $ PartialGrandfathered ITao
     16827638435018702867 -> Right $ PartialGrandfathered ITay
     16847869448969781267 -> Right $ PartialGrandfathered ITsu
-    _ -> Left $ StepError Nothing $ ErrImproperSubtag st AtIrregI
+    _ -> Left $ StepError Nothing AtStartI' $ ErrImproperSubtag st
   PartialGrandfathered g -> case g of
     -- the regular grandfathered tags can all potentially have subtags appended
     -- to them (turning them into normal tags), and in addition the tag "zh-min"
@@ -776,9 +770,14 @@ stepBCP47 st partbcp47 = case partbcp47 of
               }
     ZhXiang -> stepVariant 17699146535566049298 17412902894784479253
     where
-      err = Left $ StepError (Just $ GrandfatheredTag g) $ ErrSubtagAfterIrreg st
+      err =
+        Left $
+          StepError (Just $ GrandfatheredTag g) AtIrregGrandfathered' $
+            ErrSubtagAfterIrreg st
+      -- if there is an error in stepping then we would like to have a more
+      -- accurate tag in the errors
       fixErr x = case x of
-        Left (StepError _ e) -> Left $ StepError (Just $ GrandfatheredTag g) e
+        Left (StepError _ loc e) -> Left $ StepError (Just $ GrandfatheredTag g) loc e
         Right a -> Right a
       stepExt prim ext =
         fixErr $
@@ -793,23 +792,33 @@ stepBCP47 st partbcp47 = case partbcp47 of
     -- tests for the subtags in a normal tag (other than the primary language
     -- subtag and the singletons)
 
+    -- TODO: could factor these tests a bit
     isExtlang = containsOnlyLetters st && subtagLength st == 3
-    isScript = subtagLength st == 4 && containsOnlyLetters st
+    isScript = containsOnlyLetters st && subtagLength st == 4
     isRegion =
-      subtagLength st == 2 && containsOnlyLetters st
-        || subtagLength st == 3 && containsOnlyDigits st
+      containsOnlyLetters st && subtagLength st == 2
+        || containsOnlyDigits st && subtagLength st == 3
     isVariant =
       subtagLength st >= 5
-        || subtagLength st == 4 && not (isDigit $ subtagHead st)
+        || subtagLength st == 4 && isDigit (subtagHead st)
     isExtensionSubtag = subtagLength st >= 2
+
+    asExt2 n = guard isExtlang $> PartialExtlang2 n {extlang2 = justSubtag st}
+    asExt3 n = guard isExtlang $> PartialExtlang3 n {extlang3 = justSubtag st}
+    asScr n = guard isScript $> PartialScript n {script = justSubtag st}
+    asReg n = guard isRegion $> PartialRegion n {region = justSubtag st}
+    asVar n f = guard isVariant $> PartialVariant n (f . (st :))
+
+    andOtherwise (Just x) _ = Right x
+    andOtherwise Nothing e = e
 
     -- handle a singleton given an accumulated list of extension sections
 
     handleSingleton loc n acc
       | subtagLength st /= 1 =
         Left $
-          StepError (Just $ NormalTag nEnd) $
-            ErrImproperSubtag st loc
+          StepError (Just $ NormalTag nEnd) loc $
+            ErrImproperSubtag st
       | st == subtagX = Right $ PartialStartPrivateUseSection nEnd
       | otherwise =
         Right $
@@ -844,6 +853,8 @@ stepBCP47 st partbcp47 = case partbcp47 of
         recognizeOn (primlang n) 17699146535566049298 ZhGuoyu n'
       15098140437866610709 ->
         recognizeOn (primlang n) 17699146535566049298 ZhHakka n'
+      17412902894784479253 ->
+        recognizeOn (primlang n) 17699146535566049298 ZhXiang n'
       _ -> Right n'
       where
         n' = PartialVariant n (st :)
@@ -877,7 +888,7 @@ stepBCP47 st partbcp47 = case partbcp47 of
         Right $ PartialGrandfathered SgnChDe
       | otherwise = err
       where
-        err = Left $ StepError (Just $ NormalTag n) $ ErrImproperSubtag st AtRegion
+        err = Left $ StepError (Just $ NormalTag n) AtRegion' $ ErrImproperSubtag st
 
 -- | Attempt to interpret a partially-parsed BCP47 tag as a full tag. This
 -- function fails when the standard requires that at least one more 'Subtag' be
@@ -900,18 +911,21 @@ finalizeBCP47 (PartialScript n) = Right $ NormalTag n
 finalizeBCP47 (PartialRegion n) = Right $ NormalTag n
 finalizeBCP47 (PartialVariant n f) = Right $ NormalTag $ n {variants = f []}
 finalizeBCP47 (PartialStartExtension n exts c) =
-  Left $ StepError (Just $ NormalTag n') $ ErrEmptyExtensionSection c Nothing
+  Left $
+    StepError (Just $ NormalTag n') AtStartExtension' $
+      ErrEmptyExtensionSection c Nothing
   where
     n' = n {extensions = exts []}
 finalizeBCP47 (PartialExtension n exts c exttags) =
   Right $ NormalTag $ n {extensions = exts $ [Extension c $ exttags []]}
-finalizeBCP47 (PartialStartPrivateUseSection _) =
-  Left $ StepError Nothing ErrEmptyPrivateUse
+finalizeBCP47 (PartialStartPrivateUseSection n) =
+  Left $ StepError (Just $ NormalTag n) AtStartPrivateUse' ErrEmptyPrivateUse
 finalizeBCP47 (PartialPrivateUseSection n f) =
   Right $ NormalTag $ n {privateUse = f []}
-finalizeBCP47 PartialStartI = Left $ StepError Nothing ErrEmptyStartI
+finalizeBCP47 PartialStartI = Left $ StepError Nothing AtStartI' ErrEmptyStartI
 finalizeBCP47 (PartialGrandfathered g) = Right $ GrandfatheredTag g
-finalizeBCP47 PartialStartPrivateUse = Left $ StepError Nothing ErrEmptyPrivateUse
+finalizeBCP47 PartialStartPrivateUse =
+  Left $ StepError Nothing AtStartPrivateUse' ErrEmptyPrivateUse
 finalizeBCP47 (PartialPrivateUse f) = Right $ PrivateUse $ f []
 
 -- | Helper function that (unsafely!) constructs a 'Normal' tag with the given
@@ -919,13 +933,17 @@ finalizeBCP47 (PartialPrivateUse f) = Right $ PrivateUse $ f []
 initNormal :: Subtag -> Normal
 initNormal st = Normal st nullSubtag nullSubtag nullSubtag nullSubtag nullSubtag [] [] []
 
--- | An error that may occur when parsing a complete 'BCP47' tag
+-- | An error that may occur when parsing a complete 'BCP47' tag. These errors
+-- also include the offset of the start of the subtag at which the error
+-- occurred, the portion of the tag parsed before the error (if possible), and
+-- where in parsing the error occurred. The offset is the number of characters
+-- that need to be dropped from the initial input in order to reach the position
+-- of the error.
 data SyntaxError'
-  = -- | offset of the error in the input, the step error itself
-    SyntaxErrorStep Int StepError
-  | -- | offset of the error in the input, the tag parsed so far (if possible),
-    -- the subtag error itself
-    SyntaxErrorPop Int (Maybe BCP47) Sub.PopSubtagError
+  = -- | an error occurred while attempting to parse a subtag
+    SyntaxErrorPop Int (Maybe BCP47) AtComponent' Sub.PopSubtagError
+  | -- | an error not related to subtag parsing
+    SyntaxErrorStep Int (Maybe BCP47) AtComponent' StepErrorType
   deriving (Eq, Ord, Show)
 
 -- | Parse a 'BCP47' tag at the beginning of the stream, stopping at the end of
@@ -942,28 +960,30 @@ popBCP47LenWith ::
   (s -> Maybe s) ->
   -- | the input
   s ->
+  -- | the tag, length of input, unconsumed input
   Either SyntaxError' (BCP47, Int, s)
-popBCP47LenWith popChar popSep initinp = popSubtag' 0 Nothing initinp >>= startParse
+popBCP47LenWith popChar popSep initinp =
+  popSubtag' 0 Nothing AtBeginning' initinp >>= startParse
   where
     collapseLeft (Left _) = Nothing
     collapseLeft (Right a) = Just a
-    popSubtag' !pos bcpForErr t = case popSubtagWith popChar t of
-      Left e -> Left $ SyntaxErrorPop pos bcpForErr e
+    popSubtag' !pos bcpForErr loc t = case popSubtagWith popChar t of
+      Left e -> Left $ SyntaxErrorPop pos bcpForErr loc e
       Right a -> Right a
     startParse (st, t) = case startBCP47 st of
-      Left e -> Left $ SyntaxErrorStep 0 e
+      Left (StepError mtag loc e) -> Left $ SyntaxErrorStep 0 mtag loc e
       Right a -> step (subtagLength' st) t a
     step !startpos t acc
       | Just t' <- popSep t = do
         let bcp47ForErr = collapseLeft $ finalizeBCP47 acc
         let startpos' = startpos + 1
-        (st, t'') <- popSubtag' startpos' bcp47ForErr t'
+        (st, t'') <- popSubtag' startpos' bcp47ForErr (whereInParsing acc) t'
         case stepBCP47 st acc of
-          Left e -> Left $ SyntaxErrorStep startpos' e
+          Left (StepError mtag loc e) -> Left $ SyntaxErrorStep startpos' mtag loc e
           Right acc' -> step (startpos' + subtagLength' st) t'' acc'
       | otherwise = finalize startpos t acc
     finalize pos t tag = case finalizeBCP47 tag of
-      Left e -> Left $ SyntaxErrorStep pos e
+      Left (StepError mtag loc e) -> Left $ SyntaxErrorStep pos mtag loc e
       Right a -> Right (a, pos, t)
 
 -- | Parse a 'BCP47' tag at the beginning of the text stream. See also the
@@ -979,3 +999,16 @@ popBCP47Len = popBCP47LenWith popChar popSep
       | Just ('-', t') <- T.uncons t =
         Just t'
       | otherwise = Nothing
+
+-- | Tests whether or not the given 'Char' can occur in a well-formed tag. This
+-- is true exactly when the character is a dash @\'-\'@ or an ASCII alphanumeric
+-- character.
+isTagChar :: Char -> Bool
+isTagChar c = isSubtagChar c || c == '-'
+
+-- TODO: can be made more efficient
+parseBCP47FromSubtags' :: NonEmpty Subtag -> Either SyntaxError' BCP47
+parseBCP47FromSubtags' =
+  fmap go . popBCP47Len . T.intercalate "-" . NE.toList . fmap renderSubtagLower
+  where
+    go (x, _, _) = x

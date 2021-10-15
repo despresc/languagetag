@@ -68,12 +68,6 @@ spec = do
         where
           c' = Char.toLower c
   let mapDownCase = T.map limitedDownCase
-  let genSubtagThenGarbage = do
-        t <- genSubtagText
-        c <- arbitrary `suchThat` (not . isSubtagChar)
-        t' <- genSubtagishText
-        b <- arbitrary
-        pure $ if b then t <> T.singleton c <> t' else t
   describe "popSubtagText" $ do
     prop "acts as if subsequent invalid characters are absent" $ do
       let parse' t = case popSubtagText start of
@@ -100,12 +94,12 @@ spec = do
       forAllShrink genSubtagText shrinkSubtagText $ \t ->
         fixBad (popSubtagText t) === Nothing
     prop "pops initial well-formed subtags correctly" $ do
-      forAll genSubtagThenGarbage $ \t ->
+      forAllShrink genPopSubtagText' shrinkPopSubtagText $ \t ->
         fmap snd (popSubtagText t) === Right (T.dropWhile isSubtagChar t)
     prop "is case-insensitive on initial well-formed subtags" $ do
       let fixPop (Right (s, t)) = Right (s, T.toLower t)
           fixPop (Left e) = Left e
-      forAll genSubtagThenGarbage $ \t ->
+      forAllShrink genPopSubtagText' shrinkPopSubtagText $ \t ->
         fixPop (popSubtagText t) === popSubtagText (T.toLower t)
     prop "is case-insensitive on any candidate subtag" $ do
       let fixUp (Left e) = Left e
@@ -113,7 +107,7 @@ spec = do
       forAllShrink genSubtagishText shrinkText $ \t ->
         fixUp (popSubtagText t) === popSubtagText (mapDownCase t)
     prop "generates subtags acceptable to wrapSubtag" $
-      forAll genSubtagThenGarbage $ \t ->
+      forAllShrink genPopSubtagText' shrinkPopSubtagText $ \t ->
         let mst = collapseLeft $ fst <$> popSubtagText t
             wrapst = mst >>= (wrapSubtag . unwrapSubtag)
          in mst === wrapst
@@ -141,10 +135,10 @@ spec = do
       forAllShrink genSubtagChar shrink $ \c ->
         (unpackCharLower <$> packChar c) === Just (Char.toLower c)
   describe "renderSubtagLower" $ do
-    prop "composes on the right with popSubtag correctly" $
+    prop "composes on the right with popSubtagText correctly" $
       forAllShrink genSubtag shrinkSubtag $ \st ->
         (fst <$> popSubtagText (renderSubtagLower st)) === Right st
-    prop "composes on the left with popSubtag correctly" $
+    prop "composes on the left with popSubtagText correctly" $
       forAllShrink genSubtagText shrinkSubtagText $ \t ->
         (renderSubtagLower . fst <$> popSubtagText t) === Right (T.toLower t)
     prop "is an order homomorphism" $

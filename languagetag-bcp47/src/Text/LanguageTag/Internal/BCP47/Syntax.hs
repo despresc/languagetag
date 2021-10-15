@@ -26,6 +26,8 @@ module Text.LanguageTag.Internal.BCP47.Syntax
     grandfatheredToSubtags,
     subtagX,
     PartialBCP47 (..),
+    AtComponent' (..),
+    whereInParsing,
   )
 where
 
@@ -455,3 +457,83 @@ data PartialBCP47
     PartialStartPrivateUse
   | -- | up to at least the second subtag in a private use tag
     PartialPrivateUse ([Subtag] -> NonEmpty Subtag)
+
+-- FIXME: temporary atcomponent duplication, sadly - replace the current one
+-- with this one when the current parser is gone. remember to save the docs of
+-- the current one.
+data AtComponent'
+  = -- | start of input
+    AtBeginning'
+  | -- | primary language subtag of length at least four
+    AtPrimaryLong'
+  | -- | primary language subtag of length at most three
+    AtPrimaryShort'
+  | -- | first extended language subtag
+    AtExtlang1'
+  | -- | second extended language subtag
+    AtExtlang2'
+  | -- | third extended language subtag
+    AtExtlang3'
+  | -- | script subtag
+    AtScript'
+  | -- | region subtag
+    AtRegion'
+  | -- | variant subtag
+    AtVariant'
+  | -- | singleton starting an extension section
+    AtStartExtension'
+  | -- | extension subtag
+    AtExtension'
+  | -- | the subtag @x@ or @X@
+    AtStartPrivateUse'
+  | -- | private use subtag
+    AtPrivateUse'
+  | -- | subtag right after an initial @i-@ or @I-@
+    AtStartI'
+  | -- | complete irregular grandfathered tag
+    AtIrregGrandfathered'
+  deriving (Eq, Ord, Show)
+
+whereInParsing :: PartialBCP47 -> AtComponent'
+whereInParsing PartialPrimaryShort {} = AtPrimaryShort'
+whereInParsing PartialExtlang1 {} = AtExtlang1'
+whereInParsing PartialExtlang2 {} = AtExtlang2'
+whereInParsing PartialExtlang3 {} = AtExtlang3'
+whereInParsing PartialPrimaryLong {} = AtPrimaryLong'
+whereInParsing PartialScript {} = AtScript'
+whereInParsing PartialRegion {} = AtRegion'
+whereInParsing PartialVariant {} = AtVariant'
+whereInParsing PartialStartExtension {} = AtStartExtension'
+whereInParsing PartialExtension {} = AtExtension'
+whereInParsing PartialStartPrivateUseSection {} = AtStartPrivateUse'
+whereInParsing PartialPrivateUseSection {} = AtPrivateUse'
+whereInParsing PartialStartI = AtStartI'
+whereInParsing (PartialGrandfathered g) = case g of
+  ArtLojban -> AtVariant'
+  CelGaulish -> AtVariant'
+  EnGbOed -> AtIrregGrandfathered'
+  IAmi -> AtIrregGrandfathered'
+  IBnn -> AtIrregGrandfathered'
+  IDefault -> AtIrregGrandfathered'
+  IEnochian -> AtIrregGrandfathered'
+  IHak -> AtIrregGrandfathered'
+  IKlingon -> AtIrregGrandfathered'
+  ILux -> AtIrregGrandfathered'
+  IMingo -> AtIrregGrandfathered'
+  INavajo -> AtIrregGrandfathered'
+  IPwn -> AtIrregGrandfathered'
+  ITao -> AtIrregGrandfathered'
+  ITay -> AtIrregGrandfathered'
+  ITsu -> AtIrregGrandfathered'
+  NoBok -> AtExtlang1'
+  NoNyn -> AtExtlang1'
+  SgnBeFr -> AtIrregGrandfathered'
+  SgnBeNl -> AtIrregGrandfathered'
+  SgnChDe -> AtIrregGrandfathered'
+  ZhGuoyu -> AtVariant'
+  ZhHakka -> AtVariant'
+  ZhMin -> AtExtlang1'
+  ZhMinNan -> AtExtlang2'
+  ZhXiang -> AtVariant'
+whereInParsing PartialStartPrivateUse = AtStartPrivateUse'
+whereInParsing PartialPrivateUse {} = AtPrivateUse'
