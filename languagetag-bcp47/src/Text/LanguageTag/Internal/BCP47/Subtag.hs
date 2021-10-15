@@ -153,13 +153,13 @@ instance VG.Vector Vector Subtag where
 -- | Convert the internal representation of a 'Subtag' back to a
 -- 'Subtag'
 
--- A brief reference: the four lower bits are the length `len`, which
--- must be between 1 and 8. The highest len * 7 bits are the subtag
--- content, and must be lower case ASCII letters or digits. Bits 4 and
--- 5 record whether the subtag content contains any letters or digits,
--- respectively. All remaining bits must be 0 (might be relaxed if we
--- ever expand the range of the subtag type to, e.g., include upper
--- case letters and symbols).
+-- A brief reference: the four lower bits are the length `len`, which must be
+-- between 1 and 8. The highest len * 7 bits are the subtag content, and must be
+-- lower case ASCII letters or digits. Bits 4 and 5 record whether the subtag
+-- content contains any letters or digits, respectively. All remaining bits
+-- (including bits 6 and 7 unconditionally) must be 0.
+
+-- TODO: could probably be a little more efficient
 wrapSubtag :: Word64 -> Maybe Subtag
 wrapSubtag n
   | 1 <= len,
