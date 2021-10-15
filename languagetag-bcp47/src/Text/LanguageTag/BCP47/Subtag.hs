@@ -31,6 +31,7 @@ module Text.LanguageTag.BCP47.Subtag
     containsOnlyLetters,
     containsDigit,
     containsOnlyDigits,
+    subtagHeadIsDigit,
 
     -- * Subtags that might be absent
     MaybeSubtag,
@@ -118,6 +119,17 @@ containsDigit (Subtag n) = n `Bit.testBit` 5
 -- contains only digits (ASCII numerals)
 containsOnlyDigits :: Subtag -> Bool
 containsOnlyDigits = not . containsLetter
+
+-- | 'subtagHeadIsDigit' is 'True' exactly when the head of the given 'Subtag'
+-- is a digit (ASCII numeral). (Yes, this is unusually specialized, but it is
+-- needed elsewhere).
+subtagHeadIsDigit :: Subtag -> Bool
+subtagHeadIsDigit (Subtag n) = (n Bit..&. sel) <= selectedNumber9
+  where
+    -- highest 7 bits
+    sel = 18302628885633695744
+    -- subtag "9" with the selector above applied to it
+    selectedNumber9 = 8214565720323784704
 
 -- | Return the 'SubtagChar' at the given index
 indexSubtag :: Subtag -> Word8 -> Maybe SubtagChar

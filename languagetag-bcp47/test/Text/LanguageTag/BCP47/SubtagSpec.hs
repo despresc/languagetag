@@ -30,6 +30,7 @@ import Text.LanguageTag.BCP47.Subtag
     renderSubtagLower,
     singleton,
     subtagHead,
+    subtagHeadIsDigit,
     subtagLength,
     subtagLength',
     unpackCharLower,
@@ -208,3 +209,8 @@ spec = do
     prop "behaves like isAsciiAlphaNum" $
       forAllShrink genSubtagishChar shrink $ \c ->
         isSubtagChar c === isAsciiAlphaNum c
+  describe "subtagHeadIsDigit" $ do
+    prop "behaves like the naive implementation" $ do
+      let isDigit (SubtagChar n) = n <= 57
+      forAllShrink genSubtag shrinkSubtag $ \st ->
+        subtagHeadIsDigit st === isDigit (subtagHead st)
