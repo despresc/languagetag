@@ -139,6 +139,9 @@ startBCP47 st
 -- | Add another 'Subtag' to the end of a partially-parsed BCP47 tag, returning
 -- a new 'PartialBCP47' if the subtag can actually occur at that position, and
 -- otherwise throwing a 'StepError'
+
+-- TODO: some lookups in here implemented as case statements - could be more
+-- efficient?
 stepBCP47 :: Subtag -> PartialBCP47 -> Either StepError PartialBCP47
 stepBCP47 st partbcp47 = case partbcp47 of
   PartialPrimaryShort n
@@ -191,28 +194,34 @@ stepBCP47 st partbcp47 = case partbcp47 of
   PartialStartPrivateUseSection n -> Right $ PartialPrivateUseSection n (st :)
   PartialPrivateUseSection n f -> Right $ PartialPrivateUseSection n (f . (st :))
   PartialStartI -> case unwrapSubtag st of
-    14102819922971197459 -> Right $ PartialGrandfathered IAmi
-    14248104991419006995 -> Right $ PartialGrandfathered IBnn
-    14526138628724883479 -> Right $ PartialGrandfathered IDefault
-    14680466211245977112 -> Right $ PartialGrandfathered IEnochian
-    15098133032806121491 -> Right $ PartialGrandfathered IHak
-    15542853518732230679 -> Right $ PartialGrandfathered IKlingon
-    15697226132455686163 -> Right $ PartialGrandfathered ILux
-    15827749698417983509 -> Right $ PartialGrandfathered IMingo
-    15962927641447628822 -> Right $ PartialGrandfathered INavajo
-    16275850723642572819 -> Right $ PartialGrandfathered IPwn
-    16827550474088480787 -> Right $ PartialGrandfathered ITao
-    16827638435018702867 -> Right $ PartialGrandfathered ITay
-    16847869448969781267 -> Right $ PartialGrandfathered ITsu
+    14102819922971197443 -> Right $ PartialGrandfathered IAmi
+    14248104991419006979 -> Right $ PartialGrandfathered IBnn
+    14526138628724883463 -> Right $ PartialGrandfathered IDefault
+    14680466211245977096 -> Right $ PartialGrandfathered IEnochian
+    15098133032806121475 -> Right $ PartialGrandfathered IHak
+    15542853518732230663 -> Right $ PartialGrandfathered IKlingon
+    15697226132455686147 -> Right $ PartialGrandfathered ILux
+    15827749698417983493 -> Right $ PartialGrandfathered IMingo
+    15962927641447628806 -> Right $ PartialGrandfathered INavajo
+    16275850723642572803 -> Right $ PartialGrandfathered IPwn
+    16827550474088480771 -> Right $ PartialGrandfathered ITao
+    16827638435018702851 -> Right $ PartialGrandfathered ITay
+    16847869448969781251 -> Right $ PartialGrandfathered ITsu
     _ -> Left $ StepError Nothing AtStartI $ ErrImproperSubtag st
   PartialGrandfathered g -> case g of
+    -- TODO - might want to make this its own function so I can have an
+    -- onRegularGrandfathered :: (Normal -> r) -> r -> Grandfathered -> r or
+    -- something like that (useful, e.g., if we want to write a BCP47 -> Maybe
+    -- Normal function that ignores private use and irregular grandfathered
+    -- tags)
+
     -- the regular grandfathered tags can all potentially have subtags appended
     -- to them (turning them into normal tags), and in addition the tag "zh-min"
     -- can have the "nan" subtag appended to it (turning it into the ZhMinNan
     -- grandfathered tag). the irregular grandfathered tags, however, cannot
     -- have any subsequent subtags.
-    ArtLojban -> stepVariant 14108546179528654867 15690354374758891542
-    CelGaulish -> stepVariant 14382069488147234835 14954113284221173783
+    ArtLojban -> stepVariant 14108546179528654851 15690354374758891526
+    CelGaulish -> stepVariant 14382069488147234819 14954113284221173767
     EnGbOed -> err
     IAmi -> err
     IBnn -> err
@@ -227,25 +236,25 @@ stepBCP47 st partbcp47 = case partbcp47 of
     ITao -> err
     ITay -> err
     ITsu -> err
-    NoBok -> stepExt 15977645578003677202 14249204503046782995
-    NoNyn -> stepExt 15977645578003677202 15989872147304546323
+    NoBok -> stepExt 15977645578003677186 14249204503046782979
+    NoNyn -> stepExt 15977645578003677186 15989872147304546307
     SgnBeFr -> err
     SgnBeNl -> err
     SgnChDe -> err
-    ZhGuoyu -> stepVariant 17699146535566049298 14976579405109788693
-    ZhHakka -> stepVariant 17699146535566049298 15098140437866610709
+    ZhGuoyu -> stepVariant 17699146535566049282 14976579405109788677
+    ZhHakka -> stepVariant 17699146535566049282 15098140437866610693
     ZhMin
-      | unwrapSubtag st == 15962850549540323347 -> Right $ PartialGrandfathered ZhMinNan
-      | otherwise -> stepExt 17699146535566049298 15827742560719208467
+      | unwrapSubtag st == 15962850549540323331 -> Right $ PartialGrandfathered ZhMinNan
+      | otherwise -> stepExt 17699146535566049282 15827742560719208451
     ZhMinNan ->
       fixErr $
         stepBCP47 st $
           PartialExtlang2 $
-            (initNormal (Subtag 17699146535566049298))
-              { extlang1 = justSubtag $ Subtag 15827742560719208467,
-                extlang2 = justSubtag $ Subtag 15962850549540323347
+            (initNormal (Subtag 17699146535566049282))
+              { extlang1 = justSubtag $ Subtag 15827742560719208451,
+                extlang2 = justSubtag $ Subtag 15962850549540323331
               }
-    ZhXiang -> stepVariant 17699146535566049298 17412902894784479253
+    ZhXiang -> stepVariant 17699146535566049282 17412902894784479237
     where
       err =
         Left $
@@ -312,26 +321,26 @@ stepBCP47 st partbcp47 = case partbcp47 of
       | unwrapSubtag stGot == stExpect = Right $ PartialGrandfathered res
       | otherwise = Right fallback
     handleExtlangGrandfathered n = case unwrapSubtag st of
-      14249204503046782995 ->
-        recognizeOn (primlang n) 15977645578003677202 NoBok n'
-      15989872147304546323 ->
-        recognizeOn (primlang n) 15977645578003677202 NoNyn n'
-      15827742560719208467 ->
-        recognizeOn (primlang n) 17699146535566049298 ZhMin n'
+      14249204503046782979 ->
+        recognizeOn (primlang n) 15977645578003677186 NoBok n'
+      15989872147304546307 ->
+        recognizeOn (primlang n) 15977645578003677186 NoNyn n'
+      15827742560719208451 ->
+        recognizeOn (primlang n) 17699146535566049282 ZhMin n'
       _ -> Right n'
       where
         n' = PartialExtlang1 n {extlang1 = justSubtag st}
     handleVariantGrandfathered n = case unwrapSubtag st of
-      15690354374758891542 ->
-        recognizeOn (primlang n) 14108546179528654867 ArtLojban n'
-      14954113284221173783 ->
-        recognizeOn (primlang n) 14382069488147234835 CelGaulish n'
-      14976579405109788693 ->
-        recognizeOn (primlang n) 17699146535566049298 ZhGuoyu n'
-      15098140437866610709 ->
-        recognizeOn (primlang n) 17699146535566049298 ZhHakka n'
-      17412902894784479253 ->
-        recognizeOn (primlang n) 17699146535566049298 ZhXiang n'
+      15690354374758891526 ->
+        recognizeOn (primlang n) 14108546179528654851 ArtLojban n'
+      14954113284221173767 ->
+        recognizeOn (primlang n) 14382069488147234819 CelGaulish n'
+      14976579405109788677 ->
+        recognizeOn (primlang n) 17699146535566049282 ZhGuoyu n'
+      15098140437866610693 ->
+        recognizeOn (primlang n) 17699146535566049282 ZhHakka n'
+      17412902894784479237 ->
+        recognizeOn (primlang n) 17699146535566049282 ZhXiang n'
       _ -> Right n'
       where
         n' = PartialVariant n (st :)
@@ -355,13 +364,13 @@ stepBCP47 st partbcp47 = case partbcp47 of
           || extlang3 n /= nullSubtag
           || script n /= nullSubtag =
         err
-      | isLateIrregular n 14679482985414131730 14954202562683731986 16111381376313327635 =
+      | isLateIrregular n 14679482985414131714 14954202562683731970 16111381376313327619 =
         Right $ PartialGrandfathered EnGbOed
-      | isLateIrregular n 16690181889360658451 14237004322024980498 14828101773117358098 =
+      | isLateIrregular n 16690181889360658435 14237004322024980482 14828101773117358082 =
         Right $ PartialGrandfathered SgnBeFr
-      | isLateIrregular n 16690181889360658451 14237004322024980498 15974267878283149330 =
+      | isLateIrregular n 16690181889360658435 14237004322024980482 15974267878283149314 =
         Right $ PartialGrandfathered SgnBeNl
-      | isLateIrregular n 16690181889360658451 14384497209821364242 14525234698176692242 =
+      | isLateIrregular n 16690181889360658435 14384497209821364226 14525234698176692226 =
         Right $ PartialGrandfathered SgnChDe
       | otherwise = err
       where
@@ -499,7 +508,7 @@ data CompleteSyntaxError c
 
 -- TODO: test this
 -- TODO: write a finalizeBCP47 that returns the category of the last thing
--- parsed, then use that to fix error locations
+-- parsed, then use that to fix error locations!
 parseBCP47 :: Text -> Either (CompleteSyntaxError Char) BCP47
 parseBCP47 t = case popBCP47Len t of
   Left e
@@ -559,23 +568,7 @@ toSubtags (GrandfatheredTag g) = grandfatheredToSubtags g
 ----------------------------------------------------------------
 
 subtagI :: Subtag
-subtagI = Subtag 15132094747964866577
-
-----------------------------------------------------------------
--- Internal convenience class
-----------------------------------------------------------------
-
-class Finishing a where
-  finish :: a -> BCP47
-
-instance Finishing a => Finishing (MaybeSubtag -> a) where
-  finish con = finish $ con nullSubtag
-
-instance Finishing a => Finishing ([b] -> a) where
-  finish con = finish $ con []
-
-instance Finishing BCP47 where
-  finish = id
+subtagI = Subtag 15132094747964866561
 
 ----------------------------------------------------------------
 -- Errors

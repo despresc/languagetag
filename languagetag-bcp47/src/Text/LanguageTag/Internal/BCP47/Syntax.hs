@@ -174,83 +174,83 @@ renderBCP47 = TL.toStrict . TB.toLazyText . renderBCP47Builder
 -- put into one of the Internal.Registry.Grandfathered* modules
 grandfatheredToSubtags :: Grandfathered -> NonEmpty Subtag
 grandfatheredToSubtags ArtLojban =
-  Subtag 14108546179528654867
-    :| [Subtag 15690354374758891542]
+  Subtag 14108546179528654851
+    :| [Subtag 15690354374758891526]
 grandfatheredToSubtags CelGaulish =
-  Subtag 14382069488147234835
-    :| [Subtag 14954113284221173783]
+  Subtag 14382069488147234819
+    :| [Subtag 14954113284221173767]
 grandfatheredToSubtags EnGbOed =
-  Subtag 14679482985414131730
-    :| [Subtag 14954202562683731986, Subtag 16111381376313327635]
+  Subtag 14679482985414131714
+    :| [Subtag 14954202562683731970, Subtag 16111381376313327619]
 grandfatheredToSubtags IAmi =
-  Subtag 15132094747964866577
-    :| [Subtag 14102819922971197459]
+  Subtag 15132094747964866561
+    :| [Subtag 14102819922971197443]
 grandfatheredToSubtags IBnn =
-  Subtag 15132094747964866577
-    :| [Subtag 14248104991419006995]
+  Subtag 15132094747964866561
+    :| [Subtag 14248104991419006979]
 grandfatheredToSubtags IDefault =
-  Subtag 15132094747964866577
-    :| [Subtag 14526138628724883479]
+  Subtag 15132094747964866561
+    :| [Subtag 14526138628724883463]
 grandfatheredToSubtags IEnochian =
-  Subtag 15132094747964866577
-    :| [Subtag 14680466211245977112]
+  Subtag 15132094747964866561
+    :| [Subtag 14680466211245977096]
 grandfatheredToSubtags IHak =
-  Subtag 15132094747964866577
-    :| [Subtag 15098133032806121491]
+  Subtag 15132094747964866561
+    :| [Subtag 15098133032806121475]
 grandfatheredToSubtags IKlingon =
-  Subtag 15132094747964866577
-    :| [Subtag 15542853518732230679]
+  Subtag 15132094747964866561
+    :| [Subtag 15542853518732230663]
 grandfatheredToSubtags ILux =
-  Subtag 15132094747964866577
-    :| [Subtag 15697226132455686163]
+  Subtag 15132094747964866561
+    :| [Subtag 15697226132455686147]
 grandfatheredToSubtags IMingo =
-  Subtag 15132094747964866577
-    :| [Subtag 15827749698417983509]
+  Subtag 15132094747964866561
+    :| [Subtag 15827749698417983493]
 grandfatheredToSubtags INavajo =
-  Subtag 15132094747964866577
-    :| [Subtag 15962927641447628822]
+  Subtag 15132094747964866561
+    :| [Subtag 15962927641447628806]
 grandfatheredToSubtags IPwn =
-  Subtag 15132094747964866577
-    :| [Subtag 16275850723642572819]
+  Subtag 15132094747964866561
+    :| [Subtag 16275850723642572803]
 grandfatheredToSubtags ITao =
-  Subtag 15132094747964866577
-    :| [Subtag 16827550474088480787]
+  Subtag 15132094747964866561
+    :| [Subtag 16827550474088480771]
 grandfatheredToSubtags ITay =
-  Subtag 15132094747964866577
-    :| [Subtag 16827638435018702867]
+  Subtag 15132094747964866561
+    :| [Subtag 16827638435018702851]
 grandfatheredToSubtags ITsu =
-  Subtag 15132094747964866577
-    :| [Subtag 16847869448969781267]
+  Subtag 15132094747964866561
+    :| [Subtag 16847869448969781251]
 grandfatheredToSubtags NoBok =
-  Subtag 15977645578003677202
-    :| [Subtag 14249204503046782995]
+  Subtag 15977645578003677186
+    :| [Subtag 14249204503046782979]
 grandfatheredToSubtags NoNyn =
-  Subtag 15977645578003677202
-    :| [Subtag 15989872147304546323]
+  Subtag 15977645578003677186
+    :| [Subtag 15989872147304546307]
 grandfatheredToSubtags SgnBeFr =
-  Subtag 16690181889360658451
-    :| [Subtag 14237004322024980498, Subtag 14828101773117358098]
+  Subtag 16690181889360658435
+    :| [Subtag 14237004322024980482, Subtag 14828101773117358082]
 grandfatheredToSubtags SgnBeNl =
-  Subtag 16690181889360658451
-    :| [Subtag 14237004322024980498, Subtag 15974267878283149330]
+  Subtag 16690181889360658435
+    :| [Subtag 14237004322024980482, Subtag 15974267878283149314]
 grandfatheredToSubtags SgnChDe =
-  Subtag 16690181889360658451
-    :| [Subtag 14384497209821364242, Subtag 14525234698176692242]
+  Subtag 16690181889360658435
+    :| [Subtag 14384497209821364226, Subtag 14525234698176692226]
 grandfatheredToSubtags ZhGuoyu =
-  Subtag 17699146535566049298
-    :| [Subtag 14976579405109788693]
+  Subtag 17699146535566049282
+    :| [Subtag 14976579405109788677]
 grandfatheredToSubtags ZhHakka =
-  Subtag 17699146535566049298
-    :| [Subtag 15098140437866610709]
+  Subtag 17699146535566049282
+    :| [Subtag 15098140437866610693]
 grandfatheredToSubtags ZhMin =
-  Subtag 17699146535566049298
-    :| [Subtag 15827742560719208467]
+  Subtag 17699146535566049282
+    :| [Subtag 15827742560719208451]
 grandfatheredToSubtags ZhMinNan =
-  Subtag 17699146535566049298
-    :| [Subtag 15827742560719208467, Subtag 15962850549540323347]
+  Subtag 17699146535566049282
+    :| [Subtag 15827742560719208451, Subtag 15962850549540323331]
 grandfatheredToSubtags ZhXiang =
-  Subtag 17699146535566049298
-    :| [Subtag 17412902894784479253]
+  Subtag 17699146535566049282
+    :| [Subtag 17412902894784479237]
 {-# INLINE grandfatheredToSubtags #-}
 
 -- | Various well-formedness invariants:
@@ -397,7 +397,7 @@ extensionCharToSubtag = singleton . extensionCharToSubtagChar
 
 -- | The subtag @"x"@
 subtagX :: Subtag
-subtagX = Subtag 17293822569102704657
+subtagX = Subtag 17293822569102704641
 
 instance Hashable ExtensionChar where
   hashWithSalt = hashUsing fromEnum

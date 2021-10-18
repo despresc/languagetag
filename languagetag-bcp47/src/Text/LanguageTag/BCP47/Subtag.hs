@@ -29,6 +29,8 @@ module Text.LanguageTag.BCP47.Subtag
     indexSubtag,
     subtagLength,
     subtagLength',
+    PresentCharacters (..),
+    containsCharacters,
     containsLetter,
     containsOnlyLetters,
     containsDigit,
@@ -74,7 +76,6 @@ where
 import Control.DeepSeq (NFData (..))
 import qualified Data.Bits as Bit
 import Data.Char (ord)
-import Data.Maybe (isJust)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
@@ -103,36 +104,62 @@ renderSubtagUpper = TL.toStrict . TB.toLazyText . renderSubtagBuilderUpper
 renderSubtagTitle :: Subtag -> Text
 renderSubtagTitle = TL.toStrict . TB.toLazyText . renderSubtagBuilderTitle
 
+-- | The characters that may be present in a particular 'Subtag'
+data PresentCharacters
+  = OnlyDigits
+  | OnlyLetters
+  | DigitsAndLetters
+  deriving (Eq, Ord, Show)
+
+containsCharacters :: Subtag -> PresentCharacters
+containsCharacters st
+  | isDigit (subtagHead st) = loopDig 1
+  | otherwise = loopLet 1
+  where
+    isDigit (SubtagChar x) = x <= 57
+    isLetter (SubtagChar x) = x >= 97
+    len = subtagLength st
+    loopDig idx
+      | idx == len = OnlyDigits
+      | isLetter (unsafeIndexSubtag st idx) = DigitsAndLetters
+      | otherwise = loopDig (idx + 1)
+    loopLet idx
+      | idx == len = OnlyLetters
+      | isDigit (unsafeIndexSubtag st idx) = DigitsAndLetters
+      | otherwise = loopLet (idx + 1)
+
 -- | 'containsLetter' is 'True' exactly when the given 'Subtag'
 -- contains a letter (an ASCII alphabetic character)
 containsLetter :: Subtag -> Bool
-containsLetter (Subtag n) = n `Bit.testBit` 4
+containsLetter = (/= OnlyDigits) . containsCharacters
 
 -- | 'containsOnlyLetters' is 'True' exactly when the given 'Subtag'
 -- contains only letters (ASCII alphabetic characters)
 containsOnlyLetters :: Subtag -> Bool
-containsOnlyLetters = not . containsDigit
+containsOnlyLetters = (== OnlyLetters) . containsCharacters
 
 -- | 'containsDigit' is 'True' exactly when the given 'Subtag'
 -- contains a digit (an ASCII numeral)
 containsDigit :: Subtag -> Bool
-containsDigit (Subtag n) = n `Bit.testBit` 5
+containsDigit = (/= OnlyLetters) . containsCharacters
 
 -- | 'containsOnlyDigits' is 'True' exactly when the given 'Subtag'
 -- contains only digits (ASCII numerals)
 containsOnlyDigits :: Subtag -> Bool
-containsOnlyDigits = not . containsLetter
+containsOnlyDigits = (== OnlyDigits) . containsCharacters
 
 -- | 'subtagHeadIsDigit' is 'True' exactly when the head of the given 'Subtag'
 -- is a digit (ASCII numeral). (Yes, this is unusually specialized, but it is
 -- needed elsewhere).
+
+-- TODO: needs fixing?
 subtagHeadIsDigit :: Subtag -> Bool
 subtagHeadIsDigit (Subtag n) = (n Bit..&. sel) <= selectedNumber9
   where
     -- highest 7 bits
     sel = 18302628885633695744
     -- subtag "9" with the selector above applied to it
-    selectedNumber9 = 8214565720323784704
+    selectedNumber9 = 8214565720323784705
 
 -- | Return the 'SubtagChar' at the given index
 indexSubtag :: Subtag -> Word8 -> Maybe SubtagChar
@@ -186,27 +213,20 @@ popSubtagText = popSubtagWith go
 popSubtagWith :: (s -> Maybe (SubtagChar, s)) -> s -> Either PopError (Subtag, s)
 popSubtagWith unc = \s -> case unc s of
   Just (w, s') ->
-    go 1 50 (unsafeSetChar 57 w 0) (toSeenChar' w) s'
+    go 1 50 (unsafeSetChar 57 w 0) s'
   Nothing -> Left PopEmptySubtag
   where
-    toSeenChar' (SubtagChar w)
-      | w < 97 = OnlyDigit
-      | otherwise = OnlyLetter
-    reportChar' (SubtagChar w) OnlyLetter | w < 97 = Both
-    reportChar' (SubtagChar w) OnlyDigit | w > 57 = Both
-    reportChar' _ s = s
-    finish !sc !len !stw = recordSeen sc $ Subtag $ unsafeSetLen len stw
-    go !len !bitIdx !stw !sc s = case unc s of
+    finish !len !stw = Subtag $ unsafeSetLen len stw
+    go !len !bitIdx !stw s = case unc s of
       Just (w, s')
-        | len == 8 -> Left $ PopSubtagTooLong (finish sc len stw) w
+        | len == 8 -> Left $ PopSubtagTooLong (finish len stw) w
         | otherwise ->
           go
             (len + 1)
             (bitIdx - 7)
             (unsafeSetChar bitIdx w stw)
-            (reportChar' w sc)
             s'
-      Nothing -> Right (finish sc len stw, s)
+      Nothing -> Right (finish len stw, s)
 
 -- | An error that may occur when parsing a 'Subtag' that constitutes the entire
 -- input stream
@@ -262,10 +282,11 @@ wrapChar :: Word8 -> Maybe SubtagChar
 wrapChar w
   | w > 122 = Nothing
   | w < 48 = Nothing
-  | w <= 57 = Just $ SubtagChar w
-  | w >= 97 = Just $ SubtagChar w
+  | w <= 57 = Just $! SubtagChar w
+  | w >= 97 = Just $! SubtagChar w
   | otherwise = Nothing
 
+-- TODO: perhaps model after wrapChar?
 onChar ::
   r ->
   (Word8 -> r) ->
@@ -281,50 +302,24 @@ onChar bad f g h c
   | c <= '9' && c >= '0' = h $! c2w c
   | otherwise = bad
 
--- | Convert an ASCII alphanumeric 'Char' to a 'SubtagChar'. This
--- function also converts all letters to lower case, and reports
--- whether the character was a letter or digit.
-packCharDetail :: Char -> Maybe (SubtagChar, Bool)
-packCharDetail = onChar Nothing low high dig
-  where
-    low w = Just (SubtagChar w, False)
-    high w = Just (SubtagChar $ w + 32, False)
-    dig w = Just (SubtagChar w, True)
-
 -- | Convert an ASCII alphanumeric 'Char' to a 'SubtagChar',
 -- converting it it to lower case if it is not already
 packChar :: Char -> Maybe SubtagChar
-packChar = fmap fst . packCharDetail
+packChar = onChar Nothing low high dig
+  where
+    low w = Just $ SubtagChar w
+    high w = Just $ SubtagChar $ w + 32
+    dig w = Just $ SubtagChar w
 
 -- | Tests whether or not the 'Char' is a valid subtag character (an
 -- ASCII alphanumeric character)
 isSubtagChar :: Char -> Bool
-isSubtagChar = isJust . packCharDetail
-
--- | Tests whether or not the 'Word8' is a valid UTF-8 encoded subtag character
--- (an ASCII alphanumeric character)
-isSubtagByte :: Word8 -> Bool
-isSubtagByte w =
-  w <= 122 && w >= 97
-    || w <= 90 && w >= 65
-    || w <= 57 && w >= 48
-
-data SeenChar
-  = OnlyLetter
-  | OnlyDigit
-  | Both
-  deriving (Enum)
-
-recordSeen :: SeenChar -> Subtag -> Subtag
-recordSeen OnlyLetter (Subtag n) = Subtag $ n `Bit.setBit` 4
-recordSeen OnlyDigit (Subtag n) = Subtag $ n `Bit.setBit` 5
-recordSeen Both (Subtag n) = Subtag $ n Bit..|. 48
+isSubtagChar = onChar False true true true
+  where
+    true = const True
 
 -- | Convert a 'SubtagChar' into a 'Subtag' of length one
 singleton :: SubtagChar -> Subtag
-singleton (SubtagChar c) = recordSeen sc $ Subtag $ recordLen $ Bit.shiftL (fromIntegral c) 57
+singleton (SubtagChar c) = Subtag $ recordLen $ Bit.shiftL (fromIntegral c) 57
   where
     recordLen = (Bit..|. 1)
-    sc
-      | c <= 57 = OnlyDigit
-      | otherwise = OnlyLetter

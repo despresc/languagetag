@@ -10,6 +10,7 @@ import qualified Data.List.NonEmpty as NE
 import Data.Maybe (mapMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.Text.IO as T
 import qualified Data.Vector as V
 import Test.Common
 import Test.Hspec
@@ -30,17 +31,101 @@ import Text.LanguageTag.BCP47.Registry
     redundantToNormalTag,
     redundantToValidTag,
     renderBCP47,
+    renderExtlang,
+    renderGrandfathered,
+    renderLanguage,
+    renderRedundant,
+    renderRegion,
+    renderScript,
+    renderVariant,
     toSubtags,
     toSyntaxTag,
   )
 import Text.LanguageTag.BCP47.Registry.Redundant (recognizeRedundantTag, redundantTrie)
-import Text.LanguageTag.BCP47.Subtag (renderSubtagLower)
+import Text.LanguageTag.BCP47.Subtag (parseSubtagText, renderSubtagLower)
 import qualified Text.LanguageTag.BCP47.Subtag.Trie as Trie
 import qualified Text.LanguageTag.BCP47.Syntax as Syn
-import Text.LanguageTag.BCP47.Validation (validateBCP47)
+import Text.LanguageTag.BCP47.Validation
+  ( validateBCP47,
+    validateExtlang,
+    validateLanguage,
+    validateRegion,
+    validateScript,
+    validateVariant,
+  )
 import Text.LanguageTag.Internal.BCP47.Registry.Types (unsafeBinSearchIndexOn)
+import qualified Text.LanguageTag.Internal.BCP47.Syntax as SynI
+
+----------------------------------------------------------------
+-- Registry parsing
+----------------------------------------------------------------
+
+-- | Strip off the beginning of a tag or subtag entry, throwing an error if it fails
+stripTagOrSubtag :: Text -> Text
+stripTagOrSubtag t
+  | Just t' <- T.stripPrefix "Subtag: " t =
+    t'
+  | Just t' <- T.stripPrefix "Tag: " t =
+    t'
+  | otherwise = error $ "couldn't strip line: " <> T.unpack (T.take 10 $ T.drop 1 t)
+
+-- | Get a list of all @(entrytype, entry)@ pairs from the registry
+getRegistryEntries :: Text -> [(Text, Text)]
+getRegistryEntries = go . zip [(2 :: Int) ..] . drop 1 . T.lines
+  where
+    go ((_, "%%") : tty : tentry : tentries)
+      | Just ty <- T.stripPrefix "Type: " $ snd tty,
+        entry <- stripTagOrSubtag $ snd tentry =
+        (ty, entry) : go tentries
+    go ((n, "%%") : _) = error $ "bad record starting on line " <> show n
+    go (_ : xs) = go xs
+    go [] = []
+
+-- | Returns @Just@ some message if parsing, validation, then rendering doesn't
+-- return the original. Skips the few tag ranges that exist in the registry.
+anInvalidRegistryEntry :: (Text, Text) -> Maybe Text
+anInvalidRegistryEntry (ty, entry) = case ty of
+  "language" -> case comparing (toM parseSubtagText) validateLanguage renderLanguage of
+    Just _
+      | entry == "qaa..qtz" -> Nothing
+    x -> x
+  "extlang" -> comparing (toM parseSubtagText) validateExtlang renderExtlang
+  "script" -> case comparing (toM parseSubtagText) validateScript renderScript of
+    Just _
+      | entry == "Qaaa..Qabx" -> Nothing
+    x -> x
+  "region" -> case comparing (toM parseSubtagText) validateRegion renderRegion of
+    Just _
+      | entry == "QM..QZ" || entry == "XA..XZ" -> Nothing
+    x -> x
+  "variant" -> comparing (toM parseSubtagText) validateVariant renderVariant
+  "grandfathered" -> comparing pGrand Just renderGrandfathered
+  "redundant" -> comparing (toM Syn.parseBCP47) validateRedundant renderRedundant
+  _ -> error $ "unknown type in entry " <> show (ty, entry)
+  where
+    toM f = either (const Nothing) Just . f
+    pGrand t = case Syn.parseBCP47 t of
+      Left _ -> Nothing
+      Right (SynI.GrandfatheredTag g) -> Just g
+      Right _ -> Nothing
+    validateRedundant tag = do
+      tag' <- toM validateBCP47 tag
+      recognizeRedundantTag tag'
+    comparing parse validate render = case parse entry of
+      Nothing -> Just "<no-parse>"
+      Just a -> case validate a of
+        Nothing -> Just "<no-validate>"
+        Just a'
+          | render a' /= entry -> Just $ render a'
+          | otherwise -> Nothing
+
+----------------------------------------------------------------
+-- Tests
+----------------------------------------------------------------
 
 -- TODO: unit testing of validation (good and bad)
+
+-- TODO: really ought to test that we can round-trip the registry itself
 
 -- TODO: add to me - should also indicate exactly which example fails
 -- in the test instead of using shouldNotFind.
@@ -115,6 +200,15 @@ spec = do
     it "renders all the examples correctly" $ do
       let badPair (x, y) = renderBCP47 x /= y
       badPair `shouldNotFind` renderingExamples
+    it "round-trips on the current registry" $ do
+      reg <- T.readFile "../languagetag-gen/registry/bcp47"
+      let entries = getRegistryEntries reg
+      anInvalidRegistryEntry `shouldNotMatch` entries
+
+  --    it "round-trips on current registry" $ do
+  --      reg <- T.readFile "../languagetag-gen/registry/bcp47"
+  --      traceShowM $ T.take 15 reg
+  --      let entries = getRegistryEntries reg
   describe "redundantTrie" $ do
     let errSyn = fromRight (error "ill-formed redundant trie tag") . Syn.parseBCP47FromSubtags
     let errVal = fromRight (error "invalid redundant trie tag") . validateBCP47

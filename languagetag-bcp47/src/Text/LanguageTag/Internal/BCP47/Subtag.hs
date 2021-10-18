@@ -39,6 +39,7 @@ module Text.LanguageTag.Internal.BCP47.Subtag
     SubtagChar (..),
     unpackCharLower,
     unpackCharUpper,
+    isSubtagByte,
 
     -- * Unsafe functions
     unsafeUnpackUpperLetter,
@@ -76,11 +77,10 @@ w2c = unsafeChr . fromIntegral
 -- These tags are always stored and printed entirely in lower case
 -- when on their own.
 
--- The four lowest bits encode the length of the tag. The next two
--- bits record whether or not the tag contains a letter or digit. The
--- highest chunks of 7 bits encode the actual characters (first
--- character the highest). (This leaves us with 2 bits left over, in
--- fact, not that this is useful to us at the moment).
+-- The four lowest bits encode the length of the tag. The highest chunks of 7
+-- bits encode the actual characters (first character the highest). (This leaves
+-- us with 4 bits left over, in fact, not that this is useful to us at the
+-- moment).
 newtype Subtag = Subtag Word64
   deriving (Eq, Ord, Hashable, NFData)
 
@@ -95,7 +95,7 @@ subtagLength = fromIntegral . (Bit..&.) sel . unwrapSubtag
   where
     sel = 15
 
--- | Return the length of a subtag, which will be between 1 and 8
+-- | Return the length of a subtag as an 'Int', which will be between 1 and 8
 subtagLength' :: Subtag -> Int
 subtagLength' = fromIntegral . (Bit..&.) sel . unwrapSubtag
   where
@@ -155,31 +155,27 @@ instance VG.Vector Vector Subtag where
 
 -- A brief reference: the four lower bits are the length `len`, which must be
 -- between 1 and 8. The highest len * 7 bits are the subtag content, and must be
--- lower case ASCII letters or digits. Bits 4 and 5 record whether the subtag
--- content contains any letters or digits, respectively. All remaining bits
--- (including bits 6 and 7 unconditionally) must be 0.
+-- lower case ASCII letters or digits. All remaining bits (including bits 4
+-- through 7 unconditionally) must be 0.
 
--- TODO: could probably be a little more efficient
+-- TODO: could be a little more efficient
 wrapSubtag :: Word64 -> Maybe Subtag
 wrapSubtag n
   | 1 <= len,
     len <= 8,
-    claimsLetter == (numLetters > 0),
-    claimsDigit == (numDigits > 0),
-    numLetters + numDigits == fromIntegral len,
+    allSubtagBytes 0,
     otherBits == 0 =
     Just $ Subtag n
   | otherwise = Nothing
   where
-    len = fromIntegral (n Bit..&. 15) :: Word8
-    isLetter x = 97 <= x && x <= 122
-    isDigit x = 48 <= x && x <= 57
-    claimsLetter = Bit.testBit n 4
-    claimsDigit = Bit.testBit n 5
-    chars = unSubtagChar . unsafeIndexSubtag (Subtag n) <$> [0 .. (len - 1)]
-    numLetters = length $ filter isLetter chars
-    numDigits = length $ filter isDigit chars
-    otherBits = Bit.shiftL (Bit.shiftR n 6) (6 + fromIntegral len * 7)
+    len = n Bit..&. 15
+    len' = fromIntegral len :: Word8
+    allSubtagBytes idx =
+      idx >= len'
+        || ( isSubtagByte (unSubtagChar $ unsafeIndexSubtag (Subtag n) idx)
+               && allSubtagBytes (idx + 1)
+           )
+    otherBits = Bit.shiftL (Bit.shiftR n 4) (4 + fromIntegral len * 7)
 {-# INLINE wrapSubtag #-}
 
 ----------------------------------------------------------------
@@ -239,12 +235,23 @@ unsafeUnpackUpperLetter :: SubtagChar -> Char
 unsafeUnpackUpperLetter (SubtagChar w) =
   w2c $ w - 32
 
+-- | Tests whether or not the 'Word8' is a valid UTF-8 encoded subtag character
+-- (an ASCII alphanumeric character)
+isSubtagByte :: Word8 -> Bool
+isSubtagByte w =
+  w <= 122 && w >= 97
+    || w <= 90 && w >= 65
+    || w <= 57 && w >= 48
+
 ----------------------------------------------------------------
 -- Subtag indexing and rendering
 ----------------------------------------------------------------
 
 -- | Index a subtag without bounds checking. Note that
 -- @'unsafeIndexSubtag' 0@ is equivalent to 'subtagHead'.
+
+-- TODO: efficiency? not sure if jumping based on idx to a precalculated
+-- selector would be more efficient
 unsafeIndexSubtag :: Subtag -> Word8 -> SubtagChar
 unsafeIndexSubtag (Subtag n) idx =
   SubtagChar $

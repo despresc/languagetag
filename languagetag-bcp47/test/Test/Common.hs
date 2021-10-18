@@ -455,6 +455,8 @@ genValidRegion = arbitraryBoundedEnum
 genValidVariant :: Gen Variant
 genValidVariant = arbitraryBoundedEnum
 
+-- FIXME: this does not in fact generate a valid normal tag - it can generate a
+-- <longlang>-<extlang> pair! (really need to figure out why no tests caught this).
 genValidNormal :: Gen Normal
 genValidNormal = do
   l <- genValidLanguage

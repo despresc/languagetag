@@ -15,13 +15,13 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Text.LanguageTag.BCP47.Subtag
   ( Subtag,
-    parseSubtag,
+    parseSubtagText,
     unwrapSubtag,
   )
 
 -- | Parse a 'Subtag', throwing an exception if it could not be parsed
 parseSubtag' :: Text -> Subtag
-parseSubtag' t = case parseSubtag t of
+parseSubtag' t = case parseSubtagText t of
   Left _ -> error $ T.unpack $ "couldn't parse subtag: " <> t
   Right a -> a
 
