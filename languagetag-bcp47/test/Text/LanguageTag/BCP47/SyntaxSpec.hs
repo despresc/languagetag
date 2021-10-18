@@ -4,7 +4,6 @@
 module Text.LanguageTag.BCP47.SyntaxSpec (spec) where
 
 import qualified Data.Char as Char
-import Data.Either (isRight)
 import Data.Foldable (traverse_)
 import qualified Data.List.NonEmpty as NE
 import Data.Text (Text)
@@ -21,8 +20,7 @@ import Test.QuickCheck
 import Text.LanguageTag.BCP47.Quasi
 import Text.LanguageTag.BCP47.Registry (ExtensionChar (..), Grandfathered (..))
 import Text.LanguageTag.BCP47.Subtag
-  ( isSubtagChar,
-    renderSubtagLower,
+  ( renderSubtagLower,
     unpackCharLower,
   )
 import qualified Text.LanguageTag.BCP47.Subtag as Sub
@@ -83,64 +81,41 @@ regularTags =
     ("zh-xiang", ZhXiang)
   ]
 
-syntaxFailures :: [(Text, Syn.SyntaxError)]
-syntaxFailures =
-  [ ("", Syn.EmptyInput),
-    ("i-nonsense", Syn.BadSubtag 2 Syn.AtIrregI [subtag|nonsense|] Nothing),
-    ("i-bnn-more", Syn.IrregNum IBnn),
-    ("cmn*", Syn.UnparsableSubtag 0 Syn.AtBeginning (Just (3, '*')) Nothing),
-    ("en-GB-oed-", Syn.TrailingTerminator [syntag|en-gb-oed|]),
-    ("zh-min-nan*", Syn.UnparsableSubtag 7 Syn.AtExtlang1 (Just (10, '*')) (Just [syntag|zh-min|])),
-    ("cmn-more*", Syn.UnparsableSubtag 4 Syn.AtPrimaryShort (Just (8, '*')) (Just [syntag|cmn|])),
-    ("cmnabcd--", Syn.EmptySubtag 8 Syn.AtPrimaryLong (Just [syntag|cmnabcd|])),
-    ("cmn-lotsoftag*", Syn.UnparsableSubtag 4 Syn.AtPrimaryShort Nothing (Just [syntag|cmn|])),
-    ("en-GB-oxendict-x", Syn.EmptySingleton 15 Nothing (Just [syntag|en-GB-oxendict|])),
-    ("zh-419-a", Syn.EmptySingleton 7 (Just ExtA) (Just [syntag|zh-419|]))
-  ]
-
--- TODO: delete the existing syntaxFailures and remove the prime from this one
-syntaxFailures' :: [(Text, Syn.SyntaxError')]
+syntaxFailures' :: [(Text, Syn.SyntaxError)]
 syntaxFailures' =
   [ ( "",
-      Syn.SyntaxErrorPop 0 Nothing Syn.AtBeginning' Sub.PopEmptySubtag
+      Syn.SyntaxErrorPop 0 Nothing Syn.AtBeginning Sub.PopEmptySubtag
     ),
     ( "i-nonsense",
-      Syn.SyntaxErrorStep 2 Nothing Syn.AtStartI' $
+      Syn.SyntaxErrorStep 2 Nothing Syn.AtStartI $
         Syn.ErrImproperSubtag [subtag|nonsense|]
     ),
     ( "i-bnn-more",
-      Syn.SyntaxErrorStep 6 (Just (Syn.GrandfatheredTag IBnn)) Syn.AtIrregGrandfathered' $
-        Syn.ErrSubtagAfterIrreg [subtag|more|]
+      Syn.SyntaxErrorStep 6 (Just (Syn.GrandfatheredTag IBnn)) Syn.AtIrregGrandfathered $
+        Syn.ErrSubtagAfterIrreg [subtag|more|] IBnn
     ),
     ( "cmnabcd--",
-      Syn.SyntaxErrorPop 8 (Just [syntag|cmnabcd|]) Syn.AtPrimaryLong' Sub.PopEmptySubtag
+      Syn.SyntaxErrorPop 8 (Just [syntag|cmnabcd|]) Syn.AtPrimaryLong Sub.PopEmptySubtag
     ),
     ( "cmn-lotsoftag*",
-      Syn.SyntaxErrorPop 4 (Just [syntag|cmn|]) Syn.AtPrimaryShort' $
+      Syn.SyntaxErrorPop 4 (Just [syntag|cmn|]) Syn.AtPrimaryShort $
         Sub.PopSubtagTooLong [subtag|lotsofta|] (SubtagChar 103)
     ),
     ( "en-GB-oxendict-x",
       Syn.SyntaxErrorStep
         16
         (Just [syntag|en-GB-oxendict|])
-        Syn.AtStartPrivateUse'
+        Syn.AtStartPrivateUse
         Syn.ErrEmptyPrivateUse
     ),
     ( "zh-419-a",
-      Syn.SyntaxErrorStep 8 (Just [syntag|zh-419|]) Syn.AtStartExtension' $
+      Syn.SyntaxErrorStep 8 (Just [syntag|zh-419|]) Syn.AtStartExtension $
         Syn.ErrEmptyExtensionSection ExtA Nothing
     )
   ]
 
 spec :: Spec
 spec = do
-  -- see SubtagSpec
-  let limitedDownCase c
-        | isSubtagChar c' && not (isSubtagChar c) = c
-        | otherwise = c'
-        where
-          c' = Char.toLower c
-  let mapDownCase = T.map limitedDownCase
   describe "popBCP47Len" $ do
     prop "parses any well-formed tag completely" $ do
       -- we are interested in cases where we successfully parse a tag but do not
@@ -186,7 +161,7 @@ spec = do
   describe "parseBCP47FromSubtags" $ do
     prop "composes with toSubtags correctly on the left" $
       forAllShrink genSynTag shrinkSynTag $ \st ->
-        Syn.parseBCP47FromSubtags' (Syn.toSubtags st) === Right st
+        Syn.parseBCP47FromSubtags (Syn.toSubtags st) === Right st
   describe "renderBCP47" $ do
     prop "composes with parseBCP47 on the right correctly" $
       forAllShrink genSynTag shrinkSynTag $ \st -> do
@@ -220,58 +195,3 @@ spec = do
       forAllShrink genSynTag shrinkSynTag $ \st ->
         T.intercalate "-" (NE.toList $ renderSubtagLower <$> Syn.toSubtags st)
           === T.toLower (Syn.renderBCP47 st)
-
-  -- Tests of the older stuff
-  describe "parseBCP47" $ do
-    prop "parses any well-formed tag" $
-      forAllShrink genTagText shrinkTagText $ isRight . Syn.parseBCP47
-    prop "is case-sensitive on any well-formed tag" $
-      forAllShrink genTagText shrinkTagText $ \t ->
-        Syn.parseBCP47 t === Syn.parseBCP47 (T.toLower t)
-    prop "is case-sensitive on near-well-formed tags" $ do
-      let fixErr (Left (Syn.UnparsableSubtag p a (Just (n, c)) t)) =
-            Left $ Syn.UnparsableSubtag p a (Just (n, limitedDownCase c)) t
-          fixErr x = x
-      forAllShrink genTagishText shrinkTagishText $ \t ->
-        fixErr (Syn.parseBCP47 t) === Syn.parseBCP47 (mapDownCase t)
-    describe "fails correctly on" $ do
-      let test (l, e) =
-            it (T.unpack l) $
-              Syn.parseBCP47 l `shouldBe` Left e
-      traverse_ test syntaxFailures
-    describe "parses the irregular grandfathered tag" $ do
-      let test (l, t) =
-            it (T.unpack l) $
-              Syn.parseBCP47 l `shouldBe` Right (Syn.grandfatheredSyntax t)
-      traverse_ test irregularTags
-    describe "parses the regular grandfathered tag" $ do
-      let test (l, t) =
-            it (T.unpack l) $
-              Syn.parseBCP47 l `shouldBe` Right (Syn.grandfatheredSyntax t)
-      traverse_ test regularTags
-    prop "does not parse tags with strict irregular grandfathered prefixes" $
-      forAllShrink genTagishText shrinkTagishText $ \t ->
-        (isRight . Syn.parseBCP47 . (<> ("-" <> t)) . fst) `shouldNotFind` irregularTags
-    prop "fails to parse trailing terminator tags properly" $ do
-      let fixBad (Left (Syn.TrailingTerminator x)) = Just x
-          fixBad _ = Nothing
-      forAllShrink genTagText shrinkTagText $ \t ->
-        fixBad (Syn.parseBCP47 $ t <> "-") === collapseLeft (Syn.parseBCP47 t)
-    prop "parses tags with strict regular grandfathered prefixes correctly" $
-      forAllShrink genTagishText shrinkTagishText $ \t ->
-        let badParse (a, _) = case Syn.parseBCP47 $ a <> "-" <> t of
-              Right (Syn.NormalTag _) -> False
-              Right _ -> True
-              Left _ -> False
-         in badParse `shouldNotFind` regularTags
-  describe "renderBCP47" $ do
-    prop "composes with parseBCP47 on the right correctly" $
-      forAllShrink genSynTag shrinkSynTag $ \st ->
-        Syn.parseBCP47 (Syn.renderBCP47 st) === Right st
-    prop "composes with parseBCP47 on the left correctly" $
-      forAllShrink genTagText shrinkTagText $ \t ->
-        (T.toLower . Syn.renderBCP47 <$> Syn.parseBCP47 t) === Right (T.toLower t)
-  describe "parseBCP47FromSubtags" $ do
-    prop "composes with toSubtags correctly on the left" $
-      forAllShrink genSynTag shrinkSynTag $ \st ->
-        Syn.parseBCP47FromSubtags (Syn.toSubtags st) === Right st

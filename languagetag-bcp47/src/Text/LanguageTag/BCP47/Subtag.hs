@@ -15,8 +15,10 @@ module Text.LanguageTag.BCP47.Subtag
 
     -- ** Parsing and construction
     popSubtagText,
+    parseSubtagText,
     singleton,
     popSubtagWith,
+    parseSubtagWith,
 
     -- ** Rendering and conversion
     renderSubtagLower,
@@ -60,7 +62,8 @@ module Text.LanguageTag.BCP47.Subtag
     wrapChar,
 
     -- * Errors
-    PopSubtagError (..),
+    PopError (..),
+    ParseError (..),
 
     -- * Unsafe functions
     unsafeUnpackUpperLetter,
@@ -150,20 +153,20 @@ unsafeSetLen len w = w Bit..|. fromIntegral len
 
 -- | A possible syntax error that may be detected during parsing with
 -- 'popSubtagWith' and related functions
-data PopSubtagError
+data PopError
   = -- | there were no subtag characters at the beginning of input
     PopEmptySubtag
   | -- | an eight-character subtag and the ninth subtag character encountered
     PopSubtagTooLong Subtag SubtagChar
   deriving (Eq, Ord, Show)
 
-instance NFData PopSubtagError where
+instance NFData PopError where
   rnf PopEmptySubtag = ()
   rnf (PopSubtagTooLong x y) = rnf x `seq` rnf y
 
 -- | Parse a 'Subtag' from a 'Text' stream, stopping either at the end of input
 -- or the first non-subtag character encountered. Uses 'parseSubtagWith'.
-popSubtagText :: Text -> Either PopSubtagError (Subtag, Text)
+popSubtagText :: Text -> Either PopError (Subtag, Text)
 popSubtagText = popSubtagWith go
   where
     -- TODO: perhaps export this go as its own function? duplicated in
@@ -180,7 +183,7 @@ popSubtagText = popSubtagWith go
 -- | Parse a subtag from the given stream using the given function to pop bytes
 -- from the stream, returning the resulting 'Subtag' and the remainder of the
 -- stream if successful.
-popSubtagWith :: (s -> Maybe (SubtagChar, s)) -> s -> Either PopSubtagError (Subtag, s)
+popSubtagWith :: (s -> Maybe (SubtagChar, s)) -> s -> Either PopError (Subtag, s)
 popSubtagWith unc = \s -> case unc s of
   Just (w, s') ->
     go 1 50 (unsafeSetChar 57 w 0) (toSeenChar' w) s'
@@ -204,6 +207,46 @@ popSubtagWith unc = \s -> case unc s of
             (reportChar' w sc)
             s'
       Nothing -> Right (finish sc len stw, s)
+
+-- | An error that may occur when parsing a 'Subtag' that constitutes the entire
+-- input stream
+data ParseError c
+  = ParseEmptySubtag
+  | ParseSubtagTooLong Subtag SubtagChar
+  | ParseInvalidChar (Maybe Subtag) Int c
+  deriving (Eq, Ord, Show)
+
+-- TODO: this might want to go into Internal?
+-- TODO: the direct definition would be more efficient
+
+-- | @'parseSubtagWith' uncons toChar s@ parses a 'Subtag' from @s@, returning
+-- an error if @s@ does not consist of a single well-formed 'Subtag'
+parseSubtagWith ::
+  (s -> Maybe (c, s)) ->
+  (c -> Maybe SubtagChar) ->
+  s ->
+  Either (ParseError c) Subtag
+parseSubtagWith uncC toC = \s -> case popSubtagWith unc s of
+  Left PopEmptySubtag
+    | Just (c, _) <- uncC s ->
+      Left $ ParseInvalidChar Nothing 0 c
+    | otherwise -> Left ParseEmptySubtag
+  Left (PopSubtagTooLong st sc) -> Left $ ParseSubtagTooLong st sc
+  Right (st, s')
+    | Just (c, _) <- uncC s' ->
+      Left $ ParseInvalidChar (Just st) (subtagLength' st) c
+    | otherwise -> Right st
+  where
+    unc s = do
+      (c, s') <- uncC s
+      c' <- toC c
+      pure (c', s')
+
+-- TODO: test this
+
+-- | Uses 'parseSubtagWith' to parse a 'Subtag' from a 'Text' stream
+parseSubtagText :: Text -> Either (ParseError Char) Subtag
+parseSubtagText = parseSubtagWith T.uncons packChar
 
 ----------------------------------------------------------------
 -- Subtag characters

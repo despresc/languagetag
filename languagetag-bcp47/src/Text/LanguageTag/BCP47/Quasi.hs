@@ -396,45 +396,49 @@ tag =
 -- Nicer errors
 ----------------------------------------------------------------
 
-syntaxErr :: Text -> Syn.SyntaxError -> Text
-syntaxErr inp (Syn.UnparsableSubtag pos _ mpc _) =
-  case mpc of
-    Nothing -> "subtag starting with \"" <> badExample <> "\" was too long"
-    Just (_, c) ->
-      T.concat
-        [ "subtag \"",
-          badExample,
-          "\" contains character '",
-          T.singleton c,
-          "' that is not an ASCII letter or number"
-        ]
+syntaxErr :: Text -> Syn.CompleteSyntaxError Char -> Text
+syntaxErr inp (Syn.CompleteSyntaxError (Syn.SyntaxErrorPop off _ _ err)) =
+  case err of
+    Sub.PopEmptySubtag -> "all subtags must be non-empty"
+    Sub.PopSubtagTooLong {} ->
+      "subtag starting with \"" <> badExample <> "\" was too long"
+      where
+        badExample = T.take 8 $ T.drop off inp
+syntaxErr _ (Syn.CompleteSyntaxError (Syn.SyntaxErrorStep _ _ loc err)) =
+  case err of
+    Syn.ErrEmptyExtensionSection ec _ ->
+      "the extension section after the subtag \""
+        <> T.singleton (Syn.extensionCharToChar ec)
+        <> "\" must be non-empty"
+    Syn.ErrEmptyPrivateUse ->
+      "the private use section after the subtag \"x\" must be non-empty"
+    Syn.ErrImproperSubtag st ->
+      "after " <> Syn.atComponentDescription' loc
+        <> ", expected one of: "
+        <> T.intercalate
+          ", "
+          (NE.toList $ Syn.subtagCategoryName <$> Syn.expectedCategories' loc)
+        <> "; got \""
+        <> Sub.renderSubtagLower st
+        <> "\"."
+    Syn.ErrEmptyStartI ->
+      "the irregular initial subtag \"i\" must be followed by one of: "
+        <> Syn.subtagCategorySyntax Syn.GrandfatheredIFollower
+    Syn.ErrSubtagAfterIrreg _ g ->
+      "the irregular grandfathered tag " <> Syn.renderBCP47 (Syn.GrandfatheredTag g)
+        <> " cannot be followed by further subtags"
+syntaxErr inp (Syn.InvalidCharacter off _ _ c) =
+  T.concat
+    [ "subtag \"",
+      badExample,
+      "\" contains character '",
+      T.singleton c,
+      "' that is not an ASCII letter or number"
+    ]
   where
-    badExample = T.take 8 $ T.takeWhile (/= '-') $ T.drop pos inp
-syntaxErr _ (Syn.BadSubtag _ atlast st _) =
-  "after " <> Syn.atComponentDescription atlast
-    <> ", expected one of: "
-    <> T.intercalate
-      ", "
-      (NE.toList $ Syn.subtagCategoryName <$> Syn.expectedCategories atlast)
-    <> "; got \""
-    <> Sub.renderSubtagLower st
-    <> "\"."
-syntaxErr _ Syn.EmptyInput = "input must be non-empty"
-syntaxErr _ Syn.EmptySubtag {} = "all subtags must be non-empty"
-syntaxErr _ Syn.TrailingTerminator {} = "a tag cannot end in a dash character"
-syntaxErr _ (Syn.EmptySingleton _ mc _) = case mc of
-  Nothing -> "the private use section after the subtag \"x\" must be non-empty"
-  (Just c) ->
-    "the extension section after the subtag \"" <> T.singleton (Syn.extensionCharToChar c)
-      <> "\" must be non-empty"
-syntaxErr _ (Syn.IrregNum g) =
-  "the irregular grandfathered tag " <> Syn.renderBCP47 (Syn.GrandfatheredTag g)
-    <> " cannot be followed by further text"
-syntaxErr _ Syn.EmptyIrregI =
-  "the irregular grandfathered subtag \"i\" must be followed by one of the subtags: "
-    <> Syn.subtagCategorySyntax Syn.GrandfatheredIFollower
+    badExample = T.take 8 $ T.takeWhile (/= '-') $ T.drop off inp
 
-syntaxErr' :: String -> Syn.SyntaxError -> String
+syntaxErr' :: String -> Syn.CompleteSyntaxError Char -> String
 syntaxErr' s e = T.unpack $ "Ill-formed tag: " <> syntaxErr (T.pack s) e
 
 validErr :: ValidationError -> Text

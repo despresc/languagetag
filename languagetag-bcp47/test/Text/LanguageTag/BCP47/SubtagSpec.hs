@@ -19,7 +19,7 @@ import Test.QuickCheck
     (===),
   )
 import Text.LanguageTag.BCP47.Subtag
-  ( PopSubtagError (..),
+  ( PopError (..),
     containsDigit,
     containsLetter,
     containsOnlyDigits,

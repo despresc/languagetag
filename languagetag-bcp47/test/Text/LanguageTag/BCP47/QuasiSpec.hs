@@ -10,7 +10,7 @@ import Test.Hspec
 import Text.LanguageTag.BCP47.Canonicalization (canonicalizeBCP47)
 import Text.LanguageTag.BCP47.Quasi (canontag, subtag, syntag, validtag)
 import Text.LanguageTag.BCP47.Registry (BCP47)
-import Text.LanguageTag.BCP47.Subtag (Subtag, PopSubtagError (..), popSubtagText)
+import Text.LanguageTag.BCP47.Subtag (Subtag, PopError (..), popSubtagText)
 import qualified Text.LanguageTag.BCP47.Syntax as Syn
 import Text.LanguageTag.BCP47.Validation (validateBCP47)
 
