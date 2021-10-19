@@ -40,7 +40,7 @@ module Text.LanguageTag.BCP47.Syntax
 
     -- * Errors
 
-    --    SyntaxError (..),
+    --    PopError (..),
     --    Pos,
     --    AtComponent (..),
     SubtagCategory (..),
@@ -55,12 +55,12 @@ module Text.LanguageTag.BCP47.Syntax
     startBCP47,
     stepBCP47,
     finalizeBCP47,
-    SyntaxError (..),
+    PopError (..),
     isTagChar,
     AtComponent (..),
     parseBCP47FromSubtags,
     parseBCP47,
-    CompleteSyntaxError (..),
+    ParseError (..),
     atComponentDescription',
     expectedCategories',
   )
@@ -76,7 +76,7 @@ import Data.Maybe (mapMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Text.LanguageTag.BCP47.Registry.Grandfathered
-import Text.LanguageTag.BCP47.Subtag hiding (PopError (..))
+import Text.LanguageTag.BCP47.Subtag hiding (ParseError (..), PopError (..))
 import qualified Text.LanguageTag.BCP47.Subtag as Sub
 import Text.LanguageTag.Internal.BCP47.Subtag (Subtag (..))
 import Text.LanguageTag.Internal.BCP47.Syntax
@@ -425,11 +425,11 @@ initNormal st = Normal st nullSubtag nullSubtag nullSubtag nullSubtag nullSubtag
 -- where in parsing the error occurred. The offset is the number of characters
 -- that need to be dropped from the initial input in order to reach the position
 -- of the error.
-data SyntaxError
+data PopError
   = -- | an error occurred while attempting to parse a subtag
-    SyntaxErrorPop Int (Maybe BCP47) AtComponent Sub.PopError
+    PopErrorSubtag Int (Maybe BCP47) AtComponent Sub.PopError
   | -- | an error not related to subtag parsing
-    SyntaxErrorStep Int (Maybe BCP47) AtComponent StepErrorType
+    PopErrorStep Int (Maybe BCP47) AtComponent StepErrorType
   deriving (Eq, Ord, Show)
 
 -- | Parse a 'BCP47' tag at the beginning of the stream, stopping at the end of
@@ -447,17 +447,17 @@ popBCP47LenWith ::
   -- | the input
   s ->
   -- | the tag, length of input, unconsumed input
-  Either SyntaxError (BCP47, Int, s)
+  Either PopError (BCP47, Int, s)
 popBCP47LenWith popChar popSep initinp =
   popSubtag' 0 Nothing AtBeginning initinp >>= startParse
   where
     collapseLeft (Left _) = Nothing
     collapseLeft (Right a) = Just a
     popSubtag' !pos bcpForErr loc t = case popSubtagWith popChar t of
-      Left e -> Left $ SyntaxErrorPop pos bcpForErr loc e
+      Left e -> Left $ PopErrorSubtag pos bcpForErr loc e
       Right a -> Right a
     startParse (st, t) = case startBCP47 st of
-      Left (StepError mtag loc e) -> Left $ SyntaxErrorStep 0 mtag loc e
+      Left (StepError mtag loc e) -> Left $ PopErrorStep 0 mtag loc e
       Right a -> step (subtagLength' st) t a
     step !startpos t acc
       | Just t' <- popSep t = do
@@ -465,16 +465,16 @@ popBCP47LenWith popChar popSep initinp =
         let startpos' = startpos + 1
         (st, t'') <- popSubtag' startpos' bcp47ForErr (whereInParsing acc) t'
         case stepBCP47 st acc of
-          Left (StepError mtag loc e) -> Left $ SyntaxErrorStep startpos' mtag loc e
+          Left (StepError mtag loc e) -> Left $ PopErrorStep startpos' mtag loc e
           Right acc' -> step (startpos' + subtagLength' st) t'' acc'
       | otherwise = finalize startpos t acc
     finalize pos t tag = case finalizeBCP47 tag of
-      Left (StepError mtag loc e) -> Left $ SyntaxErrorStep pos mtag loc e
+      Left (StepError mtag loc e) -> Left $ PopErrorStep pos mtag loc e
       Right a -> Right (a, pos, t)
 
 -- | Parse a 'BCP47' tag at the beginning of the text stream. See also the
 -- documentation for 'popBCP47LenWith'.
-popBCP47Len :: Text -> Either SyntaxError (BCP47, Int, Text)
+popBCP47Len :: Text -> Either PopError (BCP47, Int, Text)
 popBCP47Len = popBCP47LenWith popChar popSep
   where
     popChar t = do
@@ -492,44 +492,45 @@ popBCP47Len = popBCP47LenWith popChar popSep
 isTagChar :: Char -> Bool
 isTagChar c = isSubtagChar c || c == '-'
 
+-- | Parse a 'BCP47' tag from a non-empty list of subtags
+
 -- TODO: can be made more efficient
-parseBCP47FromSubtags :: NonEmpty Subtag -> Either SyntaxError BCP47
+parseBCP47FromSubtags :: NonEmpty Subtag -> Either PopError BCP47
 parseBCP47FromSubtags =
   fmap go . popBCP47Len . T.intercalate "-" . NE.toList . fmap renderSubtagLower
   where
     go (x, _, _) = x
 
--- TODO: document, maybe factor out the (Int, Maybe BCP47, AtComponent) into
--- its own "Located" type or something
-data CompleteSyntaxError c
-  = CompleteSyntaxError SyntaxError
-  | InvalidCharacter Int (Maybe BCP47) AtComponent c
+-- | An error that may occur while parsing a 'BCP47' tag taking up the entire
+-- input stream
+data ParseError c
+  = ParseErrorPop PopError
+  | ParseErrorInvalidChar Int (Maybe BCP47) c
   deriving (Eq, Ord, Show)
 
--- TODO: test this
--- TODO: write a finalizeBCP47 that returns the category of the last thing
--- parsed, then use that to fix error locations!
-parseBCP47 :: Text -> Either (CompleteSyntaxError Char) BCP47
+-- TODO: test this, and write the stream-independent version of this (may
+-- require a popSubtagWith that also returns the remaining input on error!)
+parseBCP47 :: Text -> Either (ParseError Char) BCP47
 parseBCP47 t = case popBCP47Len t of
   Left e
-    | Just (off, mbcp, loc) <- getDetail e,
+    | Just (off, mbcp) <- getDetail e,
       Just (c, _) <- T.uncons $ T.drop off t ->
-      Left $ InvalidCharacter off mbcp loc c
-  Left e -> Left (CompleteSyntaxError e)
+      Left $ ParseErrorInvalidChar off mbcp c
+  Left e -> Left $ ParseErrorPop e
   Right (bcp, len, t') -> case T.uncons t' of
     Nothing -> Right bcp
-    Just (c, _) -> Left $ InvalidCharacter len (Just bcp) AtBeginning c
+    Just (c, _) -> Left $ ParseErrorInvalidChar len (Just bcp) c
   where
     -- inelegant, but we want to catch all of the "empty <something>" errors
     -- that don't come at the very end of the stream, since these should all
     -- become invalid character errors
-    getDetail (SyntaxErrorPop x y z Sub.PopEmptySubtag) = Just (x, y, z)
-    getDetail (SyntaxErrorStep x y z ErrEmptyExtensionSection {}) = Just (x, y, z)
-    getDetail (SyntaxErrorStep x y z ErrEmptyPrivateUse) = Just (x, y, z)
-    getDetail (SyntaxErrorStep x y z ErrEmptyStartI) = Just (x, y, z)
-    getDetail (SyntaxErrorPop _ _ _ Sub.PopSubtagTooLong {}) = Nothing
-    getDetail (SyntaxErrorStep _ _ _ ErrImproperSubtag {}) = Nothing
-    getDetail (SyntaxErrorStep _ _ _ ErrSubtagAfterIrreg {}) = Nothing
+    getDetail (PopErrorSubtag x y _ Sub.PopEmptySubtag) = Just (x, y)
+    getDetail (PopErrorStep x y _ ErrEmptyExtensionSection {}) = Just (x, y)
+    getDetail (PopErrorStep x y _ ErrEmptyPrivateUse) = Just (x, y)
+    getDetail (PopErrorStep x y _ ErrEmptyStartI) = Just (x, y)
+    getDetail (PopErrorSubtag _ _ _ Sub.PopSubtagTooLong {}) = Nothing
+    getDetail (PopErrorStep _ _ _ ErrImproperSubtag {}) = Nothing
+    getDetail (PopErrorStep _ _ _ ErrSubtagAfterIrreg {}) = Nothing
 
 -- $valueconstruction
 --

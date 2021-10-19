@@ -81,35 +81,35 @@ regularTags =
     ("zh-xiang", ZhXiang)
   ]
 
-syntaxFailures' :: [(Text, Syn.SyntaxError)]
+syntaxFailures' :: [(Text, Syn.PopError)]
 syntaxFailures' =
   [ ( "",
-      Syn.SyntaxErrorPop 0 Nothing Syn.AtBeginning Sub.PopEmptySubtag
+      Syn.PopErrorSubtag 0 Nothing Syn.AtBeginning Sub.PopEmptySubtag
     ),
     ( "i-nonsense",
-      Syn.SyntaxErrorStep 2 Nothing Syn.AtStartI $
+      Syn.PopErrorStep 2 Nothing Syn.AtStartI $
         Syn.ErrImproperSubtag [subtag|nonsense|]
     ),
     ( "i-bnn-more",
-      Syn.SyntaxErrorStep 6 (Just (Syn.GrandfatheredTag IBnn)) Syn.AtIrregGrandfathered $
+      Syn.PopErrorStep 6 (Just (Syn.GrandfatheredTag IBnn)) Syn.AtIrregGrandfathered $
         Syn.ErrSubtagAfterIrreg [subtag|more|] IBnn
     ),
     ( "cmnabcd--",
-      Syn.SyntaxErrorPop 8 (Just [syntag|cmnabcd|]) Syn.AtPrimaryLong Sub.PopEmptySubtag
+      Syn.PopErrorSubtag 8 (Just [syntag|cmnabcd|]) Syn.AtPrimaryLong Sub.PopEmptySubtag
     ),
     ( "cmn-lotsoftag*",
-      Syn.SyntaxErrorPop 4 (Just [syntag|cmn|]) Syn.AtPrimaryShort $
+      Syn.PopErrorSubtag 4 (Just [syntag|cmn|]) Syn.AtPrimaryShort $
         Sub.PopSubtagTooLong [subtag|lotsofta|] (SubtagChar 103)
     ),
     ( "en-GB-oxendict-x",
-      Syn.SyntaxErrorStep
+      Syn.PopErrorStep
         16
         (Just [syntag|en-GB-oxendict|])
         Syn.AtStartPrivateUse
         Syn.ErrEmptyPrivateUse
     ),
     ( "zh-419-a",
-      Syn.SyntaxErrorStep 8 (Just [syntag|zh-419|]) Syn.AtStartExtension $
+      Syn.PopErrorStep 8 (Just [syntag|zh-419|]) Syn.AtStartExtension $
         Syn.ErrEmptyExtensionSection ExtA Nothing
     )
   ]

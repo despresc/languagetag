@@ -396,15 +396,15 @@ tag =
 -- Nicer errors
 ----------------------------------------------------------------
 
-syntaxErr :: Text -> Syn.CompleteSyntaxError Char -> Text
-syntaxErr inp (Syn.CompleteSyntaxError (Syn.SyntaxErrorPop off _ _ err)) =
+syntaxErr :: Text -> Syn.ParseError Char -> Text
+syntaxErr inp (Syn.ParseErrorPop (Syn.PopErrorSubtag off _ _ err)) =
   case err of
     Sub.PopEmptySubtag -> "all subtags must be non-empty"
     Sub.PopSubtagTooLong {} ->
       "subtag starting with \"" <> badExample <> "\" was too long"
       where
         badExample = T.take 8 $ T.drop off inp
-syntaxErr _ (Syn.CompleteSyntaxError (Syn.SyntaxErrorStep _ _ loc err)) =
+syntaxErr _ (Syn.ParseErrorPop (Syn.PopErrorStep _ _ loc err)) =
   case err of
     Syn.ErrEmptyExtensionSection ec _ ->
       "the extension section after the subtag \""
@@ -427,7 +427,7 @@ syntaxErr _ (Syn.CompleteSyntaxError (Syn.SyntaxErrorStep _ _ loc err)) =
     Syn.ErrSubtagAfterIrreg _ g ->
       "the irregular grandfathered tag " <> Syn.renderBCP47 (Syn.GrandfatheredTag g)
         <> " cannot be followed by further subtags"
-syntaxErr inp (Syn.InvalidCharacter off _ _ c) =
+syntaxErr inp (Syn.ParseErrorInvalidChar off _ c) =
   T.concat
     [ "subtag \"",
       badExample,
@@ -438,7 +438,7 @@ syntaxErr inp (Syn.InvalidCharacter off _ _ c) =
   where
     badExample = T.take 8 $ T.takeWhile (/= '-') $ T.drop off inp
 
-syntaxErr' :: String -> Syn.CompleteSyntaxError Char -> String
+syntaxErr' :: String -> Syn.ParseError Char -> String
 syntaxErr' s e = T.unpack $ "Ill-formed tag: " <> syntaxErr (T.pack s) e
 
 validErr :: ValidationError -> Text
