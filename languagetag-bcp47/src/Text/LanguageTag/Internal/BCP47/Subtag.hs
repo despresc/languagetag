@@ -214,7 +214,11 @@ nullSubtag = MaybeSubtag (Subtag 0)
 -- | The encoding of a valid subtag character (a case-insensitive
 -- ASCII alphabetic character or digit)
 newtype SubtagChar = SubtagChar {unSubtagChar :: Word8}
-  deriving (Eq, Ord, Show, Hashable)
+  deriving (Eq, Ord, Hashable)
+
+-- | shown like a 'Char'
+instance Show SubtagChar where
+  show = show . unpackCharLower
 
 instance NFData SubtagChar where
   rnf (SubtagChar _) = ()

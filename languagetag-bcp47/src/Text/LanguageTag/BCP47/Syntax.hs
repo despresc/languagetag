@@ -27,8 +27,8 @@
 module Text.LanguageTag.BCP47.Syntax
   ( -- * Parsing and rendering tags
     BCP47,
-    popBCP47Len,
-    popBCP47LenWith,
+    popBCP47Detail,
+    popBCP47DetailWith,
     renderBCP47,
     renderBCP47Builder,
     toSubtags,
@@ -432,6 +432,8 @@ data PopError
     PopErrorStep Int (Maybe BCP47) AtComponent StepErrorType
   deriving (Eq, Ord, Show)
 
+-- TODO: test the below! especially test that the stuff returned by the stream is
+
 -- | Parse a 'BCP47' tag at the beginning of the stream, stopping at the end of
 -- input or the first invalid character encountered. Also returns the total
 -- length (according to the passed popping functions) of input that was consumed
@@ -439,7 +441,13 @@ data PopError
 -- it parses a 'BCP47' tag successfully and the input is composed only of subtag
 -- characters and dashes, then it will have consumed its entire input (i.e., the
 -- returned unconsumed input will be empty).
-popBCP47LenWith ::
+--
+-- Along with the 'PopError', this function will return any unconsumed input;
+-- the error will have occurred exactly at the start of that returned value, so
+-- in the case of a 'PopErrorStep' that will be the start of the subtag
+-- currently being processed, and in the case of a 'PopErrorSubtag' that will be
+-- somewhere in the ill-formed subtag.
+popBCP47DetailWith ::
   -- | function to pop a 'SubtagChar' from @s@
   (s -> Maybe (SubtagChar, s)) ->
   -- | function to pop a dash separator from @s@
@@ -447,35 +455,37 @@ popBCP47LenWith ::
   -- | the input
   s ->
   -- | the tag, length of input, unconsumed input
-  Either PopError (BCP47, Int, s)
-popBCP47LenWith popChar popSep initinp =
+  Either (PopError, s) (BCP47, Int, s)
+popBCP47DetailWith popChar popSep initinp =
   popSubtag' 0 Nothing AtBeginning initinp >>= startParse
   where
     collapseLeft (Left _) = Nothing
     collapseLeft (Right a) = Just a
     popSubtag' !pos bcpForErr loc t = case popSubtagWith popChar t of
-      Left e -> Left $ PopErrorSubtag pos bcpForErr loc e
-      Right a -> Right a
-    startParse (st, t) = case startBCP47 st of
-      Left (StepError mtag loc e) -> Left $ PopErrorStep 0 mtag loc e
-      Right a -> step (subtagLength' st) t a
+      Left (e, t') -> Left (PopErrorSubtag pos bcpForErr loc e, t')
+      Right (st, t') -> Right (st, t, t')
+    -- we pass in the input stream corresponding to both the start and right
+    -- after the end of the subtag
+    startParse (st, startt, endt) = case startBCP47 st of
+      Left (StepError mtag loc e) -> Left (PopErrorStep 0 mtag loc e, startt)
+      Right a -> step (subtagLength' st) endt a
     step !startpos t acc
       | Just t' <- popSep t = do
         let bcp47ForErr = collapseLeft $ finalizeBCP47 acc
         let startpos' = startpos + 1
-        (st, t'') <- popSubtag' startpos' bcp47ForErr (whereInParsing acc) t'
+        (st, startt, endt) <- popSubtag' startpos' bcp47ForErr (whereInParsing acc) t'
         case stepBCP47 st acc of
-          Left (StepError mtag loc e) -> Left $ PopErrorStep startpos' mtag loc e
-          Right acc' -> step (startpos' + subtagLength' st) t'' acc'
+          Left (StepError mtag loc e) -> Left (PopErrorStep startpos' mtag loc e, startt)
+          Right acc' -> step (startpos' + subtagLength' st) endt acc'
       | otherwise = finalize startpos t acc
     finalize pos t tag = case finalizeBCP47 tag of
-      Left (StepError mtag loc e) -> Left $ PopErrorStep pos mtag loc e
+      Left (StepError mtag loc e) -> Left (PopErrorStep pos mtag loc e, t)
       Right a -> Right (a, pos, t)
 
 -- | Parse a 'BCP47' tag at the beginning of the text stream. See also the
--- documentation for 'popBCP47LenWith'.
-popBCP47Len :: Text -> Either PopError (BCP47, Int, Text)
-popBCP47Len = popBCP47LenWith popChar popSep
+-- documentation for 'popBCP47DetailWith'.
+popBCP47Detail :: Text -> Either (PopError, Text) (BCP47, Int, Text)
+popBCP47Detail = popBCP47DetailWith popChar popSep
   where
     popChar t = do
       (c, t') <- T.uncons t
@@ -497,9 +507,10 @@ isTagChar c = isSubtagChar c || c == '-'
 -- TODO: can be made more efficient
 parseBCP47FromSubtags :: NonEmpty Subtag -> Either PopError BCP47
 parseBCP47FromSubtags =
-  fmap go . popBCP47Len . T.intercalate "-" . NE.toList . fmap renderSubtagLower
+  go . popBCP47Detail . T.intercalate "-" . NE.toList . fmap renderSubtagLower
   where
-    go (x, _, _) = x
+    go (Left (x, _)) = Left x
+    go (Right (x, _, _)) = Right x
 
 -- | An error that may occur while parsing a 'BCP47' tag taking up the entire
 -- input stream
@@ -508,19 +519,41 @@ data ParseError c
   | ParseErrorInvalidChar Int (Maybe BCP47) c
   deriving (Eq, Ord, Show)
 
--- TODO: test this, and write the stream-independent version of this (may
--- require a popSubtagWith that also returns the remaining input on error!)
+-- | Parse a 'BCP47' tag that takes up the entire input stream.
 parseBCP47 :: Text -> Either (ParseError Char) BCP47
-parseBCP47 t = case popBCP47Len t of
-  Left e
+parseBCP47 = parseBCP47With T.uncons packChar popSep
+  where
+    popSep t = do
+      (c, t') <- T.uncons t
+      guard $ c == '-'
+      pure t'
+
+-- | Parse a 'BCP47' tag that takes up the entire input stream using
+-- 'popBCP47DetailWith'
+parseBCP47With ::
+  -- | pop a character from the input stream
+  (s -> Maybe (c, s)) ->
+  -- | parse that character
+  (c -> Maybe SubtagChar) ->
+  -- | pop a dash separator from the input stream
+  (s -> Maybe s) ->
+  -- | the input stream
+  s ->
+  Either (ParseError c) BCP47
+parseBCP47With unc toChar popSep t = case popBCP47DetailWith popChar popSep t of
+  Left (e, t')
     | Just (off, mbcp) <- getDetail e,
-      Just (c, _) <- T.uncons $ T.drop off t ->
+      Just (c, _) <- unc t' ->
       Left $ ParseErrorInvalidChar off mbcp c
-  Left e -> Left $ ParseErrorPop e
-  Right (bcp, len, t') -> case T.uncons t' of
+  Left (e, _) -> Left $ ParseErrorPop e
+  Right (bcp, len, t') -> case unc t' of
     Nothing -> Right bcp
     Just (c, _) -> Left $ ParseErrorInvalidChar len (Just bcp) c
   where
+    popChar s = do
+      (c, s') <- unc s
+      w <- toChar c
+      pure (w, s')
     -- inelegant, but we want to catch all of the "empty <something>" errors
     -- that don't come at the very end of the stream, since these should all
     -- become invalid character errors

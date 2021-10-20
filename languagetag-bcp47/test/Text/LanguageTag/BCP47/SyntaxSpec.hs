@@ -81,36 +81,50 @@ regularTags =
     ("zh-xiang", ZhXiang)
   ]
 
-syntaxFailures' :: [(Text, Syn.PopError)]
+syntaxFailures' :: [(Text, (Syn.PopError, Text))]
 syntaxFailures' =
   [ ( "",
-      Syn.PopErrorSubtag 0 Nothing Syn.AtBeginning Sub.PopEmptySubtag
+      ( Syn.PopErrorSubtag 0 Nothing Syn.AtBeginning Sub.PopEmptySubtag,
+        ""
+      )
     ),
     ( "i-nonsense",
-      Syn.PopErrorStep 2 Nothing Syn.AtStartI $
-        Syn.ErrImproperSubtag [subtag|nonsense|]
+      ( Syn.PopErrorStep 2 Nothing Syn.AtStartI $
+          Syn.ErrImproperSubtag [subtag|nonsense|],
+        "nonsense"
+      )
     ),
     ( "i-bnn-more",
-      Syn.PopErrorStep 6 (Just (Syn.GrandfatheredTag IBnn)) Syn.AtIrregGrandfathered $
-        Syn.ErrSubtagAfterIrreg [subtag|more|] IBnn
+      ( Syn.PopErrorStep 6 (Just (Syn.GrandfatheredTag IBnn)) Syn.AtIrregGrandfathered $
+          Syn.ErrSubtagAfterIrreg [subtag|more|] IBnn,
+        "more"
+      )
     ),
     ( "cmnabcd--",
-      Syn.PopErrorSubtag 8 (Just [syntag|cmnabcd|]) Syn.AtPrimaryLong Sub.PopEmptySubtag
+      ( Syn.PopErrorSubtag 8 (Just [syntag|cmnabcd|]) Syn.AtPrimaryLong Sub.PopEmptySubtag,
+        "-"
+      )
     ),
     ( "cmn-lotsoftag*",
-      Syn.PopErrorSubtag 4 (Just [syntag|cmn|]) Syn.AtPrimaryShort $
-        Sub.PopSubtagTooLong [subtag|lotsofta|] (SubtagChar 103)
+      ( Syn.PopErrorSubtag 4 (Just [syntag|cmn|]) Syn.AtPrimaryShort $
+          Sub.PopSubtagTooLong [subtag|lotsofta|],
+        "g*"
+      )
     ),
     ( "en-GB-oxendict-x",
-      Syn.PopErrorStep
-        16
-        (Just [syntag|en-GB-oxendict|])
-        Syn.AtStartPrivateUse
-        Syn.ErrEmptyPrivateUse
+      ( Syn.PopErrorStep
+          16
+          (Just [syntag|en-GB-oxendict|])
+          Syn.AtStartPrivateUse
+          Syn.ErrEmptyPrivateUse,
+        ""
+      )
     ),
     ( "zh-419-a",
-      Syn.PopErrorStep 8 (Just [syntag|zh-419|]) Syn.AtStartExtension $
-        Syn.ErrEmptyExtensionSection ExtA Nothing
+      ( Syn.PopErrorStep 8 (Just [syntag|zh-419|]) Syn.AtStartExtension $
+          Syn.ErrEmptyExtensionSection ExtA Nothing,
+        ""
+      )
     )
   ]
 
@@ -123,7 +137,7 @@ spec = do
       let select (Right (_, _, t)) | not (T.null t) = Just t
           select _ = Nothing
       forAllShrink genTagText shrinkTagText $ \t ->
-        select (Syn.popBCP47Len t) === Nothing
+        select (Syn.popBCP47Detail t) === Nothing
     prop "parses initial well-formed tags completely" $ do
       -- we are interested in cases where we successfully parse a tag but do not
       -- consume all of the initial tag characters
@@ -133,27 +147,27 @@ spec = do
               rest = T.dropWhile Syn.isTagChar t
           select _ _ = Nothing
       forAllShrink genPopTagText shrinkPopTagText $ \t ->
-        select t (Syn.popBCP47Len t) === Nothing
+        select t (Syn.popBCP47Detail t) === Nothing
     prop "is case-insensitive on initial well-formed tags" $ do
       let fixUp (Right (x, y, t)) = Right (x, y, T.toLower t)
           fixUp (Left e) = Left e
       forAllShrink genPopTagText shrinkPopTagText $ \t ->
-        fixUp (Syn.popBCP47Len t) === Syn.popBCP47Len (T.toLower t)
+        fixUp (Syn.popBCP47Detail t) === Syn.popBCP47Detail (T.toLower t)
     describe "fails correctly on" $ do
       let test (l, e) =
             it (T.unpack l) $
-              Syn.popBCP47Len l `shouldBe` Left e
+              Syn.popBCP47Detail l `shouldBe` Left e
       traverse_ test syntaxFailures'
     describe "parses the grandfathered tag" $ do
       let select (Right (x, _, t)) | T.null t = Right x
           select x = Left x
       let test (l, t) =
             it (T.unpack l) $
-              select (Syn.popBCP47Len l) `shouldBe` Right (Syn.grandfatheredSyntax t)
+              select (Syn.popBCP47Detail l) `shouldBe` Right (Syn.grandfatheredSyntax t)
       traverse_ test $ irregularTags <> regularTags
     prop "parses tags with strict regular grandfathered prefixes correctly" $
       forAllShrink genTagishText shrinkTagishText $ \t ->
-        let badParse (a, _) = case Syn.popBCP47Len $ a <> "-" <> t of
+        let badParse (a, _) = case Syn.popBCP47Detail $ a <> "-" <> t of
               Right (Syn.NormalTag _, _, _) -> False
               Right _ -> True
               Left _ -> False
@@ -166,11 +180,11 @@ spec = do
     prop "composes with parseBCP47 on the right correctly" $
       forAllShrink genSynTag shrinkSynTag $ \st -> do
         let select (x, _, _) = x
-        fmap select (Syn.popBCP47Len $ Syn.renderBCP47 st) === Right st
+        fmap select (Syn.popBCP47Detail $ Syn.renderBCP47 st) === Right st
     prop "composes with parseBCP47 on the left correctly" $
       forAllShrink genTagText shrinkTagText $ \t -> do
         let select (x, _, _) = x
-        (T.toLower . Syn.renderBCP47 . select <$> Syn.popBCP47Len t) === Right (T.toLower t)
+        (T.toLower . Syn.renderBCP47 . select <$> Syn.popBCP47Detail t) === Right (T.toLower t)
   describe "charToExtensionChar" $ do
     prop "composes with extensionCharToChar on the right correctly" $
       forAll (genSubtagChar `suchThat` (not . (`elem` ['x', 'X']))) $ \c ->

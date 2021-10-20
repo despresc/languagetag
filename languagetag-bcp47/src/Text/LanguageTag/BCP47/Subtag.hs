@@ -183,18 +183,19 @@ unsafeSetLen len w = w Bit..|. fromIntegral len
 data PopError
   = -- | there were no subtag characters at the beginning of input
     PopEmptySubtag
-  | -- | an eight-character subtag and the ninth subtag character encountered
-    PopSubtagTooLong Subtag SubtagChar
+  | -- | a full subtag was parsed but there were also subsequent subtag
+    -- characters
+    PopSubtagTooLong Subtag
   deriving (Eq, Ord, Show)
 
 instance NFData PopError where
   rnf PopEmptySubtag = ()
-  rnf (PopSubtagTooLong x y) = rnf x `seq` rnf y
+  rnf (PopSubtagTooLong x) = rnf x
 
 -- | Parse a 'Subtag' from a 'Text' stream, stopping either at the end of input
 -- or the first non-subtag character encountered. Uses 'parseSubtagWith'.
 popSubtagText :: Text -> Either PopError (Subtag, Text)
-popSubtagText = popSubtagWith go
+popSubtagText = either (Left . fst) Right . popSubtagWith go
   where
     -- TODO: perhaps export this go as its own function? duplicated in
     -- 'popBCP47Len'. esp. if we have a Text/ByteString hierarchy split.
@@ -209,17 +210,18 @@ popSubtagText = popSubtagWith go
 
 -- | Parse a subtag from the given stream using the given function to pop bytes
 -- from the stream, returning the resulting 'Subtag' and the remainder of the
--- stream if successful.
-popSubtagWith :: (s -> Maybe (SubtagChar, s)) -> s -> Either PopError (Subtag, s)
+-- stream if successful. If a syntax error is encountered, this function will
+-- also return the stream at that point.
+popSubtagWith :: (s -> Maybe (SubtagChar, s)) -> s -> Either (PopError, s) (Subtag, s)
 popSubtagWith unc = \s -> case unc s of
   Just (w, s') ->
     go 1 50 (unsafeSetChar 57 w 0) s'
-  Nothing -> Left PopEmptySubtag
+  Nothing -> Left (PopEmptySubtag, s)
   where
     finish !len !stw = Subtag $ unsafeSetLen len stw
     go !len !bitIdx !stw s = case unc s of
       Just (w, s')
-        | len == 8 -> Left $ PopSubtagTooLong (finish len stw) w
+        | len == 8 -> Left (PopSubtagTooLong (finish len stw), s)
         | otherwise ->
           go
             (len + 1)
@@ -232,7 +234,7 @@ popSubtagWith unc = \s -> case unc s of
 -- input stream
 data ParseError c
   = ParseEmptySubtag
-  | ParseSubtagTooLong Subtag SubtagChar
+  | ParseSubtagTooLong Subtag
   | ParseInvalidChar (Maybe Subtag) Int c
   deriving (Eq, Ord, Show)
 
@@ -247,11 +249,11 @@ parseSubtagWith ::
   s ->
   Either (ParseError c) Subtag
 parseSubtagWith uncC toC = \s -> case popSubtagWith unc s of
-  Left PopEmptySubtag
+  Left (PopEmptySubtag, _)
     | Just (c, _) <- uncC s ->
       Left $ ParseInvalidChar Nothing 0 c
     | otherwise -> Left ParseEmptySubtag
-  Left (PopSubtagTooLong st sc) -> Left $ ParseSubtagTooLong st sc
+  Left (PopSubtagTooLong st, _) -> Left $ ParseSubtagTooLong st
   Right (st, s')
     | Just (c, _) <- uncC s' ->
       Left $ ParseInvalidChar (Just st) (subtagLength' st) c
