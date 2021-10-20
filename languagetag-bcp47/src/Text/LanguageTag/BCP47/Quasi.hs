@@ -74,7 +74,8 @@ import Text.LanguageTag.Internal.BCP47.Registry.Types (ExtensionSubtag (..))
 import Text.LanguageTag.Internal.BCP47.Subtag (MaybeSubtag (..), Subtag (..))
 import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn
 
--- Hack to lift enum constructors
+-- Hack to lift enum constructors - we figure out the location we want with the
+-- first name, then use the passed string as the actual name
 mkEx :: Name -> String -> Name
 mkEx (Name _ f) s = Name (OccName s) f
 
@@ -248,7 +249,7 @@ subtag =
         Just (c, _) ->
           prefFail $
             "contains character '" <> [c]
-              <> "that is not an ascii letter or number"
+              <> "that is not an ASCII letter or number"
         Nothing -> prefFail "subtags must contain at least one character"
       Left Sub.PopSubtagTooLong {} ->
         prefFail "subtags must be at most eight characters long"
