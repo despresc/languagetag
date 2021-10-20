@@ -74,8 +74,20 @@ import Text.LanguageTag.Internal.BCP47.Registry.Types (ExtensionSubtag (..))
 import Text.LanguageTag.Internal.BCP47.Subtag (MaybeSubtag (..), Subtag (..))
 import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn
 
+----------------------------------------------------------------
+-- Names, expressions, patterns
+----------------------------------------------------------------
+
+-- It would be possible to avoid the use of TemplateHaskellQuotes by
+-- constructing names directly like, e.g., lens does, except for the fact that
+-- cabal doesn't generate package ID macros for dependencies; it currently
+-- generates only the CURRENT_PACKAGE_KEY macro. See
+-- <https://github.com/haskell/cabal/issues/7027>. In practice this shouldn't be
+-- an issue, since I'm fairly sure that modules with TemplateHaskellQuotes can
+-- be compiled with stage 1 cross-compilers.
+
 -- Hack to lift enum constructors - we figure out the location we want with the
--- first name, then use the passed string as the actual name
+-- first name, then use the passed string as the actual name.
 mkEx :: Name -> String -> Name
 mkEx (Name _ f) s = Name (OccName s) f
 
@@ -221,6 +233,10 @@ validtagE (NormalTag (Normal l e s r v es ps)) =
     extE' (x, y) = tupE [extCharE x, neE extSubtagE y]
 validtagE (PrivateUseTag x) = AppE (ConE 'PrivateUseTag) (neE subtagE x)
 validtagE (GrandfatheredTag g) = AppE (ConE 'GrandfatheredTag) (grandE g)
+
+----------------------------------------------------------------
+-- Quasi-quoters
+----------------------------------------------------------------
 
 -- | Create a 'Subtag' value from a raw subtag string. The text in the
 -- quasi-quote should be between one and eight ASCII alphanumeric
