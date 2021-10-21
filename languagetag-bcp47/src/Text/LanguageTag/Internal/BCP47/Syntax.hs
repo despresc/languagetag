@@ -458,9 +458,10 @@ data PartialBCP47
   | -- | up to at least the second subtag in a private use tag
     PartialPrivateUse ([Subtag] -> NonEmpty Subtag)
 
--- FIXME: temporary atcomponent duplication, sadly - replace the current one
--- with this one when the current parser is gone. remember to save the docs of
--- the current one.
+-- | A description of a location within a 'BCP47' tag, named by what was most
+-- recently parsed. Thus 'AtExtlang1' means a location immediately after the
+-- first extended language subtag, and 'AtIrregGrandfathered' means a location
+-- immediately after a complete irregular grandfathered tag.
 data AtComponent
   = -- | start of input
     AtBeginning
@@ -494,6 +495,8 @@ data AtComponent
     AtIrregGrandfathered
   deriving (Eq, Ord, Show)
 
+-- | Describe the most recently parsed subtag in a 'PartialBCP47' value. Used
+-- for error location reporting and expectations.
 whereInParsing :: PartialBCP47 -> AtComponent
 whereInParsing PartialPrimaryShort {} = AtPrimaryShort
 whereInParsing PartialExtlang1 {} = AtExtlang1

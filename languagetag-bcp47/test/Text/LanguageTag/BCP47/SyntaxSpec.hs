@@ -90,13 +90,13 @@ syntaxFailures' =
     ),
     ( "i-nonsense",
       ( Syn.PopErrorStep 2 Nothing Syn.AtStartI $
-          Syn.ErrImproperSubtag [subtag|nonsense|],
+          Syn.ImproperSubtag [subtag|nonsense|],
         "nonsense"
       )
     ),
     ( "i-bnn-more",
       ( Syn.PopErrorStep 6 (Just (Syn.GrandfatheredTag IBnn)) Syn.AtIrregGrandfathered $
-          Syn.ErrSubtagAfterIrreg [subtag|more|] IBnn,
+          Syn.SubtagAfterIrreg [subtag|more|] IBnn,
         "more"
       )
     ),
@@ -116,13 +116,13 @@ syntaxFailures' =
           16
           (Just [syntag|en-GB-oxendict|])
           Syn.AtStartPrivateUse
-          Syn.ErrEmptyPrivateUse,
+          Syn.EmptyPrivateUse,
         ""
       )
     ),
     ( "zh-419-a",
       ( Syn.PopErrorStep 8 (Just [syntag|zh-419|]) Syn.AtStartExtension $
-          Syn.ErrEmptyExtensionSection ExtA Nothing,
+          Syn.EmptyExtensionSection ExtA Nothing,
         ""
       )
     )

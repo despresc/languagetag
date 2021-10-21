@@ -27,6 +27,8 @@
 module Text.LanguageTag.BCP47.Syntax
   ( -- * Parsing and rendering tags
     BCP47,
+    parseBCP47,
+    parseBCP47FromSubtags,
     popBCP47Detail,
     popBCP47DetailWith,
     renderBCP47,
@@ -39,30 +41,27 @@ module Text.LanguageTag.BCP47.Syntax
     Grandfathered (..),
 
     -- * Errors
-
-    --    PopError (..),
-    --    Pos,
-    --    AtComponent (..),
-    SubtagCategory (..),
-    --    atComponentDescription,
-    --    expectedCategories,
-    subtagCategoryName,
-    subtagCategorySyntax,
-
-    -- * Temp partial exports
+    ParseError (..),
     StepError (..),
     StepErrorType (..),
+    AtComponent (..),
+    SubtagCategory (..),
+    PopError (..),
+    subtagCategoryName,
+    subtagCategorySyntax,
+    atComponentDescription,
+    expectedCategories,
+
+    -- * Stepped parsing
     startBCP47,
     stepBCP47,
     finalizeBCP47,
-    PopError (..),
+
+    -- * Tag character predicates
     isTagChar,
-    AtComponent (..),
-    parseBCP47FromSubtags,
-    parseBCP47,
-    ParseError (..),
-    atComponentDescription',
-    expectedCategories',
+    isTagByte,
+
+    -- * Temp partial exports
   )
 where
 
@@ -75,6 +74,7 @@ import qualified Data.List.NonEmpty as NE
 import Data.Maybe (mapMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
+import Data.Word (Word8)
 import Text.LanguageTag.BCP47.Registry.Grandfathered
 import Text.LanguageTag.BCP47.Subtag hiding (ParseError (..), PopError (..))
 import qualified Text.LanguageTag.BCP47.Subtag as Sub
@@ -105,16 +105,16 @@ data StepError = StepError (Maybe BCP47) AtComponent StepErrorType
 data StepErrorType
   = -- | an extension section start was immediately followed by another
     -- singleton (@Just extensionChar@) or nothing at all (@Nothing@)
-    ErrEmptyExtensionSection ExtensionChar (Maybe ExtensionChar)
+    EmptyExtensionSection ExtensionChar (Maybe ExtensionChar)
   | -- | an empty private use tag or section was encountered
-    ErrEmptyPrivateUse
+    EmptyPrivateUse
   | -- | the subtag was not well-formed for the position at which it was
     -- encountered
-    ErrImproperSubtag Subtag
+    ImproperSubtag Subtag
   | -- | there was no subtag after an initial @i@ subtag
-    ErrEmptyStartI
+    EmptyStartI
   | -- | a subtag was encountered after an irregular grandfathered tag
-    ErrSubtagAfterIrreg Subtag Grandfathered
+    SubtagAfterIrreg Subtag Grandfathered
   deriving (Eq, Ord, Show)
 
 -- | Parse the start of a BCP47 tag and return a 'PartialBCP47' result. This
@@ -128,7 +128,7 @@ data StepErrorType
 -- * the subtag @i@, for irregular grandfathered tags beginning with that tag.
 startBCP47 :: Subtag -> Either StepError PartialBCP47
 startBCP47 st
-  | containsDigit st = Left $ StepError Nothing AtBeginning $ ErrImproperSubtag st
+  | containsDigit st = Left $ StepError Nothing AtBeginning $ ImproperSubtag st
   | st == subtagI = Right PartialStartI
   | st == subtagX = Right PartialStartPrivateUse
   | subtagLength st >= 4 = Right $ PartialPrimaryLong initcon
@@ -178,7 +178,7 @@ stepBCP47 st partbcp47 = case partbcp47 of
     | otherwise ->
       Left $
         StepError (Just $ NormalTag n {extensions = exts []}) AtStartExtension $
-          ErrEmptyExtensionSection
+          EmptyExtensionSection
             c
             (Just errC)
     where
@@ -207,7 +207,7 @@ stepBCP47 st partbcp47 = case partbcp47 of
     16827550474088480771 -> Right $ PartialGrandfathered ITao
     16827638435018702851 -> Right $ PartialGrandfathered ITay
     16847869448969781251 -> Right $ PartialGrandfathered ITsu
-    _ -> Left $ StepError Nothing AtStartI $ ErrImproperSubtag st
+    _ -> Left $ StepError Nothing AtStartI $ ImproperSubtag st
   PartialGrandfathered g -> case g of
     -- TODO - might want to make this its own function so I can have an
     -- onRegularGrandfathered :: (Normal -> r) -> r -> Grandfathered -> r or
@@ -259,7 +259,7 @@ stepBCP47 st partbcp47 = case partbcp47 of
       err =
         Left $
           StepError (Just $ GrandfatheredTag g) AtIrregGrandfathered $
-            ErrSubtagAfterIrreg st g
+            SubtagAfterIrreg st g
       -- if there is an error in stepping then we would like to have a more
       -- accurate tag in the errors
       fixErr x = case x of
@@ -304,7 +304,7 @@ stepBCP47 st partbcp47 = case partbcp47 of
       | subtagLength st /= 1 =
         Left $
           StepError (Just $ NormalTag nEnd) loc $
-            ErrImproperSubtag st
+            ImproperSubtag st
       | st == subtagX = Right $ PartialStartPrivateUseSection nEnd
       | otherwise =
         Right $
@@ -374,7 +374,7 @@ stepBCP47 st partbcp47 = case partbcp47 of
         Right $ PartialGrandfathered SgnChDe
       | otherwise = err
       where
-        err = Left $ StepError (Just $ NormalTag n) AtRegion $ ErrImproperSubtag st
+        err = Left $ StepError (Just $ NormalTag n) AtRegion $ ImproperSubtag st
 
 -- | Attempt to interpret a partially-parsed BCP47 tag as a full tag. This
 -- function fails when the standard requires that at least one more 'Subtag' be
@@ -399,19 +399,19 @@ finalizeBCP47 (PartialVariant n f) = Right $ NormalTag $ n {variants = f []}
 finalizeBCP47 (PartialStartExtension n exts c) =
   Left $
     StepError (Just $ NormalTag n') AtStartExtension $
-      ErrEmptyExtensionSection c Nothing
+      EmptyExtensionSection c Nothing
   where
     n' = n {extensions = exts []}
 finalizeBCP47 (PartialExtension n exts c exttags) =
   Right $ NormalTag $ n {extensions = exts $ [Extension c $ exttags []]}
 finalizeBCP47 (PartialStartPrivateUseSection n) =
-  Left $ StepError (Just $ NormalTag n) AtStartPrivateUse ErrEmptyPrivateUse
+  Left $ StepError (Just $ NormalTag n) AtStartPrivateUse EmptyPrivateUse
 finalizeBCP47 (PartialPrivateUseSection n f) =
   Right $ NormalTag $ n {privateUse = f []}
-finalizeBCP47 PartialStartI = Left $ StepError Nothing AtStartI ErrEmptyStartI
+finalizeBCP47 PartialStartI = Left $ StepError Nothing AtStartI EmptyStartI
 finalizeBCP47 (PartialGrandfathered g) = Right $ GrandfatheredTag g
 finalizeBCP47 PartialStartPrivateUse =
-  Left $ StepError Nothing AtStartPrivateUse ErrEmptyPrivateUse
+  Left $ StepError Nothing AtStartPrivateUse EmptyPrivateUse
 finalizeBCP47 (PartialPrivateUse f) = Right $ PrivateUse $ f []
 
 -- | Helper function that (unsafely!) constructs a 'Normal' tag with the given
@@ -502,6 +502,12 @@ popBCP47Detail = popBCP47DetailWith popChar popSep
 isTagChar :: Char -> Bool
 isTagChar c = isSubtagChar c || c == '-'
 
+-- | Tests whether or not the give byte can occur in a well-formed, UTF-8
+-- encoded tag. This is true exactly for the bytes @[45] <> [48..57] <> [65..90]
+-- <> [97..122]@. See also 'isTagChar'.
+isTagByte :: Word8 -> Bool
+isTagByte w = isSubtagByte w || w == 45
+
 -- | Parse a 'BCP47' tag from a non-empty list of subtags
 
 -- TODO: can be made more efficient
@@ -558,12 +564,12 @@ parseBCP47With unc toChar popSep t = case popBCP47DetailWith popChar popSep t of
     -- that don't come at the very end of the stream, since these should all
     -- become invalid character errors
     getDetail (PopErrorSubtag x y _ Sub.PopEmptySubtag) = Just (x, y)
-    getDetail (PopErrorStep x y _ ErrEmptyExtensionSection {}) = Just (x, y)
-    getDetail (PopErrorStep x y _ ErrEmptyPrivateUse) = Just (x, y)
-    getDetail (PopErrorStep x y _ ErrEmptyStartI) = Just (x, y)
+    getDetail (PopErrorStep x y _ EmptyExtensionSection {}) = Just (x, y)
+    getDetail (PopErrorStep x y _ EmptyPrivateUse) = Just (x, y)
+    getDetail (PopErrorStep x y _ EmptyStartI) = Just (x, y)
     getDetail (PopErrorSubtag _ _ _ Sub.PopSubtagTooLong {}) = Nothing
-    getDetail (PopErrorStep _ _ _ ErrImproperSubtag {}) = Nothing
-    getDetail (PopErrorStep _ _ _ ErrSubtagAfterIrreg {}) = Nothing
+    getDetail (PopErrorStep _ _ _ ImproperSubtag {}) = Nothing
+    getDetail (PopErrorStep _ _ _ SubtagAfterIrreg {}) = Nothing
 
 -- $valueconstruction
 --
@@ -605,105 +611,8 @@ subtagI :: Subtag
 subtagI = Subtag 15132094747964866561
 
 ----------------------------------------------------------------
--- Errors
+-- Error handling
 ----------------------------------------------------------------
-
--- TODO: salvage documentation from the various block comments, then delete
-
-{-
--- | The parser's current location in the tag, named after the most
--- recent component that was successfully parsed, more or less. What
--- it really indicates is what subtags the parser expects to occur
--- next: being 'AtPrimaryShort', for instance, means that we just
--- parsed a short primary language subtag and so the next tag
--- component we expect to see is anything from an extended language
--- subtag to the start of the private use section or end of input.
---
--- The positions corresponding to a singleton subtag (the start of an
--- extension or private use section) are not represented because only
--- an 'EmptySingleton' error can happen at those positions.
-data AtComponent
-  = -- | start of input
-    AtBeginning
-  | -- | primary language subtag of length at least four
-    AtPrimaryLong
-  | -- | primary language subtag of length at most three
-    AtPrimaryShort
-  | -- | first extended language subtag
-    AtExtlang1
-  | -- | second extended language subtag
-    AtExtlang2
-  | -- | third extended language subtag
-    AtExtlang3
-  | -- | script subtag
-    AtScript
-  | -- | region subtag
-    AtRegion
-  | -- | variant subtag
-    AtVariant
-  | -- | extension subtag
-    AtExtension
-  | -- | private use subtag
-    AtPrivateUse
-  | -- | subtag right after an initial @i-@
-    AtIrregI
-  deriving (Eq, Ord, Show)
-
-instance NFData AtComponent where
-  rnf = rwhnf
-
--- | A possible syntax error that may occur. The 'Pos' in the errors
--- indicates where the error occurred, which is:
---
--- * for 'UnparsableSubtag', the start of the ill-formed 'Subtag',
---   and, if applicable, the position of the invalid character inside
---   that subtag
---
--- * for 'BadSubtag', the start of the inappropriate 'Subtag'
---
--- * for 'EmptySubtag', the position of the second @\'-\'@
---
--- * for 'EmptySingleton', the start of the empty extension or private
---   use section that was encountered
---
--- The errors also include the initial segment of the tag that was
--- parsed before the error occurred whenever possible.
-data SyntaxError
-  = -- | encountered text that could not be parsed as a 'Subtag' (too
-    -- long, or encountered a bad 'Char')
-    UnparsableSubtag Pos AtComponent (Maybe (Pos, Char)) (Maybe BCP47)
-  | -- | encountered a 'Subtag' that was ill-formed for its location
-    BadSubtag Pos AtComponent Subtag (Maybe BCP47)
-  | -- | input was empty
-    EmptyInput
-  | -- | an empty subtag was found
-    EmptySubtag Pos AtComponent (Maybe BCP47)
-  | -- | a trailing @\'-\'@ terminator was found after a well-formed
-    -- tag
-    TrailingTerminator BCP47
-  | -- | an empty extension (@Just extchar@) or private use
-    -- section (@Nothing@) was encountered
-    EmptySingleton Pos (Maybe ExtensionChar) (Maybe BCP47)
-  | -- | an irregular grandfathered tag was encountered that had more
-    -- input after it
-    IrregNum Grandfathered
-  | -- | no tag was found after an initial @i-@
-    EmptyIrregI
-  deriving (Eq, Ord, Show)
-
-instance NFData SyntaxError where
-  rnf (UnparsableSubtag x y z w) = rnf x `seq` rnf y `seq` rnf z `seq` rnf w
-  rnf (BadSubtag x y z w) = rnf x `seq` rnf y `seq` rnf z `seq` rnf w
-  rnf (TrailingTerminator x) = rnf x
-  rnf EmptyInput = ()
-  rnf (EmptySubtag x y z) = rnf x `seq` rnf y `seq` rnf z
-  rnf (EmptySingleton x y z) = rnf x `seq` rnf y `seq` rnf z
-  rnf EmptyIrregI = ()
-  rnf (IrregNum x) = rnf x
-
--- | A position in the input 'Text' stream
-type Pos = Int
--}
 
 -- | The possible syntactic categories that a 'Subtag' within a
 -- 'BCP47' tag may fall under.
@@ -740,7 +649,6 @@ data SubtagCategory
 instance NFData SubtagCategory where
   rnf = rwhnf
 
-{-
 -- | A description of what was just parsed for each 'AtComponent'
 --
 -- >>> atComponentDescription AtPrimaryShort
@@ -757,37 +665,22 @@ atComponentDescription AtPrimaryLong = "long primary language subtag"
 atComponentDescription AtScript = "script subtag"
 atComponentDescription AtRegion = "region subtag"
 atComponentDescription AtVariant = "variant subtag"
+atComponentDescription AtStartExtension = "extension singleton subtag"
 atComponentDescription AtExtension = "extension subtag"
+atComponentDescription AtStartPrivateUse = "start of private use section"
 atComponentDescription AtPrivateUse = "private use subtag"
-atComponentDescription AtIrregI = "grandfathered \"i\" subtag"
--}
+atComponentDescription AtStartI = "initial \"i\" subtag"
+atComponentDescription AtIrregGrandfathered = "end of irregular grandfathered tag"
 
--- TODO: document
-atComponentDescription' :: AtComponent -> Text
-atComponentDescription' AtBeginning = "beginning of the tag"
-atComponentDescription' AtPrimaryShort = "short primary language subtag"
-atComponentDescription' AtExtlang1 = "first extended language subtag"
-atComponentDescription' AtExtlang2 = "second extended language subtag"
-atComponentDescription' AtExtlang3 = "third extended language subtag"
-atComponentDescription' AtPrimaryLong = "long primary language subtag"
-atComponentDescription' AtScript = "script subtag"
-atComponentDescription' AtRegion = "region subtag"
-atComponentDescription' AtVariant = "variant subtag"
-atComponentDescription' AtStartExtension = "extension singleton subtag"
-atComponentDescription' AtExtension = "extension subtag"
-atComponentDescription' AtStartPrivateUse = "start of private use section"
-atComponentDescription' AtPrivateUse = "private use subtag"
-atComponentDescription' AtStartI = "initial \"i\" subtag"
-atComponentDescription' AtIrregGrandfathered = "end of irregular grandfathered tag"
-
-{-
--- | The categories of subtag that are expected at any position within
--- a tag, for use with 'BadSubtag' errors
+-- | The categories of input that are expected at any position within a tag, for
+-- use with 'ImproperSubtag' errors
 --
 -- >>> expectedCategories AtPrimaryShort
 -- ExtendedLanguage :| [Script, Region, Variant, Singleton]
 -- >>> expectedCategories AtPrivateUse
 -- PrivateUseSubtag :| []
+-- >>> expectedCategories AtIrregGrandfathered
+-- EndOfTag :| []
 expectedCategories :: AtComponent -> NonEmpty SubtagCategory
 expectedCategories AtBeginning =
   PrimaryLanguage :| [GrandfatheredIStart, PrivateUseSingleton]
@@ -807,40 +700,14 @@ expectedCategories AtRegion =
   Variant :| [Singleton]
 expectedCategories AtVariant =
   Variant :| [Singleton]
+expectedCategories AtStartExtension =
+  ExtensionSubtag :| []
 expectedCategories AtExtension =
   ExtensionSubtag :| [Singleton]
+expectedCategories AtStartPrivateUse = PrivateUseSubtag :| []
 expectedCategories AtPrivateUse = PrivateUseSubtag :| []
-expectedCategories AtIrregI = GrandfatheredIFollower :| []
--}
-
--- TODO: document
-expectedCategories' :: AtComponent -> NonEmpty SubtagCategory
-expectedCategories' AtBeginning =
-  PrimaryLanguage :| [GrandfatheredIStart, PrivateUseSingleton]
-expectedCategories' AtPrimaryShort =
-  ExtendedLanguage :| [Script, Region, Variant, Singleton]
-expectedCategories' AtExtlang1 =
-  ExtendedLanguage :| [Script, Region, Variant, Singleton]
-expectedCategories' AtExtlang2 =
-  ExtendedLanguage :| [Script, Region, Variant, Singleton]
-expectedCategories' AtExtlang3 =
-  Script :| [Region, Variant, Singleton]
-expectedCategories' AtPrimaryLong =
-  Script :| [Region, Variant, Singleton]
-expectedCategories' AtScript =
-  Region :| [Variant, Singleton]
-expectedCategories' AtRegion =
-  Variant :| [Singleton]
-expectedCategories' AtVariant =
-  Variant :| [Singleton]
-expectedCategories' AtStartExtension =
-  ExtensionSubtag :| []
-expectedCategories' AtExtension =
-  ExtensionSubtag :| [Singleton]
-expectedCategories' AtStartPrivateUse = PrivateUseSubtag :| []
-expectedCategories' AtPrivateUse = PrivateUseSubtag :| []
-expectedCategories' AtStartI = GrandfatheredIFollower :| []
-expectedCategories' AtIrregGrandfathered = EndOfTag :| []
+expectedCategories AtStartI = GrandfatheredIFollower :| []
+expectedCategories AtIrregGrandfathered = EndOfTag :| []
 
 -- | The names of each 'SubtagCategory', for use as an expectation.
 --

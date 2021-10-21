@@ -423,25 +423,25 @@ syntaxErr inp (Syn.ParseErrorPop (Syn.PopErrorSubtag off _ _ err)) =
         badExample = T.take 8 $ T.drop off inp
 syntaxErr _ (Syn.ParseErrorPop (Syn.PopErrorStep _ _ loc err)) =
   case err of
-    Syn.ErrEmptyExtensionSection ec _ ->
+    Syn.EmptyExtensionSection ec _ ->
       "the extension section after the subtag \""
         <> T.singleton (Syn.extensionCharToChar ec)
         <> "\" must be non-empty"
-    Syn.ErrEmptyPrivateUse ->
+    Syn.EmptyPrivateUse ->
       "the private use section after the subtag \"x\" must be non-empty"
-    Syn.ErrImproperSubtag st ->
-      "after " <> Syn.atComponentDescription' loc
+    Syn.ImproperSubtag st ->
+      "after " <> Syn.atComponentDescription loc
         <> ", expected one of: "
         <> T.intercalate
           ", "
-          (NE.toList $ Syn.subtagCategoryName <$> Syn.expectedCategories' loc)
+          (NE.toList $ Syn.subtagCategoryName <$> Syn.expectedCategories loc)
         <> "; got \""
         <> Sub.renderSubtagLower st
         <> "\"."
-    Syn.ErrEmptyStartI ->
+    Syn.EmptyStartI ->
       "the irregular initial subtag \"i\" must be followed by one of: "
         <> Syn.subtagCategorySyntax Syn.GrandfatheredIFollower
-    Syn.ErrSubtagAfterIrreg _ g ->
+    Syn.SubtagAfterIrreg _ g ->
       "the irregular grandfathered tag " <> Syn.renderBCP47 (Syn.GrandfatheredTag g)
         <> " cannot be followed by further subtags"
 syntaxErr inp (Syn.ParseErrorInvalidChar off _ c) =

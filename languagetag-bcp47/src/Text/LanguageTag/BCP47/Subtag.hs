@@ -14,11 +14,11 @@ module Text.LanguageTag.BCP47.Subtag
     Subtag,
 
     -- ** Parsing and construction
-    popSubtagText,
     parseSubtagText,
-    singleton,
-    popSubtagWith,
     parseSubtagWith,
+    singleton,
+    popSubtagText,
+    popSubtagWith,
 
     -- ** Rendering and conversion
     renderSubtagLower,
@@ -111,6 +111,7 @@ data PresentCharacters
   | DigitsAndLetters
   deriving (Eq, Ord, Show)
 
+-- | Returns the category of characters present in a 'Subtag'
 containsCharacters :: Subtag -> PresentCharacters
 containsCharacters st
   | isDigit (subtagHead st) = loopDig 1
@@ -151,8 +152,6 @@ containsOnlyDigits = (== OnlyDigits) . containsCharacters
 -- | 'subtagHeadIsDigit' is 'True' exactly when the head of the given 'Subtag'
 -- is a digit (ASCII numeral). (Yes, this is unusually specialized, but it is
 -- needed elsewhere).
-
--- TODO: needs fixing?
 subtagHeadIsDigit :: Subtag -> Bool
 subtagHeadIsDigit (Subtag n) = (n Bit..&. sel) <= selectedNumber9
   where
@@ -238,7 +237,6 @@ data ParseError c
   | ParseInvalidChar (Maybe Subtag) Int c
   deriving (Eq, Ord, Show)
 
--- TODO: this might want to go into Internal?
 -- TODO: the direct definition would be more efficient
 
 -- | @'parseSubtagWith' uncons toChar s@ parses a 'Subtag' from @s@, returning
