@@ -125,8 +125,6 @@ anInvalidRegistryEntry (ty, entry) = case ty of
 
 -- TODO: unit testing of validation (good and bad)
 
--- TODO: really ought to test that we can round-trip the registry itself
-
 -- TODO: add to me - should also indicate exactly which example fails
 -- in the test instead of using shouldNotFind.
 renderingExamples :: [(BCP47, Text)]
@@ -156,6 +154,14 @@ renderingExamples =
 
 spec :: Spec
 spec = do
+  describe "valid language subtags" $
+    it "are at most three characters long" $ do
+      -- if this one fails then we'll need to change the representation of the
+      -- Normal tag type (and potentially the validated language type) to rule
+      -- out the possibility of representing a <longlang>-<extlang> tag.
+      -- genValidNormal would also need to be changed to cope.
+      let badlang l = T.length (renderLanguage l) > 3
+      badlang `shouldNotFind` [minBound .. maxBound]
   describe "binSearchIndexOn" $ do
     -- this one only tests vectors of strictly increasing elements,
     -- but that should be enough, given the other match finding test
@@ -204,11 +210,6 @@ spec = do
       reg <- T.readFile "../languagetag-gen/registry/bcp47"
       let entries = getRegistryEntries reg
       anInvalidRegistryEntry `shouldNotMatch` entries
-
-  --    it "round-trips on current registry" $ do
-  --      reg <- T.readFile "../languagetag-gen/registry/bcp47"
-  --      traceShowM $ T.take 15 reg
-  --      let entries = getRegistryEntries reg
   describe "redundantTrie" $ do
     let errSyn = fromRight (error "ill-formed redundant trie tag") . Syn.parseBCP47FromSubtags
     let errVal = fromRight (error "invalid redundant trie tag") . validateBCP47

@@ -102,6 +102,10 @@ instance NFData BCP47 where
 -- grandfathered tag. Note that validating the subtags in an extension
 -- section of a tag is not required by the standard, and we do not
 -- attempt to do so.
+
+-- N.B. errata 5457 clarifies that section 2.2.2., item 4 (regarding the
+-- invalidity of tags with more than one extlang) is in fact a validity
+-- requirement that should have been listed in section 2.2.9.
 data Normal = Normal
   { language :: Language,
     extlang :: Maybe Extlang,

@@ -95,12 +95,12 @@ spec = do
       forAllShrink genSubtagText shrinkSubtagText $ \t ->
         fixBad (popSubtagText t) === Nothing
     prop "pops initial well-formed subtags correctly" $ do
-      forAllShrink genPopSubtagText' shrinkPopSubtagText $ \t ->
+      forAllShrink genPopSubtagText shrinkPopSubtagText $ \t ->
         fmap snd (popSubtagText t) === Right (T.dropWhile isSubtagChar t)
     prop "is case-insensitive on initial well-formed subtags" $ do
       let fixPop (Right (s, t)) = Right (s, T.toLower t)
           fixPop (Left e) = Left e
-      forAllShrink genPopSubtagText' shrinkPopSubtagText $ \t ->
+      forAllShrink genPopSubtagText shrinkPopSubtagText $ \t ->
         fixPop (popSubtagText t) === popSubtagText (T.toLower t)
     prop "is case-insensitive on any candidate subtag" $ do
       let fixUp (Left e) = Left e
@@ -108,7 +108,7 @@ spec = do
       forAllShrink genSubtagishText shrinkText $ \t ->
         fixUp (popSubtagText t) === popSubtagText (mapDownCase t)
     prop "generates subtags acceptable to wrapSubtag" $
-      forAllShrink genPopSubtagText' shrinkPopSubtagText $ \t ->
+      forAllShrink genPopSubtagText shrinkPopSubtagText $ \t ->
         let mst = collapseLeft $ fst <$> popSubtagText t
             wrapst = mst >>= (wrapSubtag . unwrapSubtag)
          in mst === wrapst
