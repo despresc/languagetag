@@ -10,21 +10,21 @@ maintainer:    christian.j.j.despres@gmail.com
 copyright:     Copyright 2021 Christian Despres
 category:      Text
 description:
-  This library provides tools for parsing and analyzing [BCP47
-  language tags](https://tools.ietf.org/html/bcp47) and their
-  components, as of the current 2009 version of that standard. The
-  registered tag and subtag types and other relevant registry
-  functions are statically generated using data from the IANA Language
-  Subtag Registry, available from
-  <https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry>. See
-  the Registry submodule for the exact registry version this library
-  uses.
+  This library provides tools for parsing and analyzing [BCP47 language
+  tags](https://tools.ietf.org/html/bcp47) and their components, as of the
+  current 2009 version of that standard. The registered tag and subtag types and
+  other relevant registry functions are statically generated using data from the
+  IANA Language Subtag Registry, available from
+  <https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry>.
+  See the Registry submodule or the source file @data\/registry@ for the exact
+  registry version this library uses.
 tested-with:
   GHC ==8.6.5 || ==8.8.4 || ==8.10.4 || ==9.0.1
 
 extra-source-files:
   CHANGELOG.md
   README.md
+  data/registry
 
 library
   hs-source-dirs: src

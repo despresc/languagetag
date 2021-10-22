@@ -54,17 +54,17 @@ parseRegistryThrow inp = do
 
 -- | Read the BCP47 registry in the package in the given directory
 readLocalRegistry :: FilePath -> IO ([(LineNum, Text)], RawRegistry)
-readLocalRegistry pref = T.readFile (pref <> "/registry/bcp47") >>= parseRegistryThrow
+readLocalRegistry reg = T.readFile reg >>= parseRegistryThrow
 
 -- | Read the BCP47 registry, then write the internal modules
 defaultMain :: IO ()
 defaultMain = do
-  b <- doesDirectoryExist "./languagetag-gen"
-  let prefgen = if b then "./languagetag-gen" else "../languagetag-gen"
-  let preflang = if b then "./languagetag-bcp47" else "../languagetag-bcp47"
-  (u, r) <- readLocalRegistry prefgen
+  b <- doesDirectoryExist "./languagetag-bcp47"
+  let pref = if b then "./languagetag-bcp47" else "../languagetag-bcp47"
+  let regpath = pref <> "/data/registry"
+  (u, r) <- readLocalRegistry regpath
   unless (null u) $ do
     putStrLn "Unrecognized BCP47 registry tag fields:"
     print u
   putStrLn "writing the internal modules"
-  renderSplitRegistry preflang $ splitRegistry r
+  renderSplitRegistry pref $ splitRegistry r

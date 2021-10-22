@@ -65,7 +65,7 @@ import qualified Text.LanguageTag.Internal.BCP47.Syntax as SynI
 -- | The text of the local registry, included so that tests don't get confused
 -- when run in CI
 registryText :: Text
-registryText = T.decodeUtf8 $ $(embedFile "../languagetag-gen/registry/bcp47")
+registryText = T.decodeUtf8 $ $(embedFile "data/registry")
 
 ----------------------------------------------------------------
 -- Registry parsing

@@ -101,7 +101,7 @@ spec = do
     it "seems to round trip with rendering correctly" $ do
       -- Test that naive rendering of the parsed raw registry is equal
       -- to the original registry up to some necessary stripping.
-      t <- T.readFile "./registry/bcp47"
+      t <- T.readFile "../languagetag-bcp47/data/registry"
       let trerend = rerenderRegistryFile t
       let trend = fmap (renderRegistry . snd) . parseRegistry <$> parseJarFile t
       let trend' = case trend of
