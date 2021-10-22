@@ -1,16 +1,18 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Text.LanguageTag.BCP47.RegistrySpec (spec) where
 
 import Data.Either (fromRight)
+import Data.FileEmbed (embedFile)
 import Data.Foldable (toList)
 import qualified Data.List as List
 import qualified Data.List.NonEmpty as NE
 import Data.Maybe (mapMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
-import qualified Data.Text.IO as T
+import qualified Data.Text.Encoding as T
 import qualified Data.Vector as V
 import Test.Common
 import Test.Hspec
@@ -55,6 +57,15 @@ import Text.LanguageTag.BCP47.Validation
   )
 import Text.LanguageTag.Internal.BCP47.Registry.Types (unsafeBinSearchIndexOn)
 import qualified Text.LanguageTag.Internal.BCP47.Syntax as SynI
+
+----------------------------------------------------------------
+-- The raw registry itself
+----------------------------------------------------------------
+
+-- | The text of the local registry, included so that tests don't get confused
+-- when run in CI
+registryText :: Text
+registryText = T.decodeUtf8 $ $(embedFile "../languagetag-gen/registry/bcp47")
 
 ----------------------------------------------------------------
 -- Registry parsing
@@ -207,8 +218,7 @@ spec = do
       let badPair (x, y) = renderBCP47 x /= y
       badPair `shouldNotFind` renderingExamples
     it "round-trips on the current registry" $ do
-      reg <- T.readFile "../languagetag-gen/registry/bcp47"
-      let entries = getRegistryEntries reg
+      let entries = getRegistryEntries registryText
       anInvalidRegistryEntry `shouldNotMatch` entries
   describe "redundantTrie" $ do
     let errSyn = fromRight (error "ill-formed redundant trie tag") . Syn.parseBCP47FromSubtags
