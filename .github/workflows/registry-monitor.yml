@@ -20,7 +20,7 @@ jobs:
           curl -sL https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry > net-registry
       - name: compare registry hashes
         run: |
-          localsha=($(sha256sum source/languagetag-gen/registry/bcp47))
+          localsha=($(sha256sum source/languagetag-bcp47/data/registry))
           remotesha=($(sha256sum net-registry))
           if [[ $localsha == $remotesha ]]; then
             exit 0
