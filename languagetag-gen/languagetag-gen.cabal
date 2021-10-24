@@ -36,11 +36,11 @@ library
     time,
     directory >= 1.3.3.0 && < 1.4,
   exposed-modules:
-    Text.LanguageTag.Gen
-    Text.LanguageTag.Gen.BCP47.Common
-    Text.LanguageTag.Gen.BCP47.Parse
-    Text.LanguageTag.Gen.BCP47.Render
-    Text.LanguageTag.Gen.Jar
+    LanguageTag.Gen
+    LanguageTag.Gen.BCP47.Common
+    LanguageTag.Gen.BCP47.Parse
+    LanguageTag.Gen.BCP47.Render
+    LanguageTag.Gen.Jar
 
 executable languagetag-gen
   hs-source-dirs: app
@@ -66,4 +66,4 @@ test-suite test
     hspec,
   ghc-options: -Wall
   other-modules:
-    Text.LanguageTag.Gen.BCP47.ParseSpec
+    LanguageTag.Gen.BCP47.ParseSpec

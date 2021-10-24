@@ -1,4 +1,4 @@
-import Text.LanguageTag.Gen
+import LanguageTag.Gen
 
 main :: IO ()
 main = defaultMain

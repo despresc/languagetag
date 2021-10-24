@@ -9,19 +9,19 @@ module Main where
 
 import Test.Hspec
 import Test.Hspec.QuickCheck (modifyMaxSuccess)
-import qualified Text.LanguageTag.BCP47.CanonicalizationSpec as CanonicalizationSpec
-import qualified Text.LanguageTag.BCP47.QuasiSpec as QuasiSpec
-import qualified Text.LanguageTag.BCP47.Registry.ExtlangSpec as ExtlangSpec
-import qualified Text.LanguageTag.BCP47.Registry.GrandfatheredSpec as GrandfatheredSpec
-import qualified Text.LanguageTag.BCP47.Registry.LanguageSpec as LanguageSpec
-import qualified Text.LanguageTag.BCP47.Registry.RedundantSpec as RedundantSpec
-import qualified Text.LanguageTag.BCP47.Registry.RegionSpec as RegionSpec
-import qualified Text.LanguageTag.BCP47.Registry.ScriptSpec as ScriptSpec
-import qualified Text.LanguageTag.BCP47.Registry.VariantSpec as VariantSpec
-import qualified Text.LanguageTag.BCP47.RegistrySpec as RegistrySpec
-import qualified Text.LanguageTag.BCP47.SubtagSpec as SubtagSpec
-import qualified Text.LanguageTag.BCP47.SyntaxSpec as SyntaxSpec
-import qualified Text.LanguageTag.BCP47.TrieSpec as TrieSpec
+import qualified LanguageTag.BCP47.CanonicalizationSpec as CanonicalizationSpec
+import qualified LanguageTag.BCP47.QuasiSpec as QuasiSpec
+import qualified LanguageTag.BCP47.Registry.ExtlangSpec as ExtlangSpec
+import qualified LanguageTag.BCP47.Registry.GrandfatheredSpec as GrandfatheredSpec
+import qualified LanguageTag.BCP47.Registry.LanguageSpec as LanguageSpec
+import qualified LanguageTag.BCP47.Registry.RedundantSpec as RedundantSpec
+import qualified LanguageTag.BCP47.Registry.RegionSpec as RegionSpec
+import qualified LanguageTag.BCP47.Registry.ScriptSpec as ScriptSpec
+import qualified LanguageTag.BCP47.Registry.VariantSpec as VariantSpec
+import qualified LanguageTag.BCP47.RegistrySpec as RegistrySpec
+import qualified LanguageTag.BCP47.SubtagSpec as SubtagSpec
+import qualified LanguageTag.BCP47.SyntaxSpec as SyntaxSpec
+import qualified LanguageTag.BCP47.TrieSpec as TrieSpec
 
 {-
 General spec convention: if one of the values fed to (===) is more

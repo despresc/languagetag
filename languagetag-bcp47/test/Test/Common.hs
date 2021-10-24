@@ -39,7 +39,7 @@ import Test.QuickCheck
     suchThatMap,
     vectorOf,
   )
-import Text.LanguageTag.BCP47.Registry
+import LanguageTag.BCP47.Registry
   ( BCP47 (..),
     Deprecation (..),
     Extlang,
@@ -51,7 +51,7 @@ import Text.LanguageTag.BCP47.Registry
     Variant,
     toExtensionSubtag,
   )
-import Text.LanguageTag.BCP47.Subtag
+import LanguageTag.BCP47.Subtag
   ( MaybeSubtag,
     Subtag,
     SubtagChar,
@@ -64,14 +64,14 @@ import Text.LanguageTag.BCP47.Subtag
     renderSubtagLower,
     unpackCharLower,
   )
-import Text.LanguageTag.BCP47.Subtag.Trie (Trie)
-import qualified Text.LanguageTag.BCP47.Subtag.Trie as Trie
-import qualified Text.LanguageTag.BCP47.Syntax as Syn
-import Text.LanguageTag.Internal.BCP47.Registry.Types
+import LanguageTag.BCP47.Subtag.Trie (Trie)
+import qualified LanguageTag.BCP47.Subtag.Trie as Trie
+import qualified LanguageTag.BCP47.Syntax as Syn
+import LanguageTag.Internal.BCP47.Registry.Types
   ( ExtensionSubtag (..),
   )
-import qualified Text.LanguageTag.Internal.BCP47.Subtag.NonEmptyTrie as NET
-import qualified Text.LanguageTag.Internal.BCP47.Syntax as Syn
+import qualified LanguageTag.Internal.BCP47.Subtag.NonEmptyTrie as NET
+import qualified LanguageTag.Internal.BCP47.Syntax as Syn
 
 -- TODO: add a qualified export list to this module
 
