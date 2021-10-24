@@ -6,11 +6,11 @@ version. The code related to the [IANA subtag
 registry](https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry)
 is generated automatically from a local copy in `data/registry`. The date of the
 repository that is used can be found at the top of that file, or in the
-documentation for `Text.LanguageTag.BCP47.Registry.bcp47RegistryDate`.
+documentation for `LanguageTag.BCP47.Registry.bcp47RegistryDate`.
 
 ## The structure of the package
 
-The modules are organized under the `Text.LanguageTag.BCP47` namespace. The main
+The modules are organized under the `LanguageTag.BCP47` namespace. The main
 ones are:
 
 - `Subtag`: defines a compact representation of a BCP47 subtag. In a full tag,
