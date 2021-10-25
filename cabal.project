@@ -1,2 +1,3 @@
 packages: ./languagetag-bcp47
+          ./languagetag-bcp47-subtag
           ./languagetag-gen

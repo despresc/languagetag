@@ -31,14 +31,15 @@ library
   default-language: Haskell2010
   build-depends:
     base >= 4.12 && < 4.16,
-    text >= 1.2.3.0 && < 1.3,
-    containers >= 0.6.0.1 && < 0.7,
     bytestring >= 0.10.8.0 && < 0.12,
-    hashable >= 1.2.7.0 && < 1.4,
+    containers >= 0.6.0.1 && < 0.7,
     deepseq >= 1.4.4.0 && < 1.5,
+    hashable >= 1.2.7.0 && < 1.4,
+    template-haskell >= 2.14.0.0 && < 2.18,
+    text >= 1.2.3.0 && < 1.3,
     time >= 1.6 && < 1.12,
     vector >= 0.12.0.1 && < 0.13,
-    template-haskell >= 2.14.0.0 && < 2.18
+    languagetag-bcp47-subtag >= 0.1 && < 0.2
   ghc-options: -Wall
   exposed-modules:
     LanguageTag.BCP47.Canonicalization
@@ -51,9 +52,6 @@ library
     LanguageTag.BCP47.Registry.Region
     LanguageTag.BCP47.Registry.Script
     LanguageTag.BCP47.Registry.Variant
-    LanguageTag.BCP47.Subtag
-    LanguageTag.BCP47.Subtag.NonEmptyTrie
-    LanguageTag.BCP47.Subtag.Trie
     LanguageTag.BCP47.Syntax
     LanguageTag.BCP47.Syntax.Trie
     LanguageTag.BCP47.Validation
@@ -66,9 +64,6 @@ library
     LanguageTag.Internal.BCP47.Registry.ScriptRecords
     LanguageTag.Internal.BCP47.Registry.Types
     LanguageTag.Internal.BCP47.Registry.VariantRecords
-    LanguageTag.Internal.BCP47.Subtag
-    LanguageTag.Internal.BCP47.Subtag.NonEmptyTrie
-    LanguageTag.Internal.BCP47.Subtag.Trie
     LanguageTag.Internal.BCP47.Syntax
   other-modules:
     LanguageTag.Internal.BCP47.Registry.Date
@@ -88,16 +83,17 @@ test-suite test
   hs-source-dirs:
     test
   build-depends:
-    languagetag-bcp47,
+    QuickCheck,
     base,
-    text,
     containers,
     deepseq,
-    vector,
-    unordered-containers,
-    hspec,
-    QuickCheck,
     file-embed,
+    hspec,
+    languagetag-bcp47,
+    languagetag-bcp47-subtag,
+    text,
+    unordered-containers,
+    vector,
   ghc-options: -Wall
   other-modules:
     Test.Common
