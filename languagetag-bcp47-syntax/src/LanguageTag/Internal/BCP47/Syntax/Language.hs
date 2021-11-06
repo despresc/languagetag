@@ -16,6 +16,7 @@
 module LanguageTag.Internal.BCP47.Syntax.Language
   ( ShortLang (..),
     LongLang (..),
+    Language (..),
     Extlang (..),
     extlangToShortLang,
     LangSec (..),
@@ -29,8 +30,8 @@ import LanguageTag.BCP47.Subtag
     Subtag,
     ToSubtags (..),
     ToSubtagsNE (..),
-    WrappedToSubtagsNE (..),
     WrappedIsSubtag (..),
+    WrappedToSubtagsNE (..),
     containsDigit,
     containsOnlyLetters,
     subtagLength,

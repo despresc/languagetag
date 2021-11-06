@@ -41,13 +41,18 @@ library
   exposed-modules:
     LanguageTag.BCP47.LegacyTag
     LanguageTag.BCP47.Syntax
+    LanguageTag.BCP47.Syntax.Language
+    LanguageTag.BCP47.Syntax.Region
+    LanguageTag.BCP47.Syntax.Script
+    LanguageTag.BCP47.Syntax.SingletonSection
     LanguageTag.BCP47.Syntax.Trie
+    LanguageTag.BCP47.Syntax.Variant
     LanguageTag.Internal.BCP47.Syntax
+    LanguageTag.Internal.BCP47.Syntax.Language
+    LanguageTag.Internal.BCP47.Syntax.Region
+    LanguageTag.Internal.BCP47.Syntax.Script
+    LanguageTag.Internal.BCP47.Syntax.SingletonSection
+    LanguageTag.Internal.BCP47.Syntax.Variant
   other-modules:
     LanguageTag.Internal.BCP47.LegacyTag.Grandfathered
     LanguageTag.Internal.BCP47.LegacyTag.Redundant
-    LanguageTag.Internal.BCP47.Syntax.Language
-    LanguageTag.Internal.BCP47.Syntax.Script
-    LanguageTag.Internal.BCP47.Syntax.Region
-    LanguageTag.Internal.BCP47.Syntax.Variant
-    LanguageTag.Internal.BCP47.Syntax.SingletonSection
