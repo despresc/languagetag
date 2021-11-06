@@ -33,7 +33,7 @@ module LanguageTag.BCP47.Syntax
     popBCP47DetailWith,
     renderBCP47,
     renderBCP47Builder,
-    toSubtags,
+    toSubtagsNE,
 
     -- * Constructing tags directly
     -- $valueconstruction
@@ -60,8 +60,6 @@ module LanguageTag.BCP47.Syntax
     -- * Tag character predicates
     isTagChar,
     isTagByte,
-
-    -- * Temp partial exports
   )
 where
 
@@ -71,11 +69,10 @@ import Control.Monad (guard)
 import Data.Functor (($>))
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
-import Data.Maybe (mapMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Word (Word8)
-import LanguageTag.BCP47.Registry.Grandfathered
+import LanguageTag.BCP47.LegacyTag (Grandfathered (..), grandfatheredSyntax)
 import LanguageTag.BCP47.Subtag hiding (ParseError (..), PopError (..))
 import qualified LanguageTag.BCP47.Subtag as Sub
 import LanguageTag.Internal.BCP47.Subtag (Subtag (..))
@@ -584,24 +581,6 @@ parseBCP47With unc toChar popSep t = case popBCP47DetailWith popChar popSep t of
 --
 -- The 'LanguageTag.BCP47.Quasi.syntag' quasi-quoter is also
 -- available to construct compile-time-checked tags.
-
-----------------------------------------------------------------
--- Rendering to subtags
-----------------------------------------------------------------
-
--- | Convert a 'BCP47' tag into its component subtags
-toSubtags :: BCP47 -> NonEmpty Subtag
-toSubtags (NormalTag (Normal p e1 e2 e3 s r vs es ps)) =
-  p :| (mapMaybe go [e1, e2, e3, s, r] <> vs <> es' <> ps')
-  where
-    go = maybeSubtag Nothing Just
-    es' = flip concatMap es $ \(Extension c ts) ->
-      extensionCharToSubtag c : NE.toList ts
-    ps'
-      | null ps = []
-      | otherwise = subtagX : ps
-toSubtags (PrivateUse x) = subtagX :| NE.toList x
-toSubtags (GrandfatheredTag g) = grandfatheredToSubtags g
 
 ----------------------------------------------------------------
 -- Tag constants

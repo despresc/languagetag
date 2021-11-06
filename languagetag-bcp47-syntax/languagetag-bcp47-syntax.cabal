@@ -1,0 +1,53 @@
+cabal-version: 2.4
+name:          languagetag-bcp47-syntax
+version:       0.1.0
+synopsis:      BCP47 language tag parsing and analysis
+bug-reports:   https://github.com/despresc/languagetag/issues
+license:       BSD-2-Clause
+license-file:  LICENSE
+author:        Christian Despres
+maintainer:    christian.j.j.despres@gmail.com
+copyright:     Copyright 2021 Christian Despres
+category:      Text
+description:
+  This library provides tools for parsing and analyzing [BCP47 language
+  tags](https://tools.ietf.org/html/bcp47) and their components, as of the
+  current 2009 version of that standard. Note that the tags supported by this
+  package are merely well-formed: they conform to the formal grammar of a BCP47
+  language tag but are not necessarily valid, so they may not, for instance, be
+  composed of subtags that are registered in the IANA language subtag registry.
+tested-with:
+  GHC ==8.6.5 || ==8.8.4 || ==8.10.4 || ==9.0.1
+
+extra-source-files:
+  CHANGELOG.md
+  README.md
+
+library
+  hs-source-dirs: src
+  default-language: Haskell2010
+  build-depends:
+    base >= 4.12 && < 4.16,
+    bytestring >= 0.10.8.0 && < 0.12,
+    containers >= 0.6.0.1 && < 0.7,
+    deepseq >= 1.4.4.0 && < 1.5,
+    hashable >= 1.2.7.0 && < 1.4,
+    template-haskell >= 2.14.0.0 && < 2.18,
+    text >= 1.2.3.0 && < 1.3,
+    time >= 1.6 && < 1.12,
+    vector >= 0.12.0.1 && < 0.13,
+    languagetag-bcp47-subtag >= 0.1 && < 0.2
+  ghc-options: -Wall
+  exposed-modules:
+    LanguageTag.BCP47.LegacyTag
+    LanguageTag.BCP47.Syntax
+    LanguageTag.BCP47.Syntax.Trie
+    LanguageTag.Internal.BCP47.Syntax
+  other-modules:
+    LanguageTag.Internal.BCP47.LegacyTag.Grandfathered
+    LanguageTag.Internal.BCP47.LegacyTag.Redundant
+    LanguageTag.Internal.BCP47.Syntax.Language
+    LanguageTag.Internal.BCP47.Syntax.Script
+    LanguageTag.Internal.BCP47.Syntax.Region
+    LanguageTag.Internal.BCP47.Syntax.Variant
+    LanguageTag.Internal.BCP47.Syntax.SingletonSection

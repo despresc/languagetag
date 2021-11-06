@@ -50,6 +50,13 @@ module LanguageTag.BCP47.Subtag
     isSubtagChar,
     isSubtagByte,
 
+    -- * Conversions to and from subtags
+    IsSubtag (..),
+    ToSubtagsNE (..),
+    ToSubtags (..),
+    WrappedIsSubtag (..),
+    WrappedToSubtagsNE (..),
+
     -- * Additional rendering functions
     renderSubtagUpper,
     renderSubtagTitle,
@@ -76,11 +83,13 @@ where
 import Control.DeepSeq (NFData (..))
 import qualified Data.Bits as Bit
 import Data.Char (ord)
+import Data.List.NonEmpty (NonEmpty (..))
+import qualified Data.List.NonEmpty as NE
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Builder as TB
-import Data.Word (Word64, Word8)
+import Data.Word (Word8)
 import LanguageTag.Internal.BCP47.Subtag
 
 -- From bytestring's Data.ByteString.Internal
@@ -165,17 +174,6 @@ indexSubtag :: Subtag -> Word8 -> Maybe SubtagChar
 indexSubtag t idx
   | subtagLength t >= idx = Nothing
   | otherwise = Just $ unsafeIndexSubtag t idx
-
--- | Write a character starting at the given bit position. That bit
--- and the following six bits must not be set, and the position must
--- be of the form @57 - k * 7@ for @k@ between 0 and 7.
-unsafeSetChar :: Word8 -> SubtagChar -> Word64 -> Word64
-unsafeSetChar idx (SubtagChar c) n = n Bit..|. Bit.shiftL (fromIntegral c) (fromIntegral idx)
-
--- | Set the 'Subtag' length. There cannot be any other length
--- information recorded.
-unsafeSetLen :: Word8 -> Word64 -> Word64
-unsafeSetLen len w = w Bit..|. fromIntegral len
 
 -- | A possible syntax error that may be detected during parsing with
 -- 'popSubtagWith' and related functions
@@ -267,6 +265,60 @@ parseSubtagWith uncC toC = \s -> case popSubtagWith unc s of
 -- | Uses 'parseSubtagWith' to parse a 'Subtag' from a 'Text' stream
 parseSubtagText :: Text -> Either (ParseError Char) Subtag
 parseSubtagText = parseSubtagWith T.uncons packChar
+
+----------------------------------------------------------------
+-- Subtag conversions
+----------------------------------------------------------------
+
+-- | Types that can be converted to and from 'Subtag'. Instances are expected to
+-- satisfy @'fromSubtag' . 'toSubtag' = 'Just'@.
+class IsSubtag a where
+  toSubtag :: a -> Subtag
+  fromSubtag :: Subtag -> Maybe a
+
+instance IsSubtag Subtag where
+  toSubtag = id
+  {-# INLINE toSubtag #-}
+  fromSubtag = Just
+  {-# INLINE fromSubtag #-}
+
+-- | Types that can be converted to a non-empty list of subtags. Instances are
+-- expected to satisfy @toList . 'toSubtagsNE' = 'toSubtags'@
+class ToSubtags a => ToSubtagsNE a where
+  toSubtagsNE :: a -> NonEmpty Subtag
+
+instance ToSubtagsNE Subtag where
+  toSubtagsNE = (:| [])
+
+-- | A wrapper type for deriving 'ToSubtags' and 'ToSubtagsNE' instances via an
+-- 'IsSubtag' instance
+newtype WrappedIsSubtag a = WrappedIsSubtag {unWrappedIsSubtag :: a}
+
+instance IsSubtag a => ToSubtagsNE (WrappedIsSubtag a) where
+  toSubtagsNE = (:| []) . toSubtag . unWrappedIsSubtag
+
+instance IsSubtag a => ToSubtags (WrappedIsSubtag a) where
+  toSubtags = (: []) . toSubtag . unWrappedIsSubtag
+
+-- | Types that can be converted to a list of subtags
+class ToSubtags a where
+  toSubtags :: a -> [Subtag]
+
+instance ToSubtags Subtag where
+  toSubtags = (: [])
+
+instance ToSubtags MaybeSubtag where
+  toSubtags = maybeSubtag [] (: [])
+
+instance ToSubtags a => ToSubtags (Maybe a) where
+  toSubtags = maybe [] toSubtags
+
+-- | A wrapper type for deriving 'ToSubtags' instances via a 'ToSubtagsNE'
+-- instance
+newtype WrappedToSubtagsNE a = WrappedToSubtagsNE {unWrappedToSubtagsNE :: a}
+
+instance ToSubtagsNE a => ToSubtags (WrappedToSubtagsNE a) where
+  toSubtags = NE.toList . toSubtagsNE . unWrappedToSubtagsNE
 
 ----------------------------------------------------------------
 -- Subtag characters

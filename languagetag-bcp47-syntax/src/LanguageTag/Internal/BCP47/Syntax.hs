@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_HADDOCK not-home #-}
 
@@ -35,12 +36,14 @@ import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Hashable (Hashable (..), hashUsing)
 import qualified Data.List as List
 import Data.List.NonEmpty (NonEmpty (..))
+import qualified Data.List.NonEmpty as NE
+import Data.Maybe (mapMaybe)
 import Data.Text (Text)
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Builder as TB
 import Data.Word (Word8)
 import LanguageTag.BCP47.Subtag
-import LanguageTag.Internal.BCP47.Registry.Grandfathered
+import LanguageTag.Internal.BCP47.LegacyTag.Grandfathered
 import LanguageTag.Internal.BCP47.Subtag (Subtag (..), SubtagChar (..))
 
 -- | Render a possibly-absent region subtag in the middle of a tag,
@@ -83,7 +86,8 @@ data BCP47
   = NormalTag !Normal
   | GrandfatheredTag !Grandfathered
   | PrivateUse !(NonEmpty Subtag)
-  deriving (Eq, Ord)
+  deriving stock (Eq, Ord)
+  deriving (ToSubtags) via WrappedToSubtagsNE BCP47
 
 instance NFData BCP47 where
   rnf (NormalTag x) = rnf x
@@ -252,6 +256,19 @@ grandfatheredToSubtags ZhXiang =
   Subtag 17699146535566049282
     :| [Subtag 17412902894784479237]
 {-# INLINE grandfatheredToSubtags #-}
+
+instance ToSubtagsNE BCP47 where
+  toSubtagsNE (NormalTag (Normal p e1 e2 e3 s r vs es ps)) =
+    p :| (mapMaybe go [e1, e2, e3, s, r] <> vs <> es' <> ps')
+    where
+      go = maybeSubtag Nothing Just
+      es' = flip concatMap es $ \(Extension c ts) ->
+        extensionCharToSubtag c : NE.toList ts
+      ps'
+        | null ps = []
+        | otherwise = subtagX : ps
+  toSubtagsNE (PrivateUse x) = subtagX :| NE.toList x
+  toSubtagsNE (GrandfatheredTag g) = grandfatheredToSubtags g
 
 -- | Various well-formedness invariants:
 --

@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -44,6 +45,9 @@ module LanguageTag.Internal.BCP47.Subtag
     -- * Unsafe functions
     unsafeUnpackUpperLetter,
     unsafeIndexSubtag,
+    unsafeSubtagPackLen,
+    unsafeSetChar,
+    unsafeSetLen,
   )
 where
 
@@ -177,6 +181,26 @@ wrapSubtag n
            )
     otherBits = Bit.shiftL (Bit.shiftR n 4) (4 + fromIntegral len * 7)
 {-# INLINE wrapSubtag #-}
+
+-- | Write a character starting at the given bit position. That bit
+-- and the following six bits must not be set, and the position must
+-- be of the form @57 - k * 7@ for @k@ between 0 and 7.
+unsafeSetChar :: Word8 -> SubtagChar -> Word64 -> Word64
+unsafeSetChar idx (SubtagChar c) n = n Bit..|. Bit.shiftL (fromIntegral c) (fromIntegral idx)
+
+-- | Set the 'Subtag' length. There cannot be any other length
+-- information recorded.
+unsafeSetLen :: Word8 -> Word64 -> Word64
+unsafeSetLen len w = w Bit..|. fromIntegral len
+
+-- | Unsafely pack a list of subtag characters into a 'Subtag' given the length
+-- of that list. That the length is valid and corresponds to the list of
+-- characters is not checked.
+unsafeSubtagPackLen :: Word8 -> [SubtagChar] -> Subtag
+unsafeSubtagPackLen len = go 0 57
+  where
+    go !w !idx (x : xs) = go (unsafeSetChar idx x w) (idx - 7) xs
+    go !w _ [] = Subtag $ unsafeSetLen len w
 
 ----------------------------------------------------------------
 -- Maybe subtags

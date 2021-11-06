@@ -3,7 +3,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# OPTIONS_HADDOCK not-home #-}
 
-module LanguageTag.Internal.BCP47.Registry.Grandfathered where
+module LanguageTag.Internal.BCP47.LegacyTag.Grandfathered where
 
 import Prelude hiding (LT, GT)
 import Control.DeepSeq (NFData(..), rwhnf)

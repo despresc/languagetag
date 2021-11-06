@@ -38,9 +38,9 @@ import qualified Data.Set as S
 import Data.Text (Text)
 import Data.Vector (Vector)
 import qualified Data.Vector as V
+import LanguageTag.BCP47.LegacyTag (Grandfathered)
 import LanguageTag.BCP47.Subtag (Subtag, subtagLength)
 import LanguageTag.Internal.BCP47.Registry.Extlang
-import LanguageTag.Internal.BCP47.Registry.Grandfathered
 import LanguageTag.Internal.BCP47.Registry.Language
 import LanguageTag.Internal.BCP47.Registry.Region
 import LanguageTag.Internal.BCP47.Registry.Script

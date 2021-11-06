@@ -16,7 +16,7 @@ module LanguageTag.Internal.BCP47.Registry.GrandfatheredRecords
   (lookupGrandfatheredRecord, grandfatheredDetails) where
 
 import Prelude hiding (LT, GT)
-import LanguageTag.Internal.BCP47.Registry.Grandfathered
+import LanguageTag.BCP47.LegacyTag (Grandfathered)
 import LanguageTag.Internal.BCP47.Registry.Types
 import Data.List.NonEmpty (NonEmpty(..))
 import Data.Vector (Vector)

@@ -52,6 +52,7 @@ import qualified Data.List.NonEmpty as NE
 import Data.Maybe (isNothing, mapMaybe)
 import Data.Set (Set)
 import qualified Data.Set as S
+import LanguageTag.BCP47.LegacyTag (Grandfathered, Redundant)
 import LanguageTag.BCP47.Registry.Grandfathered (lookupGrandfatheredRecord)
 import LanguageTag.BCP47.Registry.Language (languageToSubtag, lookupLanguageRecord)
 import LanguageTag.BCP47.Registry.Redundant
@@ -66,9 +67,7 @@ import LanguageTag.Internal.BCP47.Registry.ExtlangRecords
   ( lookupExtlangRecord,
     validateExtlang,
   )
-import LanguageTag.Internal.BCP47.Registry.Grandfathered (Grandfathered)
 import LanguageTag.Internal.BCP47.Registry.Language (Language)
-import LanguageTag.Internal.BCP47.Registry.Redundant (Redundant)
 import LanguageTag.Internal.BCP47.Registry.Region (Region)
 import LanguageTag.Internal.BCP47.Registry.Script (Script)
 import LanguageTag.Internal.BCP47.Registry.Types
