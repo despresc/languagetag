@@ -257,8 +257,8 @@ grandfatheredToSubtags ZhXiang =
     :| [Subtag 17412902894784479237]
 {-# INLINE grandfatheredToSubtags #-}
 
-instance ToSubtagsNE BCP47 where
-  toSubtagsNE (NormalTag (Normal p e1 e2 e3 s r vs es ps)) =
+instance ToSubtagsNE Normal where
+  toSubtagsNE (Normal p e1 e2 e3 s r vs es ps) =
     p :| (mapMaybe go [e1, e2, e3, s, r] <> vs <> es' <> ps')
     where
       go = maybeSubtag Nothing Just
@@ -267,6 +267,9 @@ instance ToSubtagsNE BCP47 where
       ps'
         | null ps = []
         | otherwise = subtagX : ps
+
+instance ToSubtagsNE BCP47 where
+  toSubtagsNE (NormalTag n) = toSubtagsNE n
   toSubtagsNE (PrivateUse x) = subtagX :| NE.toList x
   toSubtagsNE (GrandfatheredTag g) = grandfatheredToSubtags g
 
@@ -300,7 +303,8 @@ data Normal = Normal
     extensions :: ![Extension],
     privateUse :: ![Subtag]
   }
-  deriving (Eq, Ord, Show)
+  deriving stock (Eq, Ord, Show)
+  deriving (ToSubtags) via WrappedToSubtagsNE Normal
 
 instance Hashable Normal where
   hashWithSalt s (Normal p e1 e2 e3 sc r v e pv) =

@@ -1,4 +1,5 @@
 packages: ./languagetag-bcp47
+          ./languagetag-bcp47-dynamic
           ./languagetag-bcp47-subtag
           ./languagetag-bcp47-syntax
           ./languagetag-gen
