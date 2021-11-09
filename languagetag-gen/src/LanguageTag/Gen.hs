@@ -14,20 +14,28 @@
 --  which periodically updates in-place.
 module LanguageTag.Gen where
 
-import Control.Monad (unless)
+-- TODO: qualify exports, get rid of the old functions
+
 import qualified Data.List as List
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
-import System.Directory (doesDirectoryExist)
+import qualified LanguageTag.BCP47.Dynamic.RecordJar as Jar
 import LanguageTag.Gen.BCP47.Parse
 import LanguageTag.Gen.BCP47.Render
 import LanguageTag.Gen.Jar
+import System.Directory (doesDirectoryExist)
 
 {-
 If we get more registries, then much of this module should be pushed
 down to a new Gen.BCP47.hs
 -}
+
+-- TODO: actually throw errors nicely
+parseRegistryThrowNew :: Text -> IO Jar.JarRegistry
+parseRegistryThrowNew inp = case Jar.parseJarRegistry inp of
+  Left _ -> fail "could not parse the registry"
+  Right a -> pure a
 
 -- | Parse the BCP47 registry. This does /not/ unpack ranges.
 parseRegistryThrow :: Text -> IO ([(LineNum, Text)], RawRegistry)
@@ -56,15 +64,20 @@ parseRegistryThrow inp = do
 readLocalRegistry :: FilePath -> IO ([(LineNum, Text)], RawRegistry)
 readLocalRegistry reg = T.readFile reg >>= parseRegistryThrow
 
+readLocalRegistryNew :: FilePath -> IO Jar.JarRegistry
+readLocalRegistryNew reg = T.readFile reg >>= parseRegistryThrowNew
+
 -- | Read the BCP47 registry, then write the internal modules
 defaultMain :: IO ()
 defaultMain = do
   b <- doesDirectoryExist "./languagetag-bcp47"
   let pref = if b then "./languagetag-bcp47" else "../languagetag-bcp47"
   let regpath = pref <> "/data/registry"
-  (u, r) <- readLocalRegistry regpath
-  unless (null u) $ do
-    putStrLn "Unrecognized BCP47 registry tag fields:"
-    print u
+  r <- readLocalRegistryNew regpath
+  -- unless (null u) $ do
+  --   putStrLn "Unrecognized BCP47 registry tag fields:"
+  --   print u
   putStrLn "writing the internal modules"
-  renderSplitRegistry pref $ splitRegistry r
+  case parseRegistryNew r of
+    Left _ -> error "could not parse the jar registry"
+    Right r' -> renderSplitRegistry pref r'

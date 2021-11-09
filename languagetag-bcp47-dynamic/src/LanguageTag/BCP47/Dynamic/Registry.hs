@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 -- |
@@ -92,7 +93,7 @@ data Deprecation a
     DeprecatedSimple Day
   | -- | deprecated with a preferred value
     DeprecatedPreferred Day a
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Functor)
 
 -- | A primary language subtag record. Note that the descriptions are
 -- not guaranteed by the registry to be in any particular language or

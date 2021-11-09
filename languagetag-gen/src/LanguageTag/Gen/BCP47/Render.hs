@@ -507,9 +507,7 @@ renderSplitRegistry pref sr = do
       ("Script.hs", rendscript),
       ("Region.hs", rendregion),
       ("Variant.hs", rendvariant),
-      ("Redundant.hs", rendredundant . redundantRecords),
       ("Date.hs", const regdatemodule),
-      ("Grandfathered.hs", rendgrandfathered . grandfatheredRecords),
       ("LanguageRecords.hs", rendreclang),
       ("ExtlangRecords.hs", rendrecextlang),
       ("ScriptRecords.hs", rendrecscript),
@@ -518,7 +516,14 @@ renderSplitRegistry pref sr = do
       ("GrandfatheredRecords.hs", rendrecgrandfathered),
       ("RedundantRecords.hs", rendrecredundant)
     ]
+  traverse_
+    (rendwrite legacyprefix)
+    [ ("Redundant.hs", rendredundant . redundantRecords),
+      ("Grandfathered.hs", rendgrandfathered . grandfatheredRecords)
+    ]
   where
+    -- temporarily needed since we now have legacy tags to render
+    legacyprefix = pref <> "../languagetag-bcp47-syntax/src/LanguageTag/Internal/BCP47/Syntax/"
     rendwrite p (x, y) = T.writeFile (p <> x) $ y sr
     intprefix = pref <> "/src/LanguageTag/Internal/BCP47/Registry/"
     regdatemodule =

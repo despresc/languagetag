@@ -26,6 +26,9 @@ module LanguageTag.Gen.BCP47.Parse
     RangeRecord (..),
     Err (..),
     FieldTagType (..),
+
+    -- * temporary compatibility exports
+    parseRegistryNew,
   )
 where
 
@@ -42,7 +45,16 @@ import Data.Maybe (mapMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Time.Calendar (Day (..))
+import qualified LanguageTag.BCP47.Dynamic.RecordJar as Jar
+import qualified LanguageTag.BCP47.Dynamic.Registry as Reg
+import qualified LanguageTag.BCP47.LegacyTag as Syn
 import LanguageTag.BCP47.Registry (Deprecation (..), Scope (..))
+import LanguageTag.BCP47.Subtag (IsSubtag (..), Subtag, renderSubtagLower)
+import qualified LanguageTag.BCP47.Syntax as Syn
+import qualified LanguageTag.BCP47.Syntax.Language as Syn
+import qualified LanguageTag.BCP47.Syntax.Region as Syn
+import qualified LanguageTag.BCP47.Syntax.Script as Syn
+import qualified LanguageTag.BCP47.Syntax.Variant as Syn
 import LanguageTag.Gen.BCP47.Common
 import LanguageTag.Gen.Jar
 import LanguageTag.Internal.BCP47.Registry.DataConShow
@@ -435,3 +447,148 @@ splitRegistry (RawRegistry regdate rs) =
     prdn (TagRecord tg Redundant descrs deprs) =
       Just (tg, RangeRecord (renderRangeCon tg) descrs deprs)
     prdn _ = Nothing
+
+----------------------------------------------------------------
+-- Compatibility functions for languagetag-bcp47-dynamic
+----------------------------------------------------------------
+-- (so we can use that package here without touching the rendering functions)
+
+-- obviously very unprincipled!
+parseRegistryNew :: Jar.JarRegistry -> Either Err Registry
+parseRegistryNew = either (Left . const ErrEmptyInput) (Right . fromNewReg) . Reg.parseRegistry
+
+onM :: Ord k2 => (k1 -> a -> (k2, b)) -> Map k1 a -> Map k2 b
+onM f = M.fromList . fmap (uncurry f) . M.toList
+
+conShow :: IsSubtag a => (Subtag -> String) -> a -> Text
+conShow f = T.pack . f . toSubtag
+
+fromDep' :: Reg.Deprecation a -> Deprecation a
+fromDep' (Reg.DeprecatedPreferred _ x) = DeprecatedPreferred x
+fromDep' (Reg.DeprecatedSimple _) = DeprecatedSimple
+fromDep' Reg.NotDeprecated = NotDeprecated
+
+fromDep :: IsSubtag a => Reg.Deprecation a -> Deprecation Text
+fromDep (Reg.DeprecatedPreferred _ x) = DeprecatedPreferred $ renderSubtagLower $ toSubtag x
+fromDep (Reg.DeprecatedSimple _) = DeprecatedSimple
+fromDep Reg.NotDeprecated = NotDeprecated
+
+fromScope :: Reg.Scope -> Scope
+fromScope Reg.Macrolanguage = Macrolanguage
+fromScope Reg.Collection = Collection
+fromScope Reg.Special = Special
+fromScope Reg.PrivateUseScope = PrivateUseScope
+
+fromNewReg :: Reg.Registry -> Registry
+fromNewReg newreg =
+  Registry
+    { date = Reg.registryDate newreg,
+      languageRecords = fromLangRecords $ Reg.registryLanguages newreg,
+      extlangRecords = fromExtlangRecords $ Reg.registryExtlangs newreg,
+      scriptRecords = fromScriptRecords $ Reg.registryScripts newreg,
+      regionRecords = fromRegionRecords $ Reg.registryRegions newreg,
+      variantRecords = fromVariantRecords $ Reg.registryVariants newreg,
+      grandfatheredRecords = fromGrandfatheredRecords $ Reg.registryGrandfatheredTags newreg,
+      redundantRecords = fromRedundantRecords $ Reg.registryRedundantTags newreg
+    }
+
+fromLangRecords :: Map Syn.Language Reg.LanguageRecord -> Map Text LanguageRecord
+fromLangRecords = onM go
+  where
+    go lang record = (conShow languageConShow lang, record')
+      where
+        record' =
+          LanguageRecord
+            { langTyCon = conShow languageConShow lang,
+              langDescription = Reg.languageDescription record,
+              langDeprecation =
+                fromDep $ Reg.languageDeprecation record,
+              langScriptSuppression =
+                conShow scriptConShow <$> Reg.languageScriptSuppression record,
+              langMacrolanguage = conShow languageConShow <$> Reg.languageMacrolanguage record,
+              langScope = fromScope <$> Reg.languageScope record
+            }
+
+fromExtlangRecords :: Map Syn.Extlang Reg.ExtlangRecord -> Map Text ExtlangRecord
+fromExtlangRecords = onM go
+  where
+    go extlang record = (conShow extlangConShow extlang, record')
+      where
+        record' =
+          ExtlangRecord
+            { extlangTyCon = conShow extlangConShow extlang,
+              extlangPreferredValue = conShow extlangConShow extlang,
+              extlangPrefix = conShow languageConShow $ Reg.extlangPrefix record,
+              extlangDescription = Reg.extlangDescription record,
+              extlangDeprecation = maybe False (const True) $ Reg.extlangDeprecation record,
+              extlangScriptSuppression =
+                conShow scriptConShow <$> Reg.extlangScriptSuppression record,
+              extlangMacrolanguage = conShow languageConShow <$> Reg.extlangMacrolanguage record,
+              extlangScope = fromScope <$> Reg.extlangScope record
+            }
+
+fromScriptRecords :: Map Syn.Script Reg.ScriptRecord -> Map Text ScriptRecord
+fromScriptRecords = onM go
+  where
+    go script record = (conShow scriptConShow script, record')
+      where
+        record' =
+          ScriptRecord
+            { scriptTyCon = conShow scriptConShow script,
+              scriptDescription = Reg.scriptDescription record,
+              scriptDeprecation =
+                fromDep $ Reg.scriptDeprecation record
+            }
+
+fromRegionRecords :: Map Syn.Region Reg.RegionRecord -> Map Text RegionRecord
+fromRegionRecords = onM go
+  where
+    go region record = (conShow regionConShow region, record')
+      where
+        record' =
+          RegionRecord
+            { regionTyCon = conShow regionConShow region,
+              regionDescription = Reg.regionDescription record,
+              regionDeprecation =
+                fromDep $ Reg.regionDeprecation record
+            }
+
+fromVariantRecords :: Map Syn.Variant Reg.VariantRecord -> Map Text VariantRecord
+fromVariantRecords = onM go
+  where
+    go variant record = (conShow variantConShow variant, record')
+      where
+        record' =
+          VariantRecord
+            { variantTyCon = conShow variantConShow variant,
+              variantDescription = Reg.variantDescription record,
+              variantDeprecation =
+                fromDep $ Reg.variantDeprecation record,
+              variantPrefixes = Syn.renderBCP47 <$> Reg.variantPrefixes record
+            }
+
+fromGrandfatheredRecords :: Map Syn.Grandfathered Reg.TagRecord -> Map Text RangeRecord
+fromGrandfatheredRecords = onM go
+  where
+    go grandfathered record = (Syn.renderGrandfathered grandfathered, record')
+      where
+        record' =
+          RangeRecord
+            { rangeTyCon = Syn.renderGrandfathered grandfathered,
+              rangeDescription = Reg.tagDescription record,
+              rangeDeprecation =
+                fromDep' $ Syn.renderBCP47 <$> Reg.tagDeprecation record
+            }
+
+fromRedundantRecords :: Map Syn.Redundant Reg.TagRecord -> Map Text RangeRecord
+fromRedundantRecords = onM go
+  where
+    go redundant record = (Syn.renderRedundant redundant, record')
+      where
+        record' =
+          RangeRecord
+            { rangeTyCon = Syn.renderRedundant redundant,
+              rangeDescription = Reg.tagDescription record,
+              rangeDeprecation =
+                fromDep' $ Syn.renderBCP47 <$> Reg.tagDeprecation record
+            }
