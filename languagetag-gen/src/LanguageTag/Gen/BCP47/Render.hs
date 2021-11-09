@@ -523,7 +523,7 @@ renderSplitRegistry pref sr = do
     ]
   where
     -- temporarily needed since we now have legacy tags to render
-    legacyprefix = pref <> "../languagetag-bcp47-syntax/src/LanguageTag/Internal/BCP47/Syntax/"
+    legacyprefix = pref <> "../languagetag-bcp47-syntax/src/LanguageTag/Internal/BCP47/LegacyTag/"
     rendwrite p (x, y) = T.writeFile (p <> x) $ y sr
     intprefix = pref <> "/src/LanguageTag/Internal/BCP47/Registry/"
     regdatemodule =
