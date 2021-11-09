@@ -8,7 +8,7 @@
 module Main where
 
 import Test.Hspec
-import qualified Text.LanguageTag.Gen.BCP47.ParseSpec as ParseSpec
+import qualified LanguageTag.Gen.BCP47.ParseSpec as ParseSpec
 
 
 main :: IO ()

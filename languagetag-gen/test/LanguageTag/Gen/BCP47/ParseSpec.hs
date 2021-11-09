@@ -5,7 +5,7 @@
 -- Copyright   : 2021 Christian Despres
 -- License     : BSD-2-Clause
 -- Maintainer  : Christian Despres
-module Text.LanguageTag.Gen.BCP47.ParseSpec (spec) where
+module LanguageTag.Gen.BCP47.ParseSpec (spec) where
 
 import Data.Char (isSpace)
 import Data.List.NonEmpty (toList)
@@ -14,9 +14,9 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import Test.Hspec
-import Text.LanguageTag.BCP47.Registry (Deprecation (..), Scope (..))
-import Text.LanguageTag.Gen.BCP47.Parse
-import Text.LanguageTag.Gen.Jar (parseJarFile)
+import LanguageTag.BCP47.Registry (Deprecation (..), Scope (..))
+import LanguageTag.Gen.BCP47.Parse
+import LanguageTag.Gen.Jar (parseJarFile)
 
 -- | Take a raw record and render it back to 'Text' lines. Note that
 -- this is dependent on the registry's normal field ordering, which
