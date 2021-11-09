@@ -7,6 +7,12 @@
 -- Maintainer  : Christian Despres
 module LanguageTag.Gen.BCP47.ParseSpec (spec) where
 
+import Test.Hspec
+
+spec :: Spec
+spec = pure ()
+
+{- TODO: cannibalize and put in the test package
 import Data.Char (isSpace)
 import Data.List.NonEmpty (toList)
 import Data.Maybe (mapMaybe)
@@ -110,3 +116,4 @@ spec = do
               Left _ -> error "couldn't parse BCP47 registry jar"
               Right a' -> a'
       firstDiff trend' trerend `shouldBe` Right []
+-}
