@@ -283,7 +283,7 @@ renderRedundantRecordModule tyname imps proj rend reg =
              <> ") where",
            "",
            "import Prelude hiding (LT, GT)",
-           "import LanguageTag.Internal.BCP47.Registry." <> tyname,
+           "import LanguageTag.BCP47.LegacyTag (Redundant)",
            "import LanguageTag.Internal.BCP47.Registry.Types",
            "import Data.List.NonEmpty (NonEmpty(..))",
            "import qualified LanguageTag.Internal.BCP47.Syntax as Syn",
@@ -372,7 +372,7 @@ renderGrandfatheredRecordModule tyname imps proj rend reg =
            "  (lookupGrandfatheredRecord, grandfatheredDetails) where",
            "",
            "import Prelude hiding (LT, GT)",
-           "import LanguageTag.Internal.BCP47.Registry.Grandfathered",
+           "import LanguageTag.BCP47.LegacyTag (Grandfathered)",
            "import LanguageTag.Internal.BCP47.Registry.Types",
            "import Data.List.NonEmpty (NonEmpty(..))",
            "import Data.Vector (Vector)",
@@ -451,7 +451,7 @@ renderModuleWith tyname tydescription docnote d sel rs =
       <> [""]
       <> theHashable
   where
-    modulename = "LanguageTag.Internal.BCP47.Registry." <> tyname
+    modulename = "LanguageTag.Internal.BCP47.LegacyTag." <> tyname
     docnote'
       | T.null docnote = ""
       | otherwise = " " <> docnote
@@ -523,7 +523,7 @@ renderSplitRegistry pref sr = do
     ]
   where
     -- temporarily needed since we now have legacy tags to render
-    legacyprefix = pref <> "../languagetag-bcp47-syntax/src/LanguageTag/Internal/BCP47/LegacyTag/"
+    legacyprefix = pref <> "/../languagetag-bcp47-syntax/src/LanguageTag/Internal/BCP47/LegacyTag/"
     rendwrite p (x, y) = T.writeFile (p <> x) $ y sr
     intprefix = pref <> "/src/LanguageTag/Internal/BCP47/Registry/"
     regdatemodule =

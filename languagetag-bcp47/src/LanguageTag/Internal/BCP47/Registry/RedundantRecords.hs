@@ -16,7 +16,7 @@ module LanguageTag.Internal.BCP47.Registry.RedundantRecords
   (lookupRedundantDetails, redundantToValidNormal, redundantToSyntaxNormal, lookupRedundantRecord, redundantDetails) where
 
 import Prelude hiding (LT, GT)
-import LanguageTag.BCP47.LegacyTag (Redundant(..))
+import LanguageTag.BCP47.LegacyTag (Redundant)
 import LanguageTag.Internal.BCP47.Registry.Types
 import Data.List.NonEmpty (NonEmpty(..))
 import qualified LanguageTag.Internal.BCP47.Syntax as Syn

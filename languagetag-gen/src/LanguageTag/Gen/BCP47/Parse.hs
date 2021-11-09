@@ -426,7 +426,6 @@ splitRegistry (RawRegistry regdate rs) =
     }
   where
     go proj = M.fromList $ mapMaybe proj $ unpackRegistryRanges rs
-    renderRangeCon = mconcat . fmap T.toTitle . T.split (== '-')
 
     plang (TagRecord tg (Language x y z) descrs deprs) =
       Just (tg, LanguageRecord (T.pack $ languageConShow $ parseSubtag' tg) descrs deprs x y z)
@@ -478,6 +477,9 @@ showUpper = renderSubtagUpper . toSubtag
 showLower :: IsSubtag a => a -> Text
 showLower = renderSubtagLower . toSubtag
 
+renderRangeCon :: Text -> Text
+renderRangeCon = mconcat . fmap T.toTitle . T.split (== '-')
+
 fromDep :: (a -> b) -> Reg.Deprecation a -> Deprecation b
 fromDep f (Reg.DeprecatedPreferred _ x) = DeprecatedPreferred $ f x
 fromDep _ (Reg.DeprecatedSimple _) = DeprecatedSimple
@@ -515,7 +517,7 @@ fromLangRecords = onM go
                 fromDep showLower $ Reg.languageDeprecation record,
               langScriptSuppression =
                 showTitle <$> Reg.languageScriptSuppression record,
-              langMacrolanguage = conShow languageConShow <$> Reg.languageMacrolanguage record,
+              langMacrolanguage = showLower <$> Reg.languageMacrolanguage record,
               langScope = fromScope <$> Reg.languageScope record
             }
 
@@ -584,7 +586,7 @@ fromGrandfatheredRecords = onM go
       where
         record' =
           RangeRecord
-            { rangeTyCon = Syn.renderGrandfathered grandfathered,
+            { rangeTyCon = renderRangeCon $ Syn.renderGrandfathered grandfathered,
               rangeDescription = Reg.tagDescription record,
               rangeDeprecation =
                 fromDep Syn.renderBCP47 $ Reg.tagDeprecation record
@@ -597,7 +599,7 @@ fromRedundantRecords = onM go
       where
         record' =
           RangeRecord
-            { rangeTyCon = Syn.renderRedundant redundant,
+            { rangeTyCon = renderRangeCon $ Syn.renderRedundant redundant,
               rangeDescription = Reg.tagDescription record,
               rangeDeprecation =
                 fromDep Syn.renderBCP47 $ Reg.tagDeprecation record
