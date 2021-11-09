@@ -5,9 +5,20 @@ module LanguageTag.BCP47.SyntaxSpec (spec) where
 
 import qualified Data.Char as Char
 import Data.Foldable (traverse_)
-import qualified Data.List.NonEmpty as NE
 import Data.Text (Text)
 import qualified Data.Text as T
+import LanguageTag.BCP47.Quasi
+import LanguageTag.BCP47.Registry (ExtensionChar (..), Grandfathered (..))
+import LanguageTag.BCP47.Subtag
+  ( renderSubtagLower,
+    toSubtags,
+    toSubtagsNE,
+    unpackCharLower,
+  )
+import qualified LanguageTag.BCP47.Subtag as Sub
+import qualified LanguageTag.BCP47.Syntax as Syn
+import LanguageTag.Internal.BCP47.Subtag (SubtagChar (..))
+import qualified LanguageTag.Internal.BCP47.Syntax as Syn
 import Test.Common
 import Test.Hspec
 import Test.Hspec.QuickCheck
@@ -17,16 +28,6 @@ import Test.QuickCheck
     suchThat,
     (===),
   )
-import LanguageTag.BCP47.Quasi
-import LanguageTag.BCP47.Registry (ExtensionChar (..), Grandfathered (..))
-import LanguageTag.BCP47.Subtag
-  ( renderSubtagLower,
-    unpackCharLower,
-  )
-import qualified LanguageTag.BCP47.Subtag as Sub
-import qualified LanguageTag.BCP47.Syntax as Syn
-import LanguageTag.Internal.BCP47.Subtag (SubtagChar (..))
-import qualified LanguageTag.Internal.BCP47.Syntax as Syn
 
 {-
 TODO:
@@ -175,7 +176,7 @@ spec = do
   describe "parseBCP47FromSubtags" $ do
     prop "composes with toSubtags correctly on the left" $
       forAllShrink genSynTag shrinkSynTag $ \st ->
-        Syn.parseBCP47FromSubtags (Syn.toSubtags st) === Right st
+        Syn.parseBCP47FromSubtags (toSubtagsNE st) === Right st
   describe "renderBCP47" $ do
     prop "composes with parseBCP47 on the right correctly" $
       forAllShrink genSynTag shrinkSynTag $ \st -> do
@@ -207,5 +208,5 @@ spec = do
   describe "toSubtags" $ do
     prop "should compare correctly with renderBCP47" $
       forAllShrink genSynTag shrinkSynTag $ \st ->
-        T.intercalate "-" (NE.toList $ renderSubtagLower <$> Syn.toSubtags st)
+        T.intercalate "-" (renderSubtagLower <$> toSubtags st)
           === T.toLower (Syn.renderBCP47 st)
