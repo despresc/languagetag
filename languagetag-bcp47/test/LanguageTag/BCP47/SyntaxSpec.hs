@@ -10,7 +10,8 @@ import qualified Data.Text as T
 import LanguageTag.BCP47.Quasi
 import LanguageTag.BCP47.Registry (ExtensionChar (..), Grandfathered (..))
 import LanguageTag.BCP47.Subtag
-  ( renderSubtagLower,
+  ( isSubtagChar,
+    renderSubtagLower,
     toSubtags,
     toSubtagsNE,
     unpackCharLower,
@@ -45,6 +46,9 @@ TODO:
 - test that for an input that's entirely subtag characters and dashes, if
   popSubtagLen successfully parses something then the returned unconsumed input
   will be empty.
+
+- could replace the usage of limitedDownCase with more sophisticated fixing-up
+  (see also SubtagSpec)
 
 -}
 
@@ -131,7 +135,15 @@ syntaxFailures' =
 
 spec :: Spec
 spec = do
-  describe "popBCP47Len" $ do
+  -- limited down-casing, since toLower can map non-ASCII alphanumerics to ASCII
+  -- alphanumerics. causes popping-related case insensitivity tests to fail.
+  let limitedDownCase c
+        | isSubtagChar c' && not (isSubtagChar c) = c
+        | otherwise = c'
+        where
+          c' = Char.toLower c
+  let mapDownCase = T.map limitedDownCase
+  describe "popBCP47Detail" $ do
     prop "parses any well-formed tag completely" $ do
       -- we are interested in cases where we successfully parse a tag but do not
       -- consume all input
@@ -150,10 +162,10 @@ spec = do
       forAllShrink genPopTagText shrinkPopTagText $ \t ->
         select t (Syn.popBCP47Detail t) === Nothing
     prop "is case-insensitive on initial well-formed tags" $ do
-      let fixUp (Right (x, y, t)) = Right (x, y, T.toLower t)
-          fixUp (Left e) = Left e
+      let fixUp (Right (x, y, t)) = Right (x, y, mapDownCase t)
+          fixUp (Left (e, t)) = Left (e, mapDownCase t)
       forAllShrink genPopTagText shrinkPopTagText $ \t ->
-        fixUp (Syn.popBCP47Detail t) === Syn.popBCP47Detail (T.toLower t)
+        fixUp (Syn.popBCP47Detail t) === Syn.popBCP47Detail (mapDownCase t)
     describe "fails correctly on" $ do
       let test (l, e) =
             it (T.unpack l) $

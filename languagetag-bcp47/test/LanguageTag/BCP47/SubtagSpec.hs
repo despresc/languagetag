@@ -98,10 +98,10 @@ spec = do
       forAllShrink genPopSubtagText shrinkPopSubtagText $ \t ->
         fmap snd (popSubtagText t) === Right (T.dropWhile isSubtagChar t)
     prop "is case-insensitive on initial well-formed subtags" $ do
-      let fixPop (Right (s, t)) = Right (s, T.toLower t)
+      let fixPop (Right (s, t)) = Right (s, mapDownCase t)
           fixPop (Left e) = Left e
       forAllShrink genPopSubtagText shrinkPopSubtagText $ \t ->
-        fixPop (popSubtagText t) === popSubtagText (T.toLower t)
+        fixPop (popSubtagText t) === popSubtagText (mapDownCase t)
     prop "is case-insensitive on any candidate subtag" $ do
       let fixUp (Left e) = Left e
           fixUp (Right (s, t)) = Right (s, mapDownCase t)
