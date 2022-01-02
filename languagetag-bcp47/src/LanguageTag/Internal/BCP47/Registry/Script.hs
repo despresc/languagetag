@@ -9,7 +9,7 @@ import Prelude hiding (LT, GT)
 import Control.DeepSeq (NFData(..), rwhnf)
 import Data.Hashable (Hashable(..), hashUsing)
 
--- | The BCP47 script subtags as of 2021-08-06.
+-- | The BCP47 script subtags as of 2021-12-29.
 data Script
   = Adlm -- ^ @Adlm@. Description: Adlam.
   | Afak -- ^ @Afak@. Description: Afaka.
@@ -87,6 +87,7 @@ data Script
   | Jurc -- ^ @Jurc@. Description: Jurchen.
   | Kali -- ^ @Kali@. Description: Kayah Li.
   | Kana -- ^ @Kana@. Description: Katakana.
+  | Kawi -- ^ @Kawi@. Description: Kawi.
   | Khar -- ^ @Khar@. Description: Kharoshthi.
   | Khmr -- ^ @Khmr@. Description: Khmer.
   | Khoj -- ^ @Khoj@. Description: Khojki.
@@ -128,6 +129,7 @@ data Script
   | Mtei -- ^ @Mtei@. Description: Meitei Mayek; Meithei; Meetei.
   | Mult -- ^ @Mult@. Description: Multani.
   | Mymr -- ^ @Mymr@. Description: Myanmar; Burmese.
+  | Nagm -- ^ @Nagm@. Description: Nag Mundari.
   | Nand -- ^ @Nand@. Description: Nandinagari.
   | Narb -- ^ @Narb@. Description: Old North Arabian; Ancient North Arabian.
   | Nbat -- ^ @Nbat@. Description: Nabataean.
@@ -228,6 +230,7 @@ data Script
   | Sora -- ^ @Sora@. Description: Sora Sompeng.
   | Soyo -- ^ @Soyo@. Description: Soyombo.
   | Sund -- ^ @Sund@. Description: Sundanese.
+  | Sunu -- ^ @Sunu@. Description: Sunuwar.
   | Sylo -- ^ @Sylo@. Description: Syloti Nagri.
   | Syrc -- ^ @Syrc@. Description: Syriac.
   | Syre -- ^ @Syre@. Description: Syriac (Estrangelo variant).
