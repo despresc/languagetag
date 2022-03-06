@@ -9,7 +9,7 @@ import Prelude hiding (LT, GT)
 import Control.DeepSeq (NFData(..), rwhnf)
 import Data.Hashable (Hashable(..), hashUsing)
 
--- | The BCP47 extended language subtags as of 2021-12-29. These are prefixed with \"Ext\" because they would otherwise overlap with their corresponding primary language subtags. Note that the preferred values of these subtags refer to primary language subtags.
+-- | The BCP47 extended language subtags as of 2022-03-02. These are prefixed with \"Ext\" because they would otherwise overlap with their corresponding primary language subtags. Note that the preferred values of these subtags refer to primary language subtags.
 data Extlang
   = ExtAao -- ^ @aao@. Description: Algerian Saharan Arabic. Preferred value: aao.
   | ExtAbh -- ^ @abh@. Description: Tajiki Arabic. Preferred value: abh.
@@ -28,6 +28,7 @@ data Extlang
   | ExtAfb -- ^ @afb@. Description: Gulf Arabic. Preferred value: afb.
   | ExtAfg -- ^ @afg@. Description: Afghan Sign Language. Preferred value: afg.
   | ExtAjp -- ^ @ajp@. Description: South Levantine Arabic. Preferred value: ajp.
+  | ExtAjs -- ^ @ajs@. Description: Algerian Jewish Sign Language. Preferred value: ajs.
   | ExtApc -- ^ @apc@. Description: North Levantine Arabic. Preferred value: apc.
   | ExtApd -- ^ @apd@. Description: Sudanese Arabic. Preferred value: apd.
   | ExtArb -- ^ @arb@. Description: Standard Arabic. Preferred value: arb.
@@ -81,6 +82,7 @@ data Extlang
   | ExtDoq -- ^ @doq@. Description: Dominican Sign Language. Preferred value: doq.
   | ExtDse -- ^ @dse@. Description: Dutch Sign Language. Preferred value: dse.
   | ExtDsl -- ^ @dsl@. Description: Danish Sign Language. Preferred value: dsl.
+  | ExtDsz -- ^ @dsz@. Description: Mardin Sign Language. Preferred value: dsz.
   | ExtDup -- ^ @dup@. Description: Duano. Preferred value: dup.
   | ExtEcs -- ^ @ecs@. Description: Ecuadorian Sign Language. Preferred value: ecs.
   | ExtEhs -- ^ @ehs@. Description: Miyakubo Sign Language. Preferred value: ehs.
@@ -140,6 +142,7 @@ data Extlang
   | ExtLiw -- ^ @liw@. Description: Col. Preferred value: liw.
   | ExtLls -- ^ @lls@. Description: Lithuanian Sign Language. Preferred value: lls.
   | ExtLsb -- ^ @lsb@. Description: Burundian Sign Language; Langue des Signes Burundaise. Preferred value: lsb.
+  | ExtLsc -- ^ @lsc@. Description: Albarradas Sign Language; Lengua de señas Albarradas. Preferred value: lsc.
   | ExtLsg -- ^ @lsg@. Description: Lyons Sign Language. Deprecated. Preferred value: lsg.
   | ExtLsl -- ^ @lsl@. Description: Latvian Sign Language. Preferred value: lsl.
   | ExtLsn -- ^ @lsn@. Description: Tibetan Sign Language. Preferred value: lsn.
@@ -147,6 +150,7 @@ data Extlang
   | ExtLsp -- ^ @lsp@. Description: Panamanian Sign Language; Lengua de Señas Panameñas. Preferred value: lsp.
   | ExtLst -- ^ @lst@. Description: Trinidad and Tobago Sign Language. Preferred value: lst.
   | ExtLsv -- ^ @lsv@. Description: Sivia Sign Language. Preferred value: lsv.
+  | ExtLsw -- ^ @lsw@. Description: Seychelles Sign Language; Lalang Siny Seselwa; Langue des Signes Seychelloise. Preferred value: lsw.
   | ExtLsy -- ^ @lsy@. Description: Mauritian Sign Language. Preferred value: lsy.
   | ExtLtg -- ^ @ltg@. Description: Latgalian. Preferred value: ltg.
   | ExtLvs -- ^ @lvs@. Description: Standard Latvian. Preferred value: lvs.
@@ -186,7 +190,7 @@ data Extlang
   | ExtPks -- ^ @pks@. Description: Pakistan Sign Language. Preferred value: pks.
   | ExtPrl -- ^ @prl@. Description: Peruvian Sign Language. Preferred value: prl.
   | ExtPrz -- ^ @prz@. Description: Providencia Sign Language. Preferred value: prz.
-  | ExtPsc -- ^ @psc@. Description: Persian Sign Language. Preferred value: psc.
+  | ExtPsc -- ^ @psc@. Description: Iranian Sign Language; Persian Sign Language. Preferred value: psc.
   | ExtPsd -- ^ @psd@. Description: Plains Indian Sign Language. Preferred value: psd.
   | ExtPse -- ^ @pse@. Description: Central Malay. Preferred value: pse.
   | ExtPsg -- ^ @psg@. Description: Penang Sign Language. Preferred value: psg.
@@ -195,10 +199,13 @@ data Extlang
   | ExtPsp -- ^ @psp@. Description: Philippine Sign Language. Preferred value: psp.
   | ExtPsr -- ^ @psr@. Description: Portuguese Sign Language. Preferred value: psr.
   | ExtPys -- ^ @pys@. Description: Paraguayan Sign Language; Lengua de Señas del Paraguay. Preferred value: pys.
+  | ExtRib -- ^ @rib@. Description: Bribri Sign Language. Preferred value: rib.
   | ExtRms -- ^ @rms@. Description: Romanian Sign Language. Preferred value: rms.
+  | ExtRnb -- ^ @rnb@. Description: Brunca Sign Language. Preferred value: rnb.
   | ExtRsi -- ^ @rsi@. Description: Rennellese Sign Language. Deprecated. Preferred value: rsi.
   | ExtRsl -- ^ @rsl@. Description: Russian Sign Language. Preferred value: rsl.
   | ExtRsm -- ^ @rsm@. Description: Miriwoong Sign Language. Preferred value: rsm.
+  | ExtRsn -- ^ @rsn@. Description: Rwandan Sign Language. Preferred value: rsn.
   | ExtSdl -- ^ @sdl@. Description: Saudi Arabian Sign Language. Preferred value: sdl.
   | ExtSfb -- ^ @sfb@. Description: Langue des signes de Belgique Francophone; French Belgian Sign Language. Preferred value: sfb.
   | ExtSfs -- ^ @sfs@. Description: South African Sign Language. Preferred value: sfs.
