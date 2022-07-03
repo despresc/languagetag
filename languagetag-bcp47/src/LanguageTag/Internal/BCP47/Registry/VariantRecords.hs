@@ -91,6 +91,7 @@ variantDetails = V.fromList
   ,(Subtag 15679122666969038855, VariantRecord ("Limousin" :| []) NotDeprecated [Normal Oc Nothing Nothing Nothing (S.fromList []) M.empty []])
   ,(Subtag 15679130903621657352, VariantRecord ("Languedocien" :| []) NotDeprecated [Normal Oc Nothing Nothing Nothing (S.fromList []) M.empty []])
   ,(Subtag 15683651694506278917, VariantRecord ("The Lipovaz dialect of Resian" :| ["The Lipovec dialect of Resian"]) NotDeprecated [Normal Sl Nothing Nothing Nothing (S.fromList [Rozaj]) M.empty []])
+  ,(Subtag 15695954160914235399, VariantRecord ("The Latgalian language orthography codified in the language\nlaw in 2007" :| []) NotDeprecated [Normal Ltg Nothing Nothing Nothing (S.fromList []) M.empty []])
   ,(Subtag 15697144863862077448, VariantRecord ("Post-1917 Russian orthography" :| []) NotDeprecated [Normal Ru Nothing Nothing Nothing (S.fromList []) M.empty []])
   ,(Subtag 15823298736751607815, VariantRecord ("Slovene in Metelko alphabet" :| []) NotDeprecated [Normal Sl Nothing Nothing Nothing (S.fromList []) M.empty []])
   ,(Subtag 15834505650768379911, VariantRecord ("Monotonic Greek" :| []) NotDeprecated [Normal El Nothing Nothing Nothing (S.fromList []) M.empty []])

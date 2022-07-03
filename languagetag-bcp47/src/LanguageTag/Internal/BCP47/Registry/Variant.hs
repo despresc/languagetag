@@ -9,7 +9,7 @@ import Prelude hiding (LT, GT)
 import Control.DeepSeq (NFData(..), rwhnf)
 import Data.Hashable (Hashable(..), hashUsing)
 
--- | The BCP47 variant subtags as of 2022-03-02. The names of variant constructors come from the corresponding subtag, except that they are in title case and subtags beginning with a number are prefixed with @Var@.
+-- | The BCP47 variant subtags as of 2022-06-28. The names of variant constructors come from the corresponding subtag, except that they are in title case and subtags beginning with a number are prefixed with @Var@.
 data Variant
   = Var1606nict -- ^ @1606nict@. Description: Late Middle French (to 1606).
   | Var1694acad -- ^ @1694acad@. Description: Early Modern French.
@@ -71,6 +71,7 @@ data Variant
   | Lemosin -- ^ @lemosin@. Description: Limousin.
   | Lengadoc -- ^ @lengadoc@. Description: Languedocien.
   | Lipaw -- ^ @lipaw@. Description: The Lipovaz dialect of Resian; The Lipovec dialect of Resian.
+  | Ltg2007 -- ^ @ltg2007@. Description: The Latgalian language orthography codified in the language law in 2007.
   | Luna1918 -- ^ @luna1918@. Description: Post-1917 Russian orthography.
   | Metelko -- ^ @metelko@. Description: Slovene in Metelko alphabet.
   | Monoton -- ^ @monoton@. Description: Monotonic Greek.
