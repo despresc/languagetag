@@ -45,10 +45,6 @@ import LanguageTag.Internal.BCP47.Syntax (BCP47 (..))
   noting that the text values adhere to the usual newline-only convention of
   Text unlike what we expect of the registry file
 
-- should probably not have the "happen to be in the semicolon-separated..." bit
-  in the record documentation, since this package won't have any static records
-  in it
-
 - pull out most of the where clause stuff in the registry parser into top-level,
   documented functions
 
@@ -62,7 +58,7 @@ import LanguageTag.Internal.BCP47.Syntax (BCP47 (..))
 - maybe make the registry type opaque (in an internal module) and just provide
   lookup functions? since we will be checking that grandfathered and redundant
   tags appear exactly once in the registry we can have those lookup functions be
-  total
+  total. could switch to vectors for the registry at the same time.
 
 -}
 
@@ -97,9 +93,7 @@ data Deprecation a
 
 -- | A primary language subtag record. Note that the descriptions are
 -- not guaranteed by the registry to be in any particular language or
--- script. They also happen to be the same descriptions that appear as
--- semicolon-separated lists next to the constructors of the
--- 'Language' type.
+-- script.
 data LanguageRecord = LanguageRecord
   { languageDateAdded :: Day,
     languageDescription :: NonEmpty Text,
@@ -118,9 +112,7 @@ data LanguageRecord = LanguageRecord
 -- (whether tag or subtag) will never be deprecated.
 --
 -- The descriptions are not guaranteed by the registry to be in any
--- particular language or script. They also happen to be the same
--- descriptions that appear as semicolon-separated lists next to the
--- constructors of the 'Extlang' type.
+-- particular language or script.
 data ExtlangRecord = ExtlangRecord
   { extlangDateAdded :: Day,
     extlangDescription :: NonEmpty Text,
@@ -135,9 +127,7 @@ data ExtlangRecord = ExtlangRecord
 
 -- | A variant subtag record. Note that the descriptions are not
 -- guaranteed by the registry to be in any particular language or
--- script. They also happen to be the same descriptions that appear as
--- semicolon-separated lists next to the constructors of the 'Variant'
--- type.
+-- script.
 data VariantRecord = VariantRecord
   { variantDateAdded :: Day,
     variantDescription :: NonEmpty Text,
@@ -149,9 +139,7 @@ data VariantRecord = VariantRecord
 
 -- | A script subtag record. Note that the descriptions are not
 -- guaranteed by the registry to be in any particular language or
--- script. They also happen to be the same descriptions that appear as
--- semicolon-separated lists next to the constructors of the 'Script'
--- type.
+-- script.
 data ScriptRecord = ScriptRecord
   { scriptDateAdded :: Day,
     scriptDescription :: NonEmpty Text,
@@ -164,9 +152,7 @@ data ScriptRecord = ScriptRecord
 --  the associated preferred value may not have exactly the same
 --  meaning as the deprecated subtag. Note also that the descriptions
 --  are not guaranteed by the registry to be in any particular
---  language or script. They also happen to be the same descriptions
---  that appear as semicolon-separated lists next to the constructors
---  of the 'Region' type.
+--  language or script.
 data RegionRecord = RegionRecord
   { regionDateAdded :: Day,
     regionDescription :: NonEmpty Text,
@@ -182,10 +168,7 @@ data RegionRecord = RegionRecord
 -- recommended as the replacement for the tag.
 --
 -- The descriptions are not guaranteed by the registry to be in any
--- particular language or script. They also happen to be the same
--- descriptions that appear as semicolon-separated lists next to the
--- constructors of the 'Text.LanguageTag.BCP47.Registry.Grandfathered'
--- and 'Text.LanguageTag.BCP47.Registry.Redundant' tag types.
+-- particular language or script.
 data TagRecord = TagRecord
   { tagDateAdded :: Day,
     tagDescription :: NonEmpty Text,
@@ -500,6 +483,9 @@ parseSubtag t = case parseSubtagText $ snd t of
 parseSubtagOrRange :: IsSubtag a => (RJ.LineNum, Text) -> RecordM (NonEmpty a)
 -- TODO: not sure about the mapMaybe. maybe generating an invalid subtag for
 -- the type should be an error? requiring a traversal, then.
+--
+-- TODO: I think genLetterSubtags/genDigitSubtags calls also need to be behind a
+-- test that the first tag is <= the second.
 parseSubtagOrRange t
   | T.null rest = do
     x <- parseSubtag t
