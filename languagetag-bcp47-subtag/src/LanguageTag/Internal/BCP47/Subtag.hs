@@ -58,7 +58,7 @@ import qualified Data.List as List
 import qualified Data.Text.Lazy.Builder as TB
 import qualified Data.Vector.Generic as VG
 import qualified Data.Vector.Generic.Mutable as VGM
-import Data.Vector.Unboxed (MVector, Vector)
+import Data.Vector.Unboxed (MVector, Unbox, Vector)
 import Data.Word (Word64, Word8)
 import GHC.Base (unsafeChr)
 
@@ -153,6 +153,8 @@ instance VG.Vector Vector Subtag where
   basicUnsafeCopy (MV_Subtag mv) (V_Subtag v) = VG.basicUnsafeCopy mv v
   elemseq _ (Subtag x) y = VG.elemseq (undefined :: Vector a) x y
   {-# INLINE elemseq #-}
+
+instance Unbox Subtag
 
 -- | Convert the internal representation of a 'Subtag' back to a
 -- 'Subtag'

@@ -83,6 +83,12 @@ instance IsSubtag LongLang where
     | otherwise = Nothing
 
 -- | A possible primary language subtag in a normal BCP47 tag
+
+-- TODO: I think I want Language to be a plain Language = Language Subtag, then
+-- have a distinguishLanguage :: Language -> Either LongLang ShortLang, or
+-- something like that. Maybe have a distinct newtype Lang = Lang Subtag in
+-- analogy with ShortLang and LongLang.
+
 data Language
   = ShortLanguage ShortLang
   | LongLanguage LongLang

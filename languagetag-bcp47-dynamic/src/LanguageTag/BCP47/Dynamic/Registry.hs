@@ -233,7 +233,43 @@ data Registry = Registry
     registryGrandfatheredTags :: !(Map Grandfathered TagRecord),
     registryRedundantTags :: !(Map Redundant TagRecord)
   }
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord)
+
+----------------------------------------------------------------
+-- Accessing the registry
+----------------------------------------------------------------
+
+-- | Get the registry date
+getRegistryDate :: Registry -> Day
+getRegistryDate = registryDate
+
+-- | Look up a well-formed 'Language' subtag in the registry
+lookupLanguage :: Language -> Registry -> Maybe LanguageRecord
+lookupLanguage l = Map.lookup l . registryLanguages
+
+-- | Look up a well-formed 'Extlang' subtag in the registry
+lookupExtlang :: Extlang -> Registry -> Maybe ExtlangRecord
+lookupExtlang e = Map.lookup e . registryExtlangs
+
+-- | Look up a well-formed 'Script' subtag in the registry
+lookupScript :: Script -> Registry -> Maybe ScriptRecord
+lookupScript s = Map.lookup s . registryScripts
+
+-- | Look up a well-formed 'Script' subtag in the registry
+lookupRegion :: Region -> Registry -> Maybe RegionRecord
+lookupRegion r = Map.lookup r . registryRegions
+
+-- | Look up a well-formed 'Variant' subtag in the registry
+lookupVariant :: Variant -> Registry -> Maybe VariantRecord
+lookupVariant v = Map.lookup v . registryVariants
+
+-- | Look up a well-formed 'Grandfathered' tag in the registry
+lookupGrandfathered :: Grandfathered -> Registry -> Maybe TagRecord
+lookupGrandfathered g = Map.lookup g . registryGrandfatheredTags
+
+-- | Look up a well-formed 'Redundant' tag in the registry
+lookupRedundant :: Redundant -> Registry -> Maybe TagRecord
+lookupRedundant r = Map.lookup r . registryRedundantTags
 
 ----------------------------------------------------------------
 -- Jar parser combinators
