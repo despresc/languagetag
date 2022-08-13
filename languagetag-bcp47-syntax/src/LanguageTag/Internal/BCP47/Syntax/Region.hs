@@ -18,6 +18,7 @@ module LanguageTag.Internal.BCP47.Syntax.Region
   )
 where
 
+import Data.Coerce (coerce)
 import LanguageTag.BCP47.Subtag
   ( IsSubtag (..),
     Subtag,
@@ -34,7 +35,7 @@ newtype Region = Region Subtag
   deriving newtype (ToSubtags, ToSubtagsNE)
 
 instance IsSubtag Region where
-  toSubtag (Region st) = st
+  toSubtag = coerce
   fromSubtag st
     | len == 2,
       containsOnlyLetters st =

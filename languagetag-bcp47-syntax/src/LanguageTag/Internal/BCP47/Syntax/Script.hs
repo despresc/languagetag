@@ -18,6 +18,7 @@ module LanguageTag.Internal.BCP47.Syntax.Script
   )
 where
 
+import Data.Coerce (coerce)
 import LanguageTag.BCP47.Subtag
   ( IsSubtag (..),
     Subtag,
@@ -33,7 +34,7 @@ newtype Script = Script Subtag
   deriving newtype (ToSubtags, ToSubtagsNE)
 
 instance IsSubtag Script where
-  toSubtag (Script st) = st
+  toSubtag = coerce
   fromSubtag st
     | subtagLength st == 4,
       containsOnlyLetters st =

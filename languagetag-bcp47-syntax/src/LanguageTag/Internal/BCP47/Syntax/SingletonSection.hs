@@ -23,6 +23,7 @@ module LanguageTag.Internal.BCP47.Syntax.SingletonSection
 where
 
 import Control.DeepSeq (NFData (..), rwhnf)
+import Data.Coerce (coerce)
 import Data.Hashable (Hashable (..), hashUsing)
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
@@ -110,7 +111,7 @@ newtype ExtensionSubtag = ExtensionSubtag Subtag
   deriving newtype (NFData, Hashable, ToSubtags)
 
 instance IsSubtag ExtensionSubtag where
-  toSubtag (ExtensionSubtag st) = st
+  toSubtag = coerce
   fromSubtag st
     | subtagLength st >= 2 = Just $ ExtensionSubtag st
     | otherwise = Nothing

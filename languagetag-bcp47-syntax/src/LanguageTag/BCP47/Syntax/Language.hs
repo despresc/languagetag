@@ -6,7 +6,10 @@
 module LanguageTag.BCP47.Syntax.Language
   ( ShortLang,
     LongLang,
-    Language (..),
+    Lang (..),
+    classifyLang,
+    shortLangToLang,
+    longLangToLang,
     Extlang,
     extlangToShortLang,
     LangSec (..),

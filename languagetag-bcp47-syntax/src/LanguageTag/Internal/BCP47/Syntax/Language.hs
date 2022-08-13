@@ -16,7 +16,10 @@
 module LanguageTag.Internal.BCP47.Syntax.Language
   ( ShortLang (..),
     LongLang (..),
-    Language (..),
+    Lang (..),
+    classifyLang,
+    shortLangToLang,
+    longLangToLang,
     Extlang (..),
     extlangToShortLang,
     LangSec (..),
@@ -24,13 +27,13 @@ module LanguageTag.Internal.BCP47.Syntax.Language
   )
 where
 
+import Data.Coerce (coerce)
 import Data.List.NonEmpty (NonEmpty (..))
 import LanguageTag.BCP47.Subtag
   ( IsSubtag (..),
     Subtag,
     ToSubtags (..),
     ToSubtagsNE (..),
-    WrappedIsSubtag (..),
     WrappedToSubtagsNE (..),
     containsDigit,
     containsOnlyLetters,
@@ -75,34 +78,38 @@ newtype LongLang = LongLang Subtag
   deriving newtype (ToSubtags, ToSubtagsNE)
 
 instance IsSubtag LongLang where
-  toSubtag (LongLang st) = st
+  toSubtag = coerce
   fromSubtag st
     | subtagLength st >= 4,
       containsOnlyLetters st =
       Just $ LongLang st
     | otherwise = Nothing
 
+-- | Every short language tag is a language tag
+shortLangToLang :: ShortLang -> Lang
+shortLangToLang = coerce
+
+-- | Every long language tag is a language tag
+longLangToLang :: LongLang -> Lang
+longLangToLang = coerce
+
 -- | A possible primary language subtag in a normal BCP47 tag
-
--- TODO: I think I want Language to be a plain Language = Language Subtag, then
--- have a distinguishLanguage :: Language -> Either LongLang ShortLang, or
--- something like that. Maybe have a distinct newtype Lang = Lang Subtag in
--- analogy with ShortLang and LongLang.
-
-data Language
-  = ShortLanguage ShortLang
-  | LongLanguage LongLang
+newtype Lang = Lang Subtag
   deriving stock (Eq, Ord, Show)
-  deriving (ToSubtags, ToSubtagsNE) via WrappedIsSubtag Language
+  deriving newtype (ToSubtags, ToSubtagsNE)
 
-instance IsSubtag Language where
-  toSubtag (ShortLanguage (ShortLang st)) = st
-  toSubtag (LongLanguage (LongLang st)) = st
+instance IsSubtag Lang where
+  toSubtag = coerce
   fromSubtag st
     | containsDigit st = Nothing
-    | subtagLength st >= 4 = Just $ LongLanguage $ LongLang st
-    | subtagLength st >= 2 = Just $ ShortLanguage $ ShortLang st
-    | otherwise = Nothing
+    | otherwise = Just $ Lang st
+
+-- | Determine whether the given 'Lang' is a 'ShortLang' (2 or 3 letters) or a
+-- 'LongLang' (4 or more letters)
+classifyLang :: Lang -> Either LongLang ShortLang
+classifyLang (Lang st)
+  | subtagLength st >= 4 = Left $ LongLang st
+  | otherwise = Right $ ShortLang st
 
 -- | An extended langauge subtag; a subtag that is exactly three letters long.
 newtype Extlang = Extlang Subtag
@@ -115,7 +122,7 @@ extlangToShortLang :: Extlang -> ShortLang
 extlangToShortLang (Extlang st) = ShortLang st
 
 instance IsSubtag Extlang where
-  toSubtag (Extlang s) = s
+  toSubtag = coerce
   fromSubtag st
     | subtagLength st == 3,
       containsOnlyLetters st =

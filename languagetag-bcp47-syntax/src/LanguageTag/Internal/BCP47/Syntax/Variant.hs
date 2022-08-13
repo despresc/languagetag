@@ -18,6 +18,7 @@ module LanguageTag.Internal.BCP47.Syntax.Variant
   )
 where
 
+import Data.Coerce (coerce)
 import LanguageTag.BCP47.Subtag
   ( IsSubtag (..),
     Subtag,
@@ -34,7 +35,7 @@ newtype Variant = Variant Subtag
   deriving newtype (ToSubtags, ToSubtagsNE)
 
 instance IsSubtag Variant where
-  toSubtag (Variant st) = st
+  toSubtag = coerce
   fromSubtag st
     | len >= 5 = Just $ Variant st
     | len == 4,
