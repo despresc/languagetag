@@ -9,7 +9,7 @@ import Prelude hiding (LT, GT)
 import Control.DeepSeq (NFData(..), rwhnf)
 import Data.Hashable (Hashable(..), hashUsing)
 
--- | The BCP47 region subtags as of 2022-06-28. The names of region constructors come from the corresponding subtag, except that subtags beginning with a number are prefixed with @Reg@.
+-- | The BCP47 region subtags as of 2022-08-08. The names of region constructors come from the corresponding subtag, except that subtags beginning with a number are prefixed with @Reg@.
 data Region
   = Reg001 -- ^ @001@. Description: World.
   | Reg002 -- ^ @002@. Description: Africa.
@@ -297,7 +297,7 @@ data Region
   | TN -- ^ @TN@. Description: Tunisia.
   | TO -- ^ @TO@. Description: Tonga.
   | TP -- ^ @TP@. Description: East Timor. Deprecated. Preferred value: TL.
-  | TR -- ^ @TR@. Description: Turkey.
+  | TR -- ^ @TR@. Description: Türkiye; Turkey.
   | TT -- ^ @TT@. Description: Trinidad and Tobago.
   | TV -- ^ @TV@. Description: Tuvalu.
   | TW -- ^ @TW@. Description: Taiwan, Province of China.

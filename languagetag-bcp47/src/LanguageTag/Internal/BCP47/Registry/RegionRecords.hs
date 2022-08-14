@@ -312,7 +312,7 @@ regionDetails = V.fromList
   ,(Subtag 16841210806551969794, RegionRecord ("Tunisia" :| []) NotDeprecated)
   ,(Subtag 16842336706458812418, RegionRecord ("Tonga" :| []) NotDeprecated)
   ,(Subtag 16843462606365655042, RegionRecord ("East Timor" :| []) (DeprecatedPreferred TL))
-  ,(Subtag 16845714406179340290, RegionRecord ("Turkey" :| []) NotDeprecated)
+  ,(Subtag 16845714406179340290, RegionRecord ("T\252rkiye" :| ["Turkey"]) NotDeprecated)
   ,(Subtag 16847966205993025538, RegionRecord ("Trinidad and Tobago" :| []) NotDeprecated)
   ,(Subtag 16850218005806710786, RegionRecord ("Tuvalu" :| []) NotDeprecated)
   ,(Subtag 16851343905713553410, RegionRecord ("Taiwan, Province of China" :| []) NotDeprecated)

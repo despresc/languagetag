@@ -16,8 +16,8 @@
 module LanguageTag.Internal.BCP47.Syntax.Language
   ( ShortLang (..),
     LongLang (..),
-    Lang (..),
-    classifyLang,
+    Language (..),
+    classifyLanguage,
     shortLangToLang,
     longLangToLang,
     Extlang (..),
@@ -86,28 +86,28 @@ instance IsSubtag LongLang where
     | otherwise = Nothing
 
 -- | Every short language tag is a language tag
-shortLangToLang :: ShortLang -> Lang
+shortLangToLang :: ShortLang -> Language
 shortLangToLang = coerce
 
 -- | Every long language tag is a language tag
-longLangToLang :: LongLang -> Lang
+longLangToLang :: LongLang -> Language
 longLangToLang = coerce
 
 -- | A possible primary language subtag in a normal BCP47 tag
-newtype Lang = Lang Subtag
+newtype Language = Language Subtag
   deriving stock (Eq, Ord, Show)
   deriving newtype (ToSubtags, ToSubtagsNE)
 
-instance IsSubtag Lang where
+instance IsSubtag Language where
   toSubtag = coerce
   fromSubtag st
     | containsDigit st = Nothing
-    | otherwise = Just $ Lang st
+    | otherwise = Just $ Language st
 
 -- | Determine whether the given 'Lang' is a 'ShortLang' (2 or 3 letters) or a
 -- 'LongLang' (4 or more letters)
-classifyLang :: Lang -> Either LongLang ShortLang
-classifyLang (Lang st)
+classifyLanguage :: Language -> Either LongLang ShortLang
+classifyLanguage (Language st)
   | subtagLength st >= 4 = Left $ LongLang st
   | otherwise = Right $ ShortLang st
 
