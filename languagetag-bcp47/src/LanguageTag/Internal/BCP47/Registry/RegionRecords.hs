@@ -111,6 +111,7 @@ regionDetails = V.fromList
   ,(Subtag 14391252609262419970, RegionRecord ("China" :| []) NotDeprecated)
   ,(Subtag 14392378509169262594, RegionRecord ("Colombia" :| []) NotDeprecated)
   ,(Subtag 14393504409076105218, RegionRecord ("Clipperton Island" :| []) NotDeprecated)
+  ,(Subtag 14394630308982947842, RegionRecord ("Sark" :| []) NotDeprecated)
   ,(Subtag 14395756208889790466, RegionRecord ("Costa Rica" :| []) NotDeprecated)
   ,(Subtag 14396882108796633090, RegionRecord ("Serbia and Montenegro" :| []) DeprecatedSimple)
   ,(Subtag 14399133908610318338, RegionRecord ("Cuba" :| []) NotDeprecated)

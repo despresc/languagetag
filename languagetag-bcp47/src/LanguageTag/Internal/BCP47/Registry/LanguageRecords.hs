@@ -5037,7 +5037,7 @@ languageDetails = V.fromList
   ,(Subtag 15981885294840381443, LanguageRecord ("Nara" :| []) NotDeprecated Nothing Nothing Nothing)
   ,(Subtag 15981894090933403651, LanguageRecord ("Noric" :| []) NotDeprecated Nothing Nothing Nothing)
   ,(Subtag 15981911683119448067, LanguageRecord ("Southern Rengma Naga" :| []) NotDeprecated Nothing Nothing Nothing)
-  ,(Subtag 15981920479212470275, LanguageRecord ("J\232rriais" :| ["Guern\233siais"]) NotDeprecated Nothing Nothing Nothing)
+  ,(Subtag 15981920479212470275, LanguageRecord ("J\232rriais" :| ["Guern\233siais","Sercquiais"]) NotDeprecated Nothing Nothing Nothing)
   ,(Subtag 15981929275305492483, LanguageRecord ("Narango" :| []) NotDeprecated Nothing Nothing Nothing)
   ,(Subtag 15981946867491536899, LanguageRecord ("Chokri Naga" :| []) NotDeprecated Nothing Nothing Nothing)
   ,(Subtag 15981964459677581315, LanguageRecord ("Ngarla" :| []) NotDeprecated Nothing Nothing Nothing)

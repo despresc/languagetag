@@ -9,7 +9,7 @@ import Prelude hiding (LT, GT)
 import Control.DeepSeq (NFData(..), rwhnf)
 import Data.Hashable (Hashable(..), hashUsing)
 
--- | The BCP47 primary language subtags as of 2022-08-08.
+-- | The BCP47 primary language subtags as of 2023-02-14.
 data Language
   = Aa -- ^ @aa@. Description: Afar.
   | Aaa -- ^ @aaa@. Description: Ghotuo.
@@ -5021,7 +5021,7 @@ data Language
   | Nrb -- ^ @nrb@. Description: Nara.
   | Nrc -- ^ @nrc@. Description: Noric.
   | Nre -- ^ @nre@. Description: Southern Rengma Naga.
-  | Nrf -- ^ @nrf@. Description: Jèrriais; Guernésiais.
+  | Nrf -- ^ @nrf@. Description: Jèrriais; Guernésiais; Sercquiais.
   | Nrg -- ^ @nrg@. Description: Narango.
   | Nri -- ^ @nri@. Description: Chokri Naga.
   | Nrk -- ^ @nrk@. Description: Ngarla.
