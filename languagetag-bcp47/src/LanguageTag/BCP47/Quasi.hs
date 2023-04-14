@@ -115,7 +115,7 @@ tupE = TupE
 {-# INLINE tupE #-}
 
 conP :: Name -> [Pat] -> Pat
-#if MIN_VERSION_template_haskell(2,17,0)
+#if MIN_VERSION_template_haskell(2,18,0)
 conP = \n  -> ConP n []
 #else
 conP = ConP
