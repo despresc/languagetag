@@ -459,8 +459,8 @@ splitRegistry (RawRegistry regdate rs) =
 -- (so we can use that package here without touching the rendering functions)
 
 -- obviously very unprincipled!
-parseRegistryNew :: Jar.JarRegistry -> Either Err Registry
-parseRegistryNew = either (Left . const ErrEmptyInput) (Right . fromNewReg) . Reg.parseRegistry
+parseRegistryNew :: Jar.JarRegistry -> Either Text Registry
+parseRegistryNew = either (Left . T.pack . show) (Right . fromNewReg) . Reg.parseRegistry
 
 onM :: Ord k2 => (k1 -> a -> (k2, b)) -> Map k1 a -> Map k2 b
 onM f = M.fromList . fmap (uncurry f) . M.toList

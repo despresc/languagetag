@@ -34,7 +34,7 @@ down to a new Gen.BCP47.hs
 -- TODO: actually throw errors nicely
 parseRegistryThrowNew :: Text -> IO Jar.JarRegistry
 parseRegistryThrowNew inp = case Jar.parseJarRegistry inp of
-  Left _ -> fail "could not parse the registry"
+  Left t -> fail $ show t
   Right a -> pure a
 
 -- | Parse the BCP47 registry. This does /not/ unpack ranges.
@@ -79,5 +79,5 @@ defaultMain = do
   --   print u
   putStrLn "writing the internal modules"
   case parseRegistryNew r of
-    Left _ -> error "could not parse the jar registry"
+    Left t -> error $ T.unpack t
     Right r' -> renderSplitRegistry pref r'

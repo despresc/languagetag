@@ -9,7 +9,7 @@ import Prelude hiding (LT, GT)
 import Control.DeepSeq (NFData(..), rwhnf)
 import Data.Hashable (Hashable(..), hashUsing)
 
--- | The BCP47 primary language subtags as of 2023-02-14.
+-- | The BCP47 primary language subtags as of 2023-04-13.
 data Language
   = Aa -- ^ @aa@. Description: Afar.
   | Aaa -- ^ @aaa@. Description: Ghotuo.
@@ -205,7 +205,7 @@ data Language
   | Ajg -- ^ @ajg@. Description: Aja (Benin).
   | Aji -- ^ @aji@. Description: Ajië.
   | Ajn -- ^ @ajn@. Description: Andajin.
-  | Ajp -- ^ @ajp@. Description: South Levantine Arabic.
+  | Ajp -- ^ @ajp@. Description: South Levantine Arabic. Deprecated. Preferred value: apc.
   | Ajs -- ^ @ajs@. Description: Algerian Jewish Sign Language.
   | Ajt -- ^ @ajt@. Description: Judeo-Tunisian Arabic. Deprecated. Preferred value: aeb.
   | Aju -- ^ @aju@. Description: Judeo-Moroccan Arabic.
@@ -335,7 +335,7 @@ data Language
   | Aoz -- ^ @aoz@. Description: Uab Meto.
   | Apa -- ^ @apa@. Description: Apache languages.
   | Apb -- ^ @apb@. Description: Sa\'a.
-  | Apc -- ^ @apc@. Description: North Levantine Arabic.
+  | Apc -- ^ @apc@. Description: Levantine Arabic.
   | Apd -- ^ @apd@. Description: Sudanese Arabic.
   | Ape -- ^ @ape@. Description: Bukiyip.
   | Apf -- ^ @apf@. Description: Pahanan Agta.
@@ -1543,6 +1543,7 @@ data Language
   | Cwe -- ^ @cwe@. Description: Kwere.
   | Cwg -- ^ @cwg@. Description: Chewong; Cheq Wong.
   | Cwt -- ^ @cwt@. Description: Kuwaataay.
+  | Cxh -- ^ @cxh@. Description: Cha\'ari.
   | Cy -- ^ @cy@. Description: Welsh.
   | Cya -- ^ @cya@. Description: Nopala Chatino.
   | Cyb -- ^ @cyb@. Description: Cayubaba.
@@ -1789,6 +1790,7 @@ data Language
   | Dse -- ^ @dse@. Description: Dutch Sign Language.
   | Dsh -- ^ @dsh@. Description: Daasanach.
   | Dsi -- ^ @dsi@. Description: Disa.
+  | Dsk -- ^ @dsk@. Description: Dokshi.
   | Dsl -- ^ @dsl@. Description: Danish Sign Language.
   | Dsn -- ^ @dsn@. Description: Dusner.
   | Dso -- ^ @dso@. Description: Desiya.
@@ -1853,11 +1855,12 @@ data Language
   | Dym -- ^ @dym@. Description: Yanda Dom Dogon.
   | Dyn -- ^ @dyn@. Description: Dyangadi; Dhanggatti.
   | Dyo -- ^ @dyo@. Description: Jola-Fonyi.
+  | Dyr -- ^ @dyr@. Description: Dyarim.
   | Dyu -- ^ @dyu@. Description: Dyula.
   | Dyy -- ^ @dyy@. Description: Djabugay; Dyaabugay.
   | Dz -- ^ @dz@. Description: Dzongkha.
   | Dza -- ^ @dza@. Description: Tunzu.
-  | Dzd -- ^ @dzd@. Description: Daza. Deprecated.
+  | Dzd -- ^ @dzd@. Description: Daza.
   | Dze -- ^ @dze@. Description: Djiwarli.
   | Dzg -- ^ @dzg@. Description: Dazaga.
   | Dzl -- ^ @dzl@. Description: Dzalakha.
@@ -1986,6 +1989,7 @@ data Language
   | Etx -- ^ @etx@. Description: Eten.
   | Etz -- ^ @etz@. Description: Semimi.
   | Eu -- ^ @eu@. Description: Basque.
+  | Eud -- ^ @eud@. Description: Eudeve.
   | Euq -- ^ @euq@. Description: Basque (family).
   | Eve -- ^ @eve@. Description: Even.
   | Evh -- ^ @evh@. Description: Uvbie.
@@ -2713,6 +2717,7 @@ data Language
   | Ijs -- ^ @ijs@. Description: Southeast Ijo.
   | Ik -- ^ @ik@. Description: Inupiaq.
   | Ike -- ^ @ike@. Description: Eastern Canadian Inuktitut.
+  | Ikh -- ^ @ikh@. Description: Ikhin-Arokho.
   | Iki -- ^ @iki@. Description: Iko.
   | Ikk -- ^ @ikk@. Description: Ika.
   | Ikl -- ^ @ikl@. Description: Ikulu.
@@ -2831,6 +2836,7 @@ data Language
   | Iyx -- ^ @iyx@. Description: Yaka (Congo).
   | Izh -- ^ @izh@. Description: Ingrian.
   | Izi -- ^ @izi@. Description: Izi-Ezaa-Ikwo-Mgbo. Deprecated.
+  | Izm -- ^ @izm@. Description: Kizamani.
   | Izr -- ^ @izr@. Description: Izere.
   | Izz -- ^ @izz@. Description: Izii.
   | Ja -- ^ @ja@. Description: Japanese.
@@ -3138,7 +3144,7 @@ data Language
   | Kgj -- ^ @kgj@. Description: Gamale Kham.
   | Kgk -- ^ @kgk@. Description: Kaiwá.
   | Kgl -- ^ @kgl@. Description: Kunggari.
-  | Kgm -- ^ @kgm@. Description: Karipúna.
+  | Kgm -- ^ @kgm@. Description: Karipúna. Deprecated. Preferred value: plu.
   | Kgn -- ^ @kgn@. Description: Karingani.
   | Kgo -- ^ @kgo@. Description: Krongo.
   | Kgp -- ^ @kgp@. Description: Kaingang.
@@ -3423,7 +3429,7 @@ data Language
   | Krm -- ^ @krm@. Description: Krim. Deprecated. Preferred value: bmf.
   | Krn -- ^ @krn@. Description: Sapo.
   | Kro -- ^ @kro@. Description: Kru languages.
-  | Krp -- ^ @krp@. Description: Korop.
+  | Krp -- ^ @krp@. Description: Durop.
   | Krr -- ^ @krr@. Description: Krung.
   | Krs -- ^ @krs@. Description: Gbaya (Sudan).
   | Krt -- ^ @krt@. Description: Tumari Kanuri.
@@ -3434,7 +3440,7 @@ data Language
   | Kry -- ^ @kry@. Description: Kryts.
   | Krz -- ^ @krz@. Description: Sota Kanum.
   | Ks -- ^ @ks@. Description: Kashmiri.
-  | Ksa -- ^ @ksa@. Description: Shuwa-Zamani.
+  | Ksa -- ^ @ksa@. Description: Shuwa-Zamani. Deprecated.
   | Ksb -- ^ @ksb@. Description: Shambala.
   | Ksc -- ^ @ksc@. Description: Southern Kalinga.
   | Ksd -- ^ @ksd@. Description: Kuanua.
@@ -3650,7 +3656,7 @@ data Language
   | Lad -- ^ @lad@. Description: Ladino.
   | Lae -- ^ @lae@. Description: Pattani.
   | Laf -- ^ @laf@. Description: Lafofa.
-  | Lag -- ^ @lag@. Description: Langi.
+  | Lag -- ^ @lag@. Description: Rangi.
   | Lah -- ^ @lah@. Description: Lahnda.
   | Lai -- ^ @lai@. Description: Lambya.
   | Laj -- ^ @laj@. Description: Lango (Uganda).
@@ -3756,6 +3762,7 @@ data Language
   | Lgo -- ^ @lgo@. Description: Lango (South Sudan).
   | Lgq -- ^ @lgq@. Description: Logba.
   | Lgr -- ^ @lgr@. Description: Lengo.
+  | Lgs -- ^ @lgs@. Description: Guinea-Bissau Sign Language; Língua Gestual Guineense.
   | Lgt -- ^ @lgt@. Description: Pahi.
   | Lgu -- ^ @lgu@. Description: Longgu.
   | Lgz -- ^ @lgz@. Description: Ligenza.
@@ -3884,7 +3891,7 @@ data Language
   | Loe -- ^ @loe@. Description: Saluan.
   | Lof -- ^ @lof@. Description: Logol.
   | Log -- ^ @log@. Description: Logo.
-  | Loh -- ^ @loh@. Description: Narim.
+  | Loh -- ^ @loh@. Description: Laarim; Narim.
   | Loi -- ^ @loi@. Description: Loma (Côte d\'Ivoire).
   | Loj -- ^ @loj@. Description: Lou.
   | Lok -- ^ @lok@. Description: Loko.
@@ -3978,6 +3985,7 @@ data Language
   | Lva -- ^ @lva@. Description: Maku\'a.
   | Lvi -- ^ @lvi@. Description: Lavi.
   | Lvk -- ^ @lvk@. Description: Lavukaleve.
+  | Lvl -- ^ @lvl@. Description: Lwel.
   | Lvs -- ^ @lvs@. Description: Standard Latvian.
   | Lvu -- ^ @lvu@. Description: Levuka.
   | Lwa -- ^ @lwa@. Description: Lwalu.
@@ -4983,7 +4991,7 @@ data Language
   | Noj -- ^ @noj@. Description: Nonuya.
   | Nok -- ^ @nok@. Description: Nooksack.
   | Nol -- ^ @nol@. Description: Nomlaki.
-  | Nom -- ^ @nom@. Description: Nocamán.
+  | Nom -- ^ @nom@. Description: Nocamán. Deprecated. Preferred value: cbr.
   | Non -- ^ @non@. Description: Old Norse.
   | Noo -- ^ @noo@. Description: Nootka. Deprecated.
   | Nop -- ^ @nop@. Description: Numanggang.
@@ -5162,6 +5170,7 @@ data Language
   | Nzi -- ^ @nzi@. Description: Nzima.
   | Nzk -- ^ @nzk@. Description: Nzakara.
   | Nzm -- ^ @nzm@. Description: Zeme Naga.
+  | Nzr -- ^ @nzr@. Description: Dir-Nyamzak-Mbarimi.
   | Nzs -- ^ @nzs@. Description: New Zealand Sign Language.
   | Nzu -- ^ @nzu@. Description: Teke-Nzikou.
   | Nzy -- ^ @nzy@. Description: Nzakambay.
@@ -5512,7 +5521,7 @@ data Language
   | Plf -- ^ @plf@. Description: Central Malayo-Polynesian languages.
   | Plg -- ^ @plg@. Description: Pilagá.
   | Plh -- ^ @plh@. Description: Paulohi.
-  | Plj -- ^ @plj@. Description: Polci.
+  | Plj -- ^ @plj@. Description: Polci. Deprecated.
   | Plk -- ^ @plk@. Description: Kohistani Shina.
   | Pll -- ^ @pll@. Description: Shwe Palaung.
   | Pln -- ^ @pln@. Description: Palenquero.
@@ -5536,7 +5545,7 @@ data Language
   | Pmh -- ^ @pmh@. Description: Māhārāṣṭri Prākrit.
   | Pmi -- ^ @pmi@. Description: Northern Pumi.
   | Pmj -- ^ @pmj@. Description: Southern Pumi.
-  | Pmk -- ^ @pmk@. Description: Pamlico.
+  | Pmk -- ^ @pmk@. Description: Pamlico. Deprecated. Preferred value: crr.
   | Pml -- ^ @pml@. Description: Lingua Franca.
   | Pmm -- ^ @pmm@. Description: Pomo.
   | Pmn -- ^ @pmn@. Description: Pam.
@@ -5627,7 +5636,7 @@ data Language
   | Prm -- ^ @prm@. Description: Kibiri.
   | Prn -- ^ @prn@. Description: Prasuni.
   | Pro -- ^ @pro@. Description: Old Provençal (to 1500); Old Occitan (to 1500).
-  | Prp -- ^ @prp@. Description: Parsi.
+  | Prp -- ^ @prp@. Description: Parsi. Deprecated. Preferred value: gu.
   | Prq -- ^ @prq@. Description: Ashéninka Perené.
   | Prr -- ^ @prr@. Description: Puri.
   | Prs -- ^ @prs@. Description: Dari; Afghan Persian.
@@ -5709,6 +5718,7 @@ data Language
   | Pyu -- ^ @pyu@. Description: Puyuma.
   | Pyx -- ^ @pyx@. Description: Pyu (Myanmar).
   | Pyy -- ^ @pyy@. Description: Pyen.
+  | Pze -- ^ @pze@. Description: Pesse.
   | Pzh -- ^ @pzh@. Description: Pazeh.
   | Pzn -- ^ @pzn@. Description: Jejara Naga; Para Naga.
   | Qaa -- ^ @qaa@. Description: Private use.
@@ -6421,10 +6431,11 @@ data Language
   | Rrt -- ^ @rrt@. Description: Arritinngithigh.
   | Rsb -- ^ @rsb@. Description: Romano-Serbian.
   | Rsi -- ^ @rsi@. Description: Rennellese Sign Language. Deprecated.
-  | Rsk -- ^ @rsk@. Description: Ruthenian; Rusyn.
+  | Rsk -- ^ @rsk@. Description: Ruthenian; Rusnak.
   | Rsl -- ^ @rsl@. Description: Russian Sign Language.
   | Rsm -- ^ @rsm@. Description: Miriwoong Sign Language.
   | Rsn -- ^ @rsn@. Description: Rwandan Sign Language.
+  | Rsw -- ^ @rsw@. Description: Rishiwa.
   | Rtc -- ^ @rtc@. Description: Rungtu Chin.
   | Rth -- ^ @rth@. Description: Ratahan.
   | Rtm -- ^ @rtm@. Description: Rotuman.
@@ -6715,7 +6726,7 @@ data Language
   | Slm -- ^ @slm@. Description: Pangutaran Sama.
   | Sln -- ^ @sln@. Description: Salinan.
   | Slp -- ^ @slp@. Description: Lamaholot.
-  | Slq -- ^ @slq@. Description: Salchuq.
+  | Slq -- ^ @slq@. Description: Salchuq. Deprecated.
   | Slr -- ^ @slr@. Description: Salar.
   | Sls -- ^ @sls@. Description: Singapore Sign Language.
   | Slt -- ^ @slt@. Description: Sila.
@@ -6990,7 +7001,7 @@ data Language
   | Sza -- ^ @sza@. Description: Semelai.
   | Szb -- ^ @szb@. Description: Ngalum.
   | Szc -- ^ @szc@. Description: Semaq Beri.
-  | Szd -- ^ @szd@. Description: Seru.
+  | Szd -- ^ @szd@. Description: Seru. Deprecated. Preferred value: umi.
   | Sze -- ^ @sze@. Description: Seze.
   | Szg -- ^ @szg@. Description: Sengele.
   | Szl -- ^ @szl@. Description: Silesian.
@@ -7265,7 +7276,7 @@ data Language
   | Tmh -- ^ @tmh@. Description: Tamashek.
   | Tmi -- ^ @tmi@. Description: Tutuba.
   | Tmj -- ^ @tmj@. Description: Samarokena.
-  | Tmk -- ^ @tmk@. Description: Northwestern Tamang.
+  | Tmk -- ^ @tmk@. Description: Northwestern Tamang. Deprecated. Preferred value: tdg.
   | Tml -- ^ @tml@. Description: Tamnim Citak.
   | Tmm -- ^ @tmm@. Description: Tai Thanh.
   | Tmn -- ^ @tmn@. Description: Taman (Indonesia).
@@ -7348,7 +7359,7 @@ data Language
   | Tpt -- ^ @tpt@. Description: Tlachichilco Tepehua.
   | Tpu -- ^ @tpu@. Description: Tampuan.
   | Tpv -- ^ @tpv@. Description: Tanapag.
-  | Tpw -- ^ @tpw@. Description: Tupí.
+  | Tpw -- ^ @tpw@. Description: Tupí. Deprecated. Preferred value: tpn.
   | Tpx -- ^ @tpx@. Description: Acatepec Me\'phaa; Acatepec Tlapanec.
   | Tpy -- ^ @tpy@. Description: Trumai.
   | Tpz -- ^ @tpz@. Description: Tinputz.
@@ -7468,6 +7479,7 @@ data Language
   | Tva -- ^ @tva@. Description: Vaghua.
   | Tvd -- ^ @tvd@. Description: Tsuvadi.
   | Tve -- ^ @tve@. Description: Te\'un.
+  | Tvi -- ^ @tvi@. Description: Tulai.
   | Tvk -- ^ @tvk@. Description: Southeast Ambrym.
   | Tvl -- ^ @tvl@. Description: Tuvalu.
   | Tvm -- ^ @tvm@. Description: Tela-Masbuar.
@@ -7601,6 +7613,7 @@ data Language
   | Uln -- ^ @uln@. Description: Unserdeutsch.
   | Ulu -- ^ @ulu@. Description: Uma\' Lung.
   | Ulw -- ^ @ulw@. Description: Ulwa.
+  | Uly -- ^ @uly@. Description: Buli.
   | Uma -- ^ @uma@. Description: Umatilla.
   | Umb -- ^ @umb@. Description: Umbundu.
   | Umc -- ^ @umc@. Description: Marrucinian.
@@ -7719,6 +7732,7 @@ data Language
   | Vis -- ^ @vis@. Description: Vishavan.
   | Vit -- ^ @vit@. Description: Viti.
   | Viv -- ^ @viv@. Description: Iduna.
+  | Vjk -- ^ @vjk@. Description: Bajjika.
   | Vka -- ^ @vka@. Description: Kariyarra.
   | Vki -- ^ @vki@. Description: Ija-Zuba. Deprecated.
   | Vkj -- ^ @vkj@. Description: Kujarge.
@@ -7915,7 +7929,7 @@ data Language
   | Wmt -- ^ @wmt@. Description: Walmajarri.
   | Wmw -- ^ @wmw@. Description: Mwani.
   | Wmx -- ^ @wmx@. Description: Womo.
-  | Wnb -- ^ @wnb@. Description: Wanambre.
+  | Wnb -- ^ @wnb@. Description: Mokati.
   | Wnc -- ^ @wnc@. Description: Wantoat.
   | Wnd -- ^ @wnd@. Description: Wandarang.
   | Wne -- ^ @wne@. Description: Waneci.
@@ -7975,6 +7989,7 @@ data Language
   | Wss -- ^ @wss@. Description: Wasa.
   | Wsu -- ^ @wsu@. Description: Wasu.
   | Wsv -- ^ @wsv@. Description: Wotapuri-Katarqalai.
+  | Wtb -- ^ @wtb@. Description: Matambwe.
   | Wtf -- ^ @wtf@. Description: Watiwa.
   | Wth -- ^ @wth@. Description: Wathawurrung.
   | Wti -- ^ @wti@. Description: Berta.
@@ -8261,7 +8276,7 @@ data Language
   | Xsp -- ^ @xsp@. Description: Silopi.
   | Xsq -- ^ @xsq@. Description: Makhuwa-Saka.
   | Xsr -- ^ @xsr@. Description: Sherpa.
-  | Xss -- ^ @xss@. Description: Assan.
+  | Xss -- ^ @xss@. Description: Assan. Deprecated. Preferred value: zko.
   | Xsu -- ^ @xsu@. Description: Sanumá.
   | Xsv -- ^ @xsv@. Description: Sudovian.
   | Xsy -- ^ @xsy@. Description: Saisiyat.
@@ -8377,6 +8392,7 @@ data Language
   | Ycl -- ^ @ycl@. Description: Lolopo.
   | Ycn -- ^ @ycn@. Description: Yucuna.
   | Ycp -- ^ @ycp@. Description: Chepya.
+  | Ycr -- ^ @ycr@. Description: Yilan Creole.
   | Yda -- ^ @yda@. Description: Yanda.
   | Ydd -- ^ @ydd@. Description: Eastern Yiddish.
   | Yde -- ^ @yde@. Description: Yangum Dey.
@@ -8432,6 +8448,7 @@ data Language
   | Yiz -- ^ @yiz@. Description: Azhe.
   | Yka -- ^ @yka@. Description: Yakan.
   | Ykg -- ^ @ykg@. Description: Northern Yukaghir.
+  | Ykh -- ^ @ykh@. Description: Khamnigan Mongol.
   | Yki -- ^ @yki@. Description: Yoke.
   | Ykk -- ^ @ykk@. Description: Yakaikeke.
   | Ykl -- ^ @ykl@. Description: Khlula.
@@ -8620,6 +8637,7 @@ data Language
   | Zea -- ^ @zea@. Description: Zeeuws.
   | Zeg -- ^ @zeg@. Description: Zenag.
   | Zeh -- ^ @zeh@. Description: Eastern Hongshuihe Zhuang.
+  | Zem -- ^ @zem@. Description: Zeem.
   | Zen -- ^ @zen@. Description: Zenaga.
   | Zga -- ^ @zga@. Description: Kinga.
   | Zgb -- ^ @zgb@. Description: Guibei Zhuang.
@@ -8644,7 +8662,7 @@ data Language
   | Ziw -- ^ @ziw@. Description: Zigula.
   | Ziz -- ^ @ziz@. Description: Zizilivakan.
   | Zka -- ^ @zka@. Description: Kaimbulawa.
-  | Zkb -- ^ @zkb@. Description: Koibal.
+  | Zkb -- ^ @zkb@. Description: Koibal. Deprecated. Preferred value: kjh.
   | Zkd -- ^ @zkd@. Description: Kadu.
   | Zkg -- ^ @zkg@. Description: Koguryo.
   | Zkh -- ^ @zkh@. Description: Khorezmian.
@@ -8664,6 +8682,7 @@ data Language
   | Zln -- ^ @zln@. Description: Lianshan Zhuang.
   | Zlq -- ^ @zlq@. Description: Liuqian Zhuang.
   | Zls -- ^ @zls@. Description: South Slavic languages.
+  | Zlu -- ^ @zlu@. Description: Zul.
   | Zlw -- ^ @zlw@. Description: West Slavic languages.
   | Zma -- ^ @zma@. Description: Manda (Australia).
   | Zmb -- ^ @zmb@. Description: Zimba.
@@ -8756,7 +8775,7 @@ data Language
   | Ztx -- ^ @ztx@. Description: Zaachila Zapotec.
   | Zty -- ^ @zty@. Description: Yatee Zapotec.
   | Zu -- ^ @zu@. Description: Zulu.
-  | Zua -- ^ @zua@. Description: Zeem.
+  | Zua -- ^ @zua@. Description: Zeem. Deprecated.
   | Zuh -- ^ @zuh@. Description: Tokano.
   | Zum -- ^ @zum@. Description: Kumzari.
   | Zun -- ^ @zun@. Description: Zuni.

@@ -102,7 +102,7 @@ neE f (x NE.:| xs) =
 
 neP :: (a -> Pat) -> NonEmpty a -> Pat
 neP f (x NE.:| xs) =
-  ConP
+  conP
     '(NE.:|)
     [f x, ListP $ f <$> xs]
 
@@ -114,6 +114,14 @@ tupE = TupE
 #endif
 {-# INLINE tupE #-}
 
+conP :: Name -> [Pat] -> Pat
+#if MIN_VERSION_template_haskell(2,17,0)
+conP = \n  -> ConP n []
+#else
+conP = ConP
+#endif
+{-# INLINE conP #-}
+
 appl :: Exp -> [Exp] -> Exp
 appl = foldl' AppE
 
@@ -124,7 +132,7 @@ subtagE :: Subtag -> Exp
 subtagE (Subtag a) = AppE (ConE 'Subtag) (LitE $ wordL a)
 
 subtagP :: Subtag -> Pat
-subtagP (Subtag a) = ConP 'Subtag [LitP $ wordL a]
+subtagP (Subtag a) = conP 'Subtag [LitP $ wordL a]
 
 msubtagE :: MaybeSubtag -> Exp
 msubtagE (MaybeSubtag (Subtag a)) =
@@ -135,19 +143,19 @@ grandE :: Syn.Grandfathered -> Exp
 grandE = ConE . mkExS 'Syn.ArtLojban
 
 grandP :: Syn.Grandfathered -> Pat
-grandP g = ConP (mkExS 'Syn.ArtLojban g) []
+grandP g = conP (mkExS 'Syn.ArtLojban g) []
 
 msubtagP :: MaybeSubtag -> Pat
 msubtagP (MaybeSubtag (Subtag a)) =
-  ConP
+  conP
     'MaybeSubtag
-    [ConP 'Subtag [LitP $ wordL a]]
+    [conP 'Subtag [LitP $ wordL a]]
 
 extCharE :: Syn.ExtensionChar -> Exp
 extCharE = ConE . mkExS 'Syn.ExtA
 
 extCharP :: Syn.ExtensionChar -> Pat
-extCharP x = ConP (mkExS 'Syn.ExtA x) []
+extCharP x = conP (mkExS 'Syn.ExtA x) []
 
 extE :: Syn.Extension -> Exp
 extE (Syn.Extension x y) =
@@ -179,9 +187,9 @@ syntagE (Syn.GrandfatheredTag g) =
 
 syntagP :: Syn.BCP47 -> Pat
 syntagP (Syn.NormalTag (Syn.Normal p e1 e2 e3 s r v es ps)) =
-  ConP
+  conP
     'Syn.NormalTag
-    [ ConP
+    [ conP
         'Syn.Normal
         [ subtagP p,
           msubtagP e1,
@@ -196,11 +204,11 @@ syntagP (Syn.NormalTag (Syn.Normal p e1 e2 e3 s r v es ps)) =
     ]
   where
     extP (Syn.Extension x y) =
-      ConP
+      conP
         'Syn.Extension
         [extCharP x, neP subtagP y]
-syntagP (Syn.PrivateUse x) = ConP 'Syn.PrivateUse [neP subtagP x]
-syntagP (Syn.GrandfatheredTag g) = ConP 'Syn.GrandfatheredTag [grandP g]
+syntagP (Syn.PrivateUse x) = conP 'Syn.PrivateUse [neP subtagP x]
+syntagP (Syn.GrandfatheredTag g) = conP 'Syn.GrandfatheredTag [grandP g]
 
 validtagE :: BCP47 -> Exp
 validtagE (NormalTag (Normal l e s r v es ps)) =

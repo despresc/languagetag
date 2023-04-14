@@ -9,7 +9,7 @@ import Prelude hiding (LT, GT)
 import Control.DeepSeq (NFData(..), rwhnf)
 import Data.Hashable (Hashable(..), hashUsing)
 
--- | The BCP47 extended language subtags as of 2023-02-14. These are prefixed with \"Ext\" because they would otherwise overlap with their corresponding primary language subtags. Note that the preferred values of these subtags refer to primary language subtags.
+-- | The BCP47 extended language subtags as of 2023-04-13. These are prefixed with \"Ext\" because they would otherwise overlap with their corresponding primary language subtags. Note that the preferred values of these subtags refer to primary language subtags.
 data Extlang
   = ExtAao -- ^ @aao@. Description: Algerian Saharan Arabic. Preferred value: aao.
   | ExtAbh -- ^ @abh@. Description: Tajiki Arabic. Preferred value: abh.
@@ -27,9 +27,9 @@ data Extlang
   | ExtAen -- ^ @aen@. Description: Armenian Sign Language. Preferred value: aen.
   | ExtAfb -- ^ @afb@. Description: Gulf Arabic. Preferred value: afb.
   | ExtAfg -- ^ @afg@. Description: Afghan Sign Language. Preferred value: afg.
-  | ExtAjp -- ^ @ajp@. Description: South Levantine Arabic. Preferred value: ajp.
+  | ExtAjp -- ^ @ajp@. Description: South Levantine Arabic. Deprecated. Preferred value: ajp.
   | ExtAjs -- ^ @ajs@. Description: Algerian Jewish Sign Language. Preferred value: ajs.
-  | ExtApc -- ^ @apc@. Description: North Levantine Arabic. Preferred value: apc.
+  | ExtApc -- ^ @apc@. Description: Levantine Arabic. Preferred value: apc.
   | ExtApd -- ^ @apd@. Description: Sudanese Arabic. Preferred value: apd.
   | ExtArb -- ^ @arb@. Description: Standard Arabic. Preferred value: arb.
   | ExtArq -- ^ @arq@. Description: Algerian Arabic. Preferred value: arq.
@@ -139,6 +139,7 @@ data Extlang
   | ExtLbs -- ^ @lbs@. Description: Libyan Sign Language. Preferred value: lbs.
   | ExtLce -- ^ @lce@. Description: Loncong; Sekak. Preferred value: lce.
   | ExtLcf -- ^ @lcf@. Description: Lubu. Preferred value: lcf.
+  | ExtLgs -- ^ @lgs@. Description: Guinea-Bissau Sign Language; Língua Gestual Guineense. Preferred value: lgs.
   | ExtLiw -- ^ @liw@. Description: Col. Preferred value: liw.
   | ExtLls -- ^ @lls@. Description: Lithuanian Sign Language. Preferred value: lls.
   | ExtLsb -- ^ @lsb@. Description: Burundian Sign Language; Langue des Signes Burundaise. Preferred value: lsb.
