@@ -231,9 +231,16 @@ canonicalizeLanguage n@Normal {language = l, extlang = me} =
       Nothing -> (mempty, n')
       Just e
         | language n' == extlangPrefix recd ->
-          ( edepWarning <> warnExtlang (UsedExtlang e),
-            n' {language = extlangPreferredValue recd, extlang = Nothing}
-          )
+          -- for now, we don't issue a second warning if an extlang's preferred value is
+          -- itself deprecated.
+          let extlPreferred = extlangPreferredValue recd
+              newlang =
+                case languageDeprecation $ lookupLanguageRecord extlPreferred of
+                  DeprecatedPreferred x -> x
+                  _ -> extlPreferred
+          in ( edepWarning <> warnExtlang (UsedExtlang e),
+                n' {language = newlang, extlang = Nothing}
+              )
         | otherwise ->
           (edepWarning <> warnExtlang (ExtlangPrefixMismatch e), n')
         where

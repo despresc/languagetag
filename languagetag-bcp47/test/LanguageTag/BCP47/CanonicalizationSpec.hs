@@ -203,6 +203,12 @@ canonicalizationExamples =
     ),
     ( [validtag|zh-yue|],
       simpleTag Yue
+    ),
+    -- the ajp extlang is the sole extlang (as of writing) whose preferred value
+    -- is itself deprecated with a preferred value, so we test that
+    -- canonicalization gets to the correct value
+    ( [validtag|ar-ajp|],
+      simpleTag Apc
     )
   ]
 

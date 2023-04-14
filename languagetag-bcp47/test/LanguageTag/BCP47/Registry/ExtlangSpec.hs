@@ -53,14 +53,6 @@ spec = do
               pref = extlangPreferredValue recd
               isdep = extlangDeprecation recd
       badPref `shouldNotFind` extlangtags
-    it "has a deprecated preferred value that itself has no preferred value, if applicable" $ do
-      let badPref x = case languageDeprecation $ lookupLanguageRecord pref of
-            DeprecatedPreferred _ -> True
-            _ -> False
-            where
-              recd = lookupExtlangRecord x
-              pref = extlangPreferredValue recd
-      badPref `shouldNotFind` extlangtags
   describe "extlangDetails" $ do
     it "has the same number of entries as the Extlang type has constructors" $ do
       V.length extlangDetails `shouldBe` fromEnum (maxBound :: Extlang) + 1
