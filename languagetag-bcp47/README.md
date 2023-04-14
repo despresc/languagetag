@@ -74,3 +74,19 @@ Otherwise the relevant types and functions will change as the registry updates.
 See the [registry maintenance
 section](https://tools.ietf.org/html/bcp47#section-3.3) of the standard for the
 full details.
+
+## Small registry structure deviation from the standard
+
+As of the 2023-04-13 update, the language subtag registry no longer has the
+property that if a subtag x has a preferred value y, then y will not have a
+preferred value. This is guaranteed (or at least implied to be guaranteed) by
+the registry update policy at the end of [section
+3.1.7](https://www.rfc-editor.org/rfc/rfc5646.html#section-3.1.7). In
+particular, this can fail when the subtag x is an extlang and its preferred
+language subtag (which must be equal to x) is itself deprecated with a preferred
+value z. The tags `ajp` (extlang, with prefix `ar`), `ajp` (language), and `apc`
+form such a chain. This shouldn't affect the end user, as long as tag
+normalization takes this into account and follows such a chain when it occurs.
+This library does do so, though it only checks for such a chain when the first
+link is an extlang, as the tests still ensure that the registry has no such
+chains in other circumstances.
