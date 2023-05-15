@@ -53,6 +53,8 @@ variantDetails = V.fromList
   ,(Subtag 14233510950782107653, VariantRecord ("The Barlavento dialect group of Kabuverdianu" :| []) NotDeprecated [Normal Kea Nothing Nothing Nothing (S.fromList []) M.empty []])
   ,(Subtag 14233519542217697032, VariantRecord ("Basic English" :| []) NotDeprecated [Normal En Nothing Nothing Nothing (S.fromList []) M.empty []])
   ,(Subtag 14233536791355359239, VariantRecord ("Buddhist Hybrid Sanskrit" :| []) NotDeprecated [Normal Sa Nothing Nothing Nothing (S.fromList []) M.empty []])
+  ,(Subtag 14235682841118638085, VariantRecord ("BCI Blissymbolics AV" :| []) NotDeprecated [Normal Zbl Nothing Nothing Nothing (S.fromList []) M.empty []])
+  ,(Subtag 14235684548821123078, VariantRecord ("BCI Blissymbolics" :| []) NotDeprecated [Normal Zbl Nothing Nothing Nothing (S.fromList []) M.empty []])
   ,(Subtag 14242526328165297672, VariantRecord ("Biscayan dialect of Basque" :| []) NotDeprecated [Normal Eu Nothing Nothing Nothing (S.fromList []) M.empty []])
   ,(Subtag 14242526879557877765, VariantRecord ("The San Giorgio dialect of Resian" :| ["The Bila dialect of Resian"]) NotDeprecated [Normal Sl Nothing Nothing Nothing (S.fromList [Rozaj]) M.empty []])
   ,(Subtag 14249185804276563975, VariantRecord ("Slovene in Bohori\269 alphabet" :| []) NotDeprecated [Normal Sl Nothing Nothing Nothing (S.fromList []) M.empty []])
