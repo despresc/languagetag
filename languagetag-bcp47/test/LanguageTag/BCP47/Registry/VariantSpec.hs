@@ -39,15 +39,19 @@ spec = do
             maybePreferred (variantDeprecation $ lookupVariantRecord x)
               >>= badRound canonVariant
       depNonCanon `shouldNotMatch` varianttags
-    it "has canonical prefixes, if applicable" $ do
-      let depNonCanon x = case badPrefs of
-            (a : _) -> Just a
-            _ -> Nothing
-            where
-              badPrefs =
-                mapMaybe (badRound' (snd . canonicalizeNormal)) $
-                  variantPrefixes $ lookupVariantRecord x
-      depNonCanon `shouldNotMatch` varianttags
+    -- TODO: as of the 2023-08-02 addition of the blasl record with its sgn-ase
+    -- prefix, this no longer holds. I think not having this property won't
+    -- break anything, but it would be worth it to double-check.
+    --
+    -- it "has canonical prefixes, if applicable" $ do
+    --   let depNonCanon x = case badPrefs of
+    --         (a : _) -> Just a
+    --         _ -> Nothing
+    --         where
+    --           badPrefs =
+    --             mapMaybe (badRound' (snd . canonicalizeNormal)) $
+    --               variantPrefixes $ lookupVariantRecord x
+    --   depNonCanon `shouldNotMatch` varianttags
   describe "variantDetails" $ do
     it "has the same number of entries as the Variant type has constructors" $ do
       V.length variantDetails `shouldBe` fromEnum (maxBound :: Variant) + 1

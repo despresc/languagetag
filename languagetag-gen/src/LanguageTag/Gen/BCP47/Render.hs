@@ -687,25 +687,26 @@ renderSplitRegistry pref sr = do
       _ -> error $ T.unpack $ "can't parse tag value " <> tag
     printNormalTag reg tag (Normal pl e1 e2 e3 sc regn vars exts pus)
       | not $ null exts && null pus && nullSubtag == e2 && nullSubtag == e3 =
-        error $ T.unpack $ "registry tag " <> tag <> " somehow has extensions or private use fields or more than one extended language"
+          error $ T.unpack $ "registry tag " <> tag <> " somehow has extensions or private use fields or more than one extended language"
       | otherwise =
-        T.intercalate
-          " "
-          [ "Normal",
-            resolvePl reg $ renderSubtagLower pl,
-            mrender' e1 (resolveExt reg . renderSubtagLower),
-            mrender' sc (resolveScr reg . renderSubtagLower),
-            mrender' regn (resolveReg reg . renderSubtagLower),
-            "(S.fromList [" <> T.intercalate ", " (resolveVar reg . renderSubtagLower <$> vars) <> "])",
-            "M.empty",
-            "[]"
-          ]
+          T.intercalate
+            " "
+            [ "Normal",
+              resolvePl reg $ renderSubtagLower pl,
+              mrender' e1 (resolveExt reg . renderSubtagLower),
+              mrender' sc (resolveScr reg . renderSubtagLower),
+              mrender' regn (resolveReg reg . renderSubtagLower),
+              "(S.fromList [" <> T.intercalate ", " (resolveVar reg . renderSubtagLower <$> vars) <> "])",
+              "M.empty",
+              "[]"
+            ]
 
     variantImports =
       tagImports
         <> [ "import LanguageTag.Internal.BCP47.Registry.Language",
              "import LanguageTag.Internal.BCP47.Registry.Script",
-             "import LanguageTag.Internal.BCP47.Registry.Region"
+             "import LanguageTag.Internal.BCP47.Registry.Region",
+             "import LanguageTag.Internal.BCP47.Registry.Extlang"
            ]
 
     rendrecvariant = renderRecordModuleWith
@@ -775,21 +776,21 @@ renderSplitRegistry pref sr = do
       _ -> error $ T.unpack $ "can't parse tag value " <> tag
     printSyn reg tag (Normal pl e1 e2 e3 sc regn vars exts pus)
       | not $ null exts && null pus && nullSubtag == e2 && nullSubtag == e3 =
-        error $ T.unpack $ "registry tag " <> tag <> " somehow has extensions or private use fields or more than one extended language"
+          error $ T.unpack $ "registry tag " <> tag <> " somehow has extensions or private use fields or more than one extended language"
       | otherwise =
-        T.intercalate
-          " "
-          [ "Syn.Normal",
-            resolvePl' pl,
-            msrender e1 resolveExt',
-            "nullSubtag",
-            "nullSubtag",
-            msrender sc resolveScr',
-            msrender regn resolveReg',
-            "[" <> T.intercalate ", " (resolveVar' <$> vars) <> "]",
-            "[]",
-            "[]"
-          ]
+          T.intercalate
+            " "
+            [ "Syn.Normal",
+              resolvePl' pl,
+              msrender e1 resolveExt',
+              "nullSubtag",
+              "nullSubtag",
+              msrender sc resolveScr',
+              msrender regn resolveReg',
+              "[" <> T.intercalate ", " (resolveVar' <$> vars) <> "]",
+              "[]",
+              "[]"
+            ]
       where
         showSubtag x = "Subtag " <> T.pack (show $ unwrapSubtag x)
         msrender x f = maybeSubtag "nullSubtag" (\s -> parens $ "justSubtag " <> f s) x

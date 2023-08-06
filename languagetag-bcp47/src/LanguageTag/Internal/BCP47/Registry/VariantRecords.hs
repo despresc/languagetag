@@ -27,6 +27,7 @@ import qualified Data.Set as S
 import LanguageTag.Internal.BCP47.Registry.Language
 import LanguageTag.Internal.BCP47.Registry.Script
 import LanguageTag.Internal.BCP47.Registry.Region
+import LanguageTag.Internal.BCP47.Registry.Extlang
 
 -- | All of the record information associated to 'Variant' subtags, together with their corresponding 'Subtag's, occurring in the same order as that type's constructors
 variantDetails :: Vector (Subtag, VariantRecord)
@@ -57,6 +58,7 @@ variantDetails = V.fromList
   ,(Subtag 14235684548821123078, VariantRecord ("BCI Blissymbolics" :| []) NotDeprecated [Normal Zbl Nothing Nothing Nothing (S.fromList []) M.empty []])
   ,(Subtag 14242526328165297672, VariantRecord ("Biscayan dialect of Basque" :| []) NotDeprecated [Normal Eu Nothing Nothing Nothing (S.fromList []) M.empty []])
   ,(Subtag 14242526879557877765, VariantRecord ("The San Giorgio dialect of Resian" :| ["The Bila dialect of Resian"]) NotDeprecated [Normal Sl Nothing Nothing Nothing (S.fromList [Rozaj]) M.empty []])
+  ,(Subtag 14245746803117916165, VariantRecord ("Black American Sign Language dialect" :| []) NotDeprecated [Normal Ase Nothing Nothing Nothing (S.fromList []) M.empty [],Normal Sgn (Just ExtAse) Nothing Nothing (S.fromList []) M.empty []])
   ,(Subtag 14249185804276563975, VariantRecord ("Slovene in Bohori\269 alphabet" :| []) NotDeprecated [Normal Sl Nothing Nothing Nothing (S.fromList []) M.empty []])
   ,(Subtag 14249247308838338565, VariantRecord ("Boontling" :| []) NotDeprecated [Normal En Nothing Nothing Nothing (S.fromList []) M.empty []])
   ,(Subtag 14249273691144088840, VariantRecord ("Bornholmsk" :| []) NotDeprecated [Normal Da Nothing Nothing Nothing (S.fromList []) M.empty []])
