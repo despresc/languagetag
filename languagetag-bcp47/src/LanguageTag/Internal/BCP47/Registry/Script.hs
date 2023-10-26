@@ -9,7 +9,7 @@ import Prelude hiding (LT, GT)
 import Control.DeepSeq (NFData(..), rwhnf)
 import Data.Hashable (Hashable(..), hashUsing)
 
--- | The BCP47 script subtags as of 2023-08-02.
+-- | The BCP47 script subtags as of 2023-10-16.
 data Script
   = Adlm -- ^ @Adlm@. Description: Adlam.
   | Afak -- ^ @Afak@. Description: Afaka.
@@ -37,6 +37,7 @@ data Script
   | Cari -- ^ @Cari@. Description: Carian.
   | Cham -- ^ @Cham@. Description: Cham.
   | Cher -- ^ @Cher@. Description: Cherokee.
+  | Chis -- ^ @Chis@. Description: Chisoi.
   | Chrs -- ^ @Chrs@. Description: Chorasmian.
   | Cirt -- ^ @Cirt@. Description: Cirth.
   | Copt -- ^ @Copt@. Description: Coptic.
@@ -55,6 +56,7 @@ data Script
   | Elba -- ^ @Elba@. Description: Elbasan.
   | Elym -- ^ @Elym@. Description: Elymaic.
   | Ethi -- ^ @Ethi@. Description: Ethiopic; Geʻez; Ge\'ez.
+  | Gara -- ^ @Gara@. Description: Garay.
   | Geok -- ^ @Geok@. Description: Khutsuri (Asomtavruli and Nuskhuri).
   | Geor -- ^ @Geor@. Description: Georgian (Mkhedruli and Mtavruli).
   | Glag -- ^ @Glag@. Description: Glagolitic.
@@ -64,6 +66,7 @@ data Script
   | Gran -- ^ @Gran@. Description: Grantha.
   | Grek -- ^ @Grek@. Description: Greek.
   | Gujr -- ^ @Gujr@. Description: Gujarati.
+  | Gukh -- ^ @Gukh@. Description: Gurung Khema.
   | Guru -- ^ @Guru@. Description: Gurmukhi.
   | Hanb -- ^ @Hanb@. Description: Han with Bopomofo (alias for Han + Bopomofo).
   | Hang -- ^ @Hang@. Description: Hangul; Hangŭl; Hangeul.
@@ -96,6 +99,7 @@ data Script
   | Knda -- ^ @Knda@. Description: Kannada.
   | Kore -- ^ @Kore@. Description: Korean (alias for Hangul + Han).
   | Kpel -- ^ @Kpel@. Description: Kpelle.
+  | Krai -- ^ @Krai@. Description: Kirat Rai.
   | Kthi -- ^ @Kthi@. Description: Kaithi.
   | Lana -- ^ @Lana@. Description: Tai Tham; Lanna.
   | Laoo -- ^ @Laoo@. Description: Lao.
@@ -140,6 +144,7 @@ data Script
   | Nshu -- ^ @Nshu@. Description: Nüshu.
   | Ogam -- ^ @Ogam@. Description: Ogham.
   | Olck -- ^ @Olck@. Description: Ol Chiki; Ol Cemet\'; Ol; Santali.
+  | Onao -- ^ @Onao@. Description: Ol Onal.
   | Orkh -- ^ @Orkh@. Description: Old Turkic; Orkhon Runic.
   | Orya -- ^ @Orya@. Description: Oriya; Odia.
   | Osge -- ^ @Osge@. Description: Osage.
@@ -223,6 +228,7 @@ data Script
   | Shrd -- ^ @Shrd@. Description: Sharada; Śāradā.
   | Shui -- ^ @Shui@. Description: Shuishu.
   | Sidd -- ^ @Sidd@. Description: Siddham; Siddhaṃ; Siddhamātṛkā.
+  | Sidt -- ^ @Sidt@. Description: Sidetic.
   | Sind -- ^ @Sind@. Description: Khudawadi; Sindhi.
   | Sinh -- ^ @Sinh@. Description: Sinhala.
   | Sogd -- ^ @Sogd@. Description: Sogdian.
@@ -243,6 +249,7 @@ data Script
   | Taml -- ^ @Taml@. Description: Tamil.
   | Tang -- ^ @Tang@. Description: Tangut.
   | Tavt -- ^ @Tavt@. Description: Tai Viet.
+  | Tayo -- ^ @Tayo@. Description: Tai Yo.
   | Telu -- ^ @Telu@. Description: Telugu.
   | Teng -- ^ @Teng@. Description: Tengwar.
   | Tfng -- ^ @Tfng@. Description: Tifinagh; Berber.
@@ -252,7 +259,10 @@ data Script
   | Tibt -- ^ @Tibt@. Description: Tibetan.
   | Tirh -- ^ @Tirh@. Description: Tirhuta.
   | Tnsa -- ^ @Tnsa@. Description: Tangsa.
+  | Todr -- ^ @Todr@. Description: Todhri.
+  | Tols -- ^ @Tols@. Description: Tolong Siki.
   | Toto -- ^ @Toto@. Description: Toto.
+  | Tutg -- ^ @Tutg@. Description: Tulu-Tigalari.
   | Ugar -- ^ @Ugar@. Description: Ugaritic.
   | Vaii -- ^ @Vaii@. Description: Vai.
   | Visp -- ^ @Visp@. Description: Visible Speech.
