@@ -9,7 +9,7 @@ import Prelude hiding (LT, GT)
 import Control.DeepSeq (NFData(..), rwhnf)
 import Data.Hashable (Hashable(..), hashUsing)
 
--- | The BCP47 variant subtags as of 2023-10-16. The names of variant constructors come from the corresponding subtag, except that they are in title case and subtags beginning with a number are prefixed with @Var@.
+-- | The BCP47 variant subtags as of 2024-03-07. The names of variant constructors come from the corresponding subtag, except that they are in title case and subtags beginning with a number are prefixed with @Var@.
 data Variant
   = Var1606nict -- ^ @1606nict@. Description: Late Middle French (to 1606).
   | Var1694acad -- ^ @1694acad@. Description: Early Modern French.
@@ -21,6 +21,7 @@ data Variant
   | Akuapem -- ^ @akuapem@. Description: Akuapem Twi.
   | Alalc97 -- ^ @alalc97@. Description: ALA-LC Romanization, 1997 edition.
   | Aluku -- ^ @aluku@. Description: Aluku dialect; Boni dialect.
+  | Anpezo -- ^ @anpezo@. Description: Anpezo standard of Ladin.
   | Ao1990 -- ^ @ao1990@. Description: Portuguese Language Orthographic Agreement of 1990 (Acordo Ortográfico da Língua Portuguesa de 1990).
   | Aranes -- ^ @aranes@. Description: Aranese.
   | Arevela -- ^ @arevela@. Description: Eastern Armenian. Deprecated.
@@ -48,6 +49,8 @@ data Variant
   | Dajnko -- ^ @dajnko@. Description: Slovene in Dajnko alphabet.
   | Ekavsk -- ^ @ekavsk@. Description: Serbian with Ekavian pronunciation.
   | Emodeng -- ^ @emodeng@. Description: Early Modern English (1500-1700).
+  | Fascia -- ^ @fascia@. Description: Fascia standard of Ladin.
+  | Fodom -- ^ @fodom@. Description: Fodom standard of Ladin.
   | Fonipa -- ^ @fonipa@. Description: International Phonetic Alphabet.
   | Fonkirsh -- ^ @fonkirsh@. Description: Kirshenbaum Phonetic Alphabet.
   | Fonnapa -- ^ @fonnapa@. Description: North American Phonetic Alphabet; Americanist Phonetic Notation.
@@ -55,6 +58,7 @@ data Variant
   | Fonxsamp -- ^ @fonxsamp@. Description: X-SAMPA transcription.
   | Gallo -- ^ @gallo@. Description: Gallo.
   | Gascon -- ^ @gascon@. Description: Gascon.
+  | Gherd -- ^ @gherd@. Description: Gherdëina standard of Ladin.
   | Grclass -- ^ @grclass@. Description: Classical Occitan orthography.
   | Grital -- ^ @grital@. Description: Italian-inspired Occitan orthography.
   | Grmistr -- ^ @grmistr@. Description: Mistralian or Mistralian-inspired Occitan orthography.
@@ -92,6 +96,7 @@ data Variant
   | Pahawh4 -- ^ @pahawh4@. Description: Pahawh Hmong Final Version orthography.
   | Pamaka -- ^ @pamaka@. Description: Pamaka dialect.
   | Peano -- ^ @peano@. Description: Latino Sine Flexione; Interlingua de API; Interlingua de Peano.
+  | Pehoeji -- ^ @pehoeji@. Description: Hokkien Vernacular Romanization System; Pe̍h-ōe-jī orthography\/romanization.
   | Petr1708 -- ^ @petr1708@. Description: Petrine orthography.
   | Pinyin -- ^ @pinyin@. Description: Pinyin romanization.
   | Polyton -- ^ @polyton@. Description: Polytonic Greek.
@@ -110,6 +115,7 @@ data Variant
   | Sursilv -- ^ @sursilv@. Description: Sursilvan idiom of Romansh.
   | Sutsilv -- ^ @sutsilv@. Description: Sutsilvan idiom of Romansh.
   | Synnejyl -- ^ @synnejyl@. Description: Synnejysk; South Jutish.
+  | Tailo -- ^ @tailo@. Description: Taiwanese Hokkien Romanization System for Hokkien languages; Tâi-lô orthography\/romanization.
   | Tarask -- ^ @tarask@. Description: Belarusian in Taraskievica orthography.
   | Tongyong -- ^ @tongyong@. Description: Tongyong Pinyin romanization.
   | Tunumiit -- ^ @tunumiit@. Description: Tunumiisiut; East Greenlandic; Østgrønlandsk.
@@ -118,6 +124,7 @@ data Variant
   | Ulster -- ^ @ulster@. Description: Ulster dialect of Scots.
   | Unifon -- ^ @unifon@. Description: Unifon phonetic alphabet.
   | Vaidika -- ^ @vaidika@. Description: Vedic Sanskrit.
+  | Valbadia -- ^ @valbadia@. Description: Val Badia standard of Ladin.
   | Valencia -- ^ @valencia@. Description: Valencian.
   | Vallader -- ^ @vallader@. Description: Vallader idiom of Romansh.
   | Vecdruka -- ^ @vecdruka@. Description: Latvian orthography used before 1920s (\"vecā druka\").

@@ -9,7 +9,7 @@ import Prelude hiding (LT, GT)
 import Control.DeepSeq (NFData(..), rwhnf)
 import Data.Hashable (Hashable(..), hashUsing)
 
--- | The BCP47 primary language subtags as of 2023-10-16.
+-- | The BCP47 primary language subtags as of 2024-03-07.
 data Language
   = Aa -- ^ @aa@. Description: Afar.
   | Aaa -- ^ @aaa@. Description: Ghotuo.
@@ -1370,6 +1370,7 @@ data Language
   | Cll -- ^ @cll@. Description: Chala.
   | Clm -- ^ @clm@. Description: Clallam.
   | Clo -- ^ @clo@. Description: Lowland Oaxaca Chontal.
+  | Cls -- ^ @cls@. Description: Classical Sanskrit.
   | Clt -- ^ @clt@. Description: Lautu Chin.
   | Clu -- ^ @clu@. Description: Caluyanun.
   | Clw -- ^ @clw@. Description: Chulym.
@@ -6427,6 +6428,7 @@ data Language
   | Rpn -- ^ @rpn@. Description: Repanbitip.
   | Rpt -- ^ @rpt@. Description: Rapting.
   | Rri -- ^ @rri@. Description: Ririo.
+  | Rrm -- ^ @rrm@. Description: Moriori.
   | Rro -- ^ @rro@. Description: Waima.
   | Rrt -- ^ @rrt@. Description: Arritinngithigh.
   | Rsb -- ^ @rsb@. Description: Romano-Serbian.
@@ -7782,6 +7784,7 @@ data Language
   | Vrt -- ^ @vrt@. Description: Burmbar; Banam Bay.
   | Vsi -- ^ @vsi@. Description: Moldova Sign Language.
   | Vsl -- ^ @vsl@. Description: Venezuelan Sign Language.
+  | Vsn -- ^ @vsn@. Description: Vedic Sanskrit.
   | Vsv -- ^ @vsv@. Description: Valencian Sign Language; Llengua de signes valenciana.
   | Vto -- ^ @vto@. Description: Vitou.
   | Vum -- ^ @vum@. Description: Vumbu.
