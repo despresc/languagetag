@@ -9,7 +9,7 @@ import Prelude hiding (LT, GT)
 import Control.DeepSeq (NFData(..), rwhnf)
 import Data.Hashable (Hashable(..), hashUsing)
 
--- | The BCP47 primary language subtags as of 2024-03-07.
+-- | The BCP47 primary language subtags as of 2024-05-16.
 data Language
   = Aa -- ^ @aa@. Description: Afar.
   | Aaa -- ^ @aaa@. Description: Ghotuo.
@@ -1641,7 +1641,7 @@ data Language
   | Dgl -- ^ @dgl@. Description: Andaandi; Dongolawi.
   | Dgn -- ^ @dgn@. Description: Dagoman.
   | Dgo -- ^ @dgo@. Description: Dogri (individual language).
-  | Dgr -- ^ @dgr@. Description: Dogrib; Tłı̨chǫ.
+  | Dgr -- ^ @dgr@. Description: Tlicho; Dogrib; Tłı̨chǫ.
   | Dgs -- ^ @dgs@. Description: Dogoso.
   | Dgt -- ^ @dgt@. Description: Ndra\'ngith.
   | Dgu -- ^ @dgu@. Description: Degaru. Deprecated.
@@ -2803,6 +2803,7 @@ data Language
   | Isr -- ^ @isr@. Description: Israeli Sign Language.
   | Ist -- ^ @ist@. Description: Istriot.
   | Isu -- ^ @isu@. Description: Isu (Menchum Division).
+  | Isv -- ^ @isv@. Description: Interslavic.
   | It -- ^ @it@. Description: Italian.
   | Itb -- ^ @itb@. Description: Binongan Itneg.
   | Itc -- ^ @itc@. Description: Italic languages.
