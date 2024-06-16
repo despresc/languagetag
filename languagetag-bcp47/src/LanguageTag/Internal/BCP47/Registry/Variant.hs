@@ -9,7 +9,7 @@ import Prelude hiding (LT, GT)
 import Control.DeepSeq (NFData(..), rwhnf)
 import Data.Hashable (Hashable(..), hashUsing)
 
--- | The BCP47 variant subtags as of 2024-05-16. The names of variant constructors come from the corresponding subtag, except that they are in title case and subtags beginning with a number are prefixed with @Var@.
+-- | The BCP47 variant subtags as of 2024-06-14. The names of variant constructors come from the corresponding subtag, except that they are in title case and subtags beginning with a number are prefixed with @Var@.
 data Variant
   = Var1606nict -- ^ @1606nict@. Description: Late Middle French (to 1606).
   | Var1694acad -- ^ @1694acad@. Description: Early Modern French.
@@ -74,7 +74,7 @@ data Variant
   | Kkcor -- ^ @kkcor@. Description: Common Cornish orthography of Revived Cornish.
   | Kociewie -- ^ @kociewie@. Description: The Kociewie dialect of Polish.
   | Kscor -- ^ @kscor@. Description: Standard Cornish orthography of Revived Cornish; Kernowek Standard.
-  | Laukika -- ^ @laukika@. Description: Classical Sanskrit.
+  | Laukika -- ^ @laukika@. Description: Classical Sanskrit. Deprecated.
   | Lemosin -- ^ @lemosin@. Description: Limousin.
   | Lengadoc -- ^ @lengadoc@. Description: Languedocien.
   | Lipaw -- ^ @lipaw@. Description: The Lipovaz dialect of Resian; The Lipovec dialect of Resian.
@@ -123,7 +123,7 @@ data Variant
   | Ucrcor -- ^ @ucrcor@. Description: Unified Cornish Revised orthography of Revived Cornish.
   | Ulster -- ^ @ulster@. Description: Ulster dialect of Scots.
   | Unifon -- ^ @unifon@. Description: Unifon phonetic alphabet.
-  | Vaidika -- ^ @vaidika@. Description: Vedic Sanskrit.
+  | Vaidika -- ^ @vaidika@. Description: Vedic Sanskrit. Deprecated.
   | Valbadia -- ^ @valbadia@. Description: Val Badia standard of Ladin.
   | Valencia -- ^ @valencia@. Description: Valencian.
   | Vallader -- ^ @vallader@. Description: Vallader idiom of Romansh.

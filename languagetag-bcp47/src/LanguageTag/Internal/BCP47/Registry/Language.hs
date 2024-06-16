@@ -9,7 +9,7 @@ import Prelude hiding (LT, GT)
 import Control.DeepSeq (NFData(..), rwhnf)
 import Data.Hashable (Hashable(..), hashUsing)
 
--- | The BCP47 primary language subtags as of 2024-05-16.
+-- | The BCP47 primary language subtags as of 2024-06-14.
 data Language
   = Aa -- ^ @aa@. Description: Afar.
   | Aaa -- ^ @aaa@. Description: Ghotuo.
