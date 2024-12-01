@@ -9,7 +9,7 @@ import Prelude hiding (LT, GT)
 import Control.DeepSeq (NFData(..), rwhnf)
 import Data.Hashable (Hashable(..), hashUsing)
 
--- | The BCP47 variant subtags as of 2024-06-14. The names of variant constructors come from the corresponding subtag, except that they are in title case and subtags beginning with a number are prefixed with @Var@.
+-- | The BCP47 variant subtags as of 2024-11-19. The names of variant constructors come from the corresponding subtag, except that they are in title case and subtags beginning with a number are prefixed with @Var@.
 data Variant
   = Var1606nict -- ^ @1606nict@. Description: Late Middle French (to 1606).
   | Var1694acad -- ^ @1694acad@. Description: Early Modern French.
@@ -72,6 +72,7 @@ data Variant
   | Jauer -- ^ @jauer@. Description: Jauer dialect of Romansh.
   | Jyutping -- ^ @jyutping@. Description: Jyutping Cantonese Romanization.
   | Kkcor -- ^ @kkcor@. Description: Common Cornish orthography of Revived Cornish.
+  | Kleinsch -- ^ @kleinsch@. Description: Kleinschmidt orthography; Allattaasitaamut.
   | Kociewie -- ^ @kociewie@. Description: The Kociewie dialect of Polish.
   | Kscor -- ^ @kscor@. Description: Standard Cornish orthography of Revived Cornish; Kernowek Standard.
   | Laukika -- ^ @laukika@. Description: Classical Sanskrit. Deprecated.

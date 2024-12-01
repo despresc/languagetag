@@ -93,6 +93,7 @@ variantDetails = V.fromList
   ,(Subtag 15386458371758489605, VariantRecord ("Jauer dialect of Romansh" :| []) NotDeprecated [Normal Rm Nothing Nothing Nothing (S.fromList []) M.empty []])
   ,(Subtag 15413480999685154568, VariantRecord ("Jyutping Cantonese Romanization" :| []) NotDeprecated [Normal Yue Nothing Nothing Nothing (S.fromList []) M.empty []])
   ,(Subtag 15541674916423139333, VariantRecord ("Common Cornish orthography of Revived Cornish" :| []) NotDeprecated [Normal Kw Nothing Nothing Nothing (S.fromList []) M.empty []])
+  ,(Subtag 15542817994537297928, VariantRecord ("Kleinschmidt orthography" :| ["Allattaasitaamut"]) NotDeprecated [Normal Kl Nothing Nothing Nothing (S.fromList []) M.empty [],Normal Kl Nothing Nothing Nothing (S.fromList [Tunumiit]) M.empty []])
   ,(Subtag 15546178097256916232, VariantRecord ("The Kociewie dialect of Polish" :| []) NotDeprecated [Normal Pl Nothing Nothing Nothing (S.fromList []) M.empty []])
   ,(Subtag 15550682115677880325, VariantRecord ("Standard Cornish orthography of Revived Cornish" :| ["Kernowek Standard"]) NotDeprecated [Normal Kw Nothing Nothing Nothing (S.fromList []) M.empty []])
   ,(Subtag 15674689155847192583, VariantRecord ("Classical Sanskrit" :| []) DeprecatedSimple [Normal Sa Nothing Nothing Nothing (S.fromList []) M.empty []])
